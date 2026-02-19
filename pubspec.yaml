@@ -1,0 +1,40 @@
+name: samizdat
+description: "Censorship-resistant P2P video sharing platform"
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.10.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  video_player: ^2.9.0
+  chewie: ^1.8.0
+  go_router: ^14.0.0
+  provider: ^6.1.0
+  file_picker: ^8.0.0
+  path_provider: ^2.1.0
+  google_fonts: ^6.2.0
+  ffi: ^2.1.0
+  video_thumbnail: ^0.5.3
+  just_audio: ^0.9.0
+  open_filex: ^4.5.0
+  http: ^1.2.0
+  tray_manager: ^0.5.2
+  window_manager: ^0.4.3
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/bare/
+    - assets/tray_icon.png
+    - assets/tray_icon.ico
+    - assets/tray_icon_macos.png

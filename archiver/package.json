@@ -1,0 +1,20 @@
+{
+  "name": "samizdat-archiver",
+  "version": "1.0.0",
+  "description": "P2P web archiver for Samizdat video network",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.0.0",
+    "compact-encoding": "^2.0.0",
+    "cors": "^2.8.5",
+    "corestore": "^6.0.0",
+    "express": "^4.21.0",
+    "hyperdrive": "^11.0.0",
+    "hyperswarm": "^4.0.0",
+    "multer": "^1.4.5-lts.1",
+    "protomux": "^3.0.0"
+  }
+}

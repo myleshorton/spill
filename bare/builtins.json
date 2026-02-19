@@ -1,0 +1,22 @@
+[
+  { "addon": "bare-buffer" },
+  { "addon": "bare-crypto" },
+  { "addon": "bare-fs" },
+  { "addon": "bare-hrtime" },
+  { "addon": "bare-inspect" },
+  { "addon": "bare-logger" },
+  { "addon": "bare-module" },
+  { "addon": "bare-module-lexer" },
+  { "addon": "bare-os" },
+  { "addon": "bare-pipe" },
+  { "addon": "bare-structured-clone" },
+  { "addon": "bare-system-logger" },
+  { "addon": "bare-type" },
+  { "addon": "bare-url" },
+  { "addon": "crc-native" },
+  { "addon": "fs-native-extensions" },
+  { "addon": "quickbit-native" },
+  { "addon": "simdle-native" },
+  { "addon": "sodium-native" },
+  { "addon": "udx-native" }
+]

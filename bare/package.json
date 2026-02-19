@@ -1,0 +1,45 @@
+{
+  "name": "samizdat-bare",
+  "version": "1.0.0",
+  "description": "Samizdat P2P backend running in Bare worklet",
+  "main": "index.js",
+  "scripts": {
+    "bundle": "bare-pack index.js -o bundle.js"
+  },
+  "dependencies": {
+    "bare-crypto": "^1.13.0",
+    "bare-events": "^2.0.0",
+    "bare-fs": "^4.5.3",
+    "bare-hrtime": "^2.1.1",
+    "bare-inspect": "^3.1.4",
+    "bare-ipc": "^1.0.0",
+    "bare-logger": "^2.0.0",
+    "bare-module": "^6.1.3",
+    "bare-os": "^3.6.2",
+    "bare-path": "^2.0.0",
+    "bare-pipe": "^4.1.3",
+    "bare-system-logger": "^1.0.2",
+    "corestore": "^6.0.0",
+    "hyperblobs": "^2.0.0",
+    "hypercore": "^10.0.0",
+    "hypercore-crypto": "^3.0.0",
+    "hyperbee": "^2.27.0",
+    "hyperdrive": "^11.0.0",
+    "hyperswarm": "^4.0.0",
+    "sodium-native": "^5.0.10",
+    "sodium-universal": "^5.0.0",
+    "udx-native": "^1.17.8"
+  },
+  "overrides": {
+    "sodium-native": "^5.0.10",
+    "sodium-universal": "^5.0.0"
+  },
+  "devDependencies": {
+    "bare-compat-napi": "^1.3.9",
+    "bare-pack": "^1.0.0",
+    "cmake-bare": "^1.7.6",
+    "cmake-fetch": "^1.4.9",
+    "cmake-napi": "^1.2.2",
+    "cmake-npm": "^1.1.0"
+  }
+}

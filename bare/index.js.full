@@ -1,0 +1,67 @@
+/**
+ * Samizdat Bare Worklet Entry Point
+ *
+ * This JS runs inside a Bare runtime worklet, started by the native C bridge.
+ * It provides P2P networking via Holepunch (Hyperswarm, Hyperdrive, Hypercore)
+ * and communicates with the Flutter UI via JSON-RPC over IPC.
+ *
+ * In bare-kit worklets, IPC is provided as BareKit.IPC — a Duplex stream
+ * backed by bare-ipc/bare-pipe over OS-level pipe file descriptors.
+ */
+
+const RpcHandler = require('./lib/rpc-handler')
+const VideoManager = require('./lib/video-manager')
+const FeedManager = require('./lib/feed-manager')
+
+const ipc = BareKit.IPC
+
+// Data directory is passed via the first IPC message or environment
+let dataDir = null
+
+const rpc = new RpcHandler(ipc)
+
+let videoManager = null
+let feedManager = null
+
+// --- RPC Methods ---
+
+rpc.register('ping', async () => {
+  return 'pong'
+})
+
+rpc.register('startNode', async (params) => {
+  dataDir = params.dataDir || '/tmp/samizdat'
+
+  videoManager = new VideoManager(dataDir)
+  feedManager = new FeedManager(dataDir)
+
+  // Wire up discovery notifications
+  feedManager.on('videoDiscovered', (meta) => {
+    rpc.notify('onVideoDiscovered', meta)
+  })
+
+  await feedManager.start()
+  return feedManager.getNodeId()
+})
+
+rpc.register('publishVideo', async (params) => {
+  if (!videoManager) throw new Error('Node not started')
+  return videoManager.publish(params)
+})
+
+rpc.register('getVideos', async () => {
+  if (!feedManager) return []
+  return feedManager.listVideos()
+})
+
+rpc.register('fetchVideo', async (params) => {
+  if (!videoManager) throw new Error('Node not started')
+  return videoManager.fetch(params)
+})
+
+rpc.register('getNodeId', async () => {
+  if (!feedManager) throw new Error('Node not started')
+  return feedManager.getNodeId()
+})
+
+console.log('[samizdat] Bare worklet started, waiting for RPC messages...')
