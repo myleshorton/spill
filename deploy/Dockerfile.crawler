@@ -4,6 +4,7 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends \
       poppler-utils \
       tesseract-ocr \
+      ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -16,7 +17,9 @@ RUN cd archiver && npm ci --production
 COPY crawler/package*.json ./crawler/
 RUN cd crawler && npm ci --production
 
-# Copy ingest modules (text extraction, thumbnails, file utils)
+# Copy ingest modules (text extraction, thumbnails, file utils, transcription)
+COPY ingest/package*.json ./ingest/
+RUN cd ingest && npm ci --production
 COPY ingest/ ./ingest/
 
 # Copy application code

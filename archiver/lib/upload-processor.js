@@ -3,6 +3,11 @@ const fs = require('fs')
 const path = require('path')
 const { EventEmitter } = require('events')
 
+let transcriber = null
+try {
+  transcriber = require('../../ingest/lib/transcriber')
+} catch {}
+
 const UPLOAD_DIR = path.join(__dirname, '..', 'data', 'content', 'uploads')
 
 const ALLOWED_EXTENSIONS = new Set([
@@ -156,9 +161,24 @@ class UploadProcessor extends EventEmitter {
         created_at: Date.now()
       })
 
-      // 7. Index in Meilisearch
+      // 7. Transcribe audio/video
+      let transcript = ''
+      if (transcriber && (contentType === 'audio' || contentType === 'video')) {
+        try {
+          job.status = 'transcribing'
+          this.emit('status', job)
+          transcript = await transcriber.transcribe(destPath, contentType)
+          if (transcript) {
+            this.docsDb.db.prepare('UPDATE documents SET transcript = ? WHERE id = ?').run(transcript, docId)
+          }
+        } catch (err) {
+          console.warn('[upload] Transcription failed for %s: %s', docId, err.message)
+        }
+      }
+
+      // 8. Index in Meilisearch
       try {
-        await this.searchIndex.addDocuments([{
+        const searchDoc = {
           id: docId,
           title: path.basename(job.originalName, ext),
           file_name: job.originalName,
@@ -168,12 +188,14 @@ class UploadProcessor extends EventEmitter {
           created_at: Date.now(),
           hasContent: true,
           hasThumbnail: false
-        }])
+        }
+        if (transcript) searchDoc.transcript = transcript
+        await this.searchIndex.addDocuments([searchDoc])
       } catch (err) {
         console.warn('[upload] Meilisearch indexing failed:', err.message)
       }
 
-      // 8. Publish to Hyperdrive
+      // 9. Publish to Hyperdrive
       if (this.archiver && this.archiver.localDrive) {
         try {
           const driveKey = this.archiver.localDrive.key.toString('hex')
@@ -185,13 +207,13 @@ class UploadProcessor extends EventEmitter {
         }
       }
 
-      // 9. Mark complete
+      // 10. Mark complete
       job.status = 'complete'
       job.documentId = docId
       this.emit('status', job)
       console.log('[upload] Processed %s → %s', job.originalName, docId)
 
-      // 10. Periodic torrent regeneration
+      // 11. Periodic torrent regeneration
       this._uploadsSinceLastTorrent++
       if (this._uploadsSinceLastTorrent >= 10 && this.torrentManager) {
         this._uploadsSinceLastTorrent = 0

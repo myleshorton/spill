@@ -21,11 +21,12 @@ const SearchDiscoveryAdapter = require('./lib/adapters/search-discovery')
 const DocumentsDatabase = require('../archiver/lib/documents-db')
 const SearchIndex = require('../archiver/lib/meilisearch')
 
-let textExtract, thumbnails, fileUtils
+let textExtract, thumbnails, fileUtils, transcriber
 try {
   textExtract = require('../ingest/lib/text-extract')
   thumbnails = require('../ingest/lib/thumbnails')
   fileUtils = require('../ingest/lib/file-utils')
+  transcriber = require('../ingest/lib/transcriber')
 } catch (err) {
   console.warn('[crawler] Optional ingest modules not available: %s', err.message)
 }
@@ -170,6 +171,7 @@ async function cmdRun (opts) {
     textExtract,
     thumbnails,
     fileUtils,
+    transcriber,
     options: {
       minRelevance: opts.minRelevance,
       dryRun: opts.dryRun,

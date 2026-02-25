@@ -17,7 +17,9 @@ RUN cd archiver && npm install --production
 
 COPY archiver/ ./archiver/
 
-# Copy ingest pipeline (for upload text extraction / thumbnailing)
+# Copy ingest pipeline (for upload text extraction / thumbnailing / transcription)
+COPY ingest/package*.json ./ingest/
+RUN cd ingest && npm install --production
 COPY ingest/ ./ingest/
 
 # If an override archive-config.json is mounted at runtime, the archiver reads it;

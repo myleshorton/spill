@@ -17,13 +17,14 @@ const SOURCE_CATEGORY_MAP = {
 }
 
 class ContentProcessor {
-  constructor ({ docsDb, searchIndex, relevanceScorer, textExtract, thumbnails, fileUtils, options = {} }) {
+  constructor ({ docsDb, searchIndex, relevanceScorer, textExtract, thumbnails, fileUtils, transcriber, options = {} }) {
     this.docsDb = docsDb
     this.searchIndex = searchIndex
     this.scorer = relevanceScorer
     this.textExtract = textExtract
     this.thumbnails = thumbnails
     this.fileUtils = fileUtils
+    this.transcriber = transcriber
     this.minRelevance = options.minRelevance || 0.3
     this.autoIndexThreshold = options.autoIndexThreshold || 0.5
     this.dryRun = options.dryRun || false
@@ -67,7 +68,21 @@ class ContentProcessor {
       } catch {}
     }
 
-    // 4. Extract metadata from HTML
+    // 4. Transcribe audio/video
+    let transcript = ''
+    const isAudio = (contentType || '').includes('audio')
+    const isVideo = (contentType || '').includes('video')
+    if ((isAudio || isVideo) && this.transcriber) {
+      try {
+        const avType = isVideo ? 'video' : 'audio'
+        transcript = await this.transcriber.transcribe(filePath, avType)
+        if (transcript && !text) text = transcript
+      } catch (err) {
+        console.warn('[processor] Transcription failed for %s: %s', path.basename(filePath), err.message)
+      }
+    }
+
+    // 5. Extract metadata from HTML
     let title = ''
     let meta = {}
     if (isHtml) {
@@ -76,7 +91,7 @@ class ContentProcessor {
       meta = htmlMeta
     }
 
-    // 5. Score relevance
+    // 6. Score relevance
     const url = finalUrl || urlRow.url
     const relevanceScore = this.scorer.score(text, url, {
       documentType: this._inferDocumentType(urlRow.source, contentType),
@@ -92,7 +107,7 @@ class ContentProcessor {
       return { dryRun: true, score: relevanceScore, title: title || url, url }
     }
 
-    // 6. Determine file type and category
+    // 7. Determine file type and category
     const ext = path.extname(filePath)
     let fileType = { contentType: 'pdf', category: null }
     if (isHtml) {
@@ -103,14 +118,14 @@ class ContentProcessor {
 
     const category = SOURCE_CATEGORY_MAP[urlRow.source] || fileType.category || 'web_page'
 
-    // 7. Copy file to content directory
+    // 8. Copy file to content directory
     const docId = crypto.createHash('sha256').update(url + sha256).digest('hex').slice(0, 32)
     const destDir = path.join(this.contentDir, 'crawled', urlRow.source || 'generic')
     if (!fs.existsSync(destDir)) fs.mkdirSync(destDir, { recursive: true })
     const destFile = path.join(destDir, `${docId}${ext}`)
     fs.copyFileSync(filePath, destFile)
 
-    // 8. Generate thumbnail
+    // 9. Generate thumbnail
     let thumbPath = null
     if (this.thumbnails && (isPdf || fileType.contentType === 'image')) {
       const thumbDest = path.join(this.thumbDir, 'crawled', `${docId}.jpg`)
@@ -120,10 +135,10 @@ class ContentProcessor {
       } catch {}
     }
 
-    // 9. Determine collection
+    // 10. Determine collection
     const collectionId = this._getCollectionId(urlRow.source)
 
-    // 10. Build document
+    // 11. Build document
     const doc = {
       id: docId,
       title: title || path.basename(filePath, ext) || url,
@@ -136,6 +151,7 @@ class ContentProcessor {
       file_path: destFile,
       thumb_path: thumbPath,
       extracted_text: text.slice(0, 500000),
+      transcript: transcript || null,
       source_url: url,
       created_at: Date.now(),
       indexed_at: relevanceScore >= this.autoIndexThreshold ? Date.now() : null,
@@ -143,10 +159,10 @@ class ContentProcessor {
       sha256_hash: sha256,
     }
 
-    // 11. Insert into documents DB
+    // 12. Insert into documents DB
     this.docsDb.insert(doc)
 
-    // 12. Index in Meilisearch if above auto-index threshold
+    // 13. Index in Meilisearch if above auto-index threshold
     if (relevanceScore >= this.autoIndexThreshold && this.searchIndex) {
       try {
         await this.searchIndex.addDocuments([doc])

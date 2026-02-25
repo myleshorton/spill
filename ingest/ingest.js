@@ -15,6 +15,7 @@ const fs = require('fs')
 const DocumentsDatabase = require('../archiver/lib/documents-db')
 const { extractText, getPageCount } = require('./lib/text-extract')
 const { generateThumbnail } = require('./lib/thumbnails')
+const { transcribe } = require('./lib/transcriber')
 
 const args = parseArgs(process.argv.slice(2))
 const DB_PATH = args['db-path'] || path.join(__dirname, '..', 'archiver', 'data', 'documents.db')
@@ -49,7 +50,8 @@ async function main () {
   const stmt = db.db.prepare(`
     SELECT * FROM documents
     WHERE file_path IS NOT NULL
-      AND (extracted_text IS NULL OR thumb_path IS NULL)
+      AND (extracted_text IS NULL OR thumb_path IS NULL
+           OR (transcript IS NULL AND content_type IN ('audio', 'video')))
     ORDER BY data_set ASC, rowid ASC
     ${LIMIT > 0 ? `LIMIT ${LIMIT}` : ''}
   `)
@@ -58,14 +60,15 @@ async function main () {
 
   let processed = 0
   let textExtracted = 0
+  let transcribed = 0
   let thumbsGenerated = 0
   let errors = 0
 
   for (const doc of pending) {
     processed++
     if (processed % 100 === 0 || processed === 1) {
-      console.log('[ingest] Progress: %d/%d (text: %d, thumbs: %d, errors: %d)',
-        processed, pending.length, textExtracted, thumbsGenerated, errors)
+      console.log('[ingest] Progress: %d/%d (text: %d, transcribed: %d, thumbs: %d, errors: %d)',
+        processed, pending.length, textExtracted, transcribed, thumbsGenerated, errors)
     }
 
     const updates = {}
@@ -80,6 +83,20 @@ async function main () {
         }
       } catch (err) {
         console.error('[ingest] Text extraction failed for %s: %s', doc.id, err.message)
+        errors++
+      }
+    }
+
+    // Transcribe audio/video if needed
+    if (!doc.transcript && (doc.content_type === 'audio' || doc.content_type === 'video') && doc.file_path && fs.existsSync(doc.file_path)) {
+      try {
+        const transcript = await transcribe(doc.file_path, doc.content_type)
+        if (transcript && transcript.length > 0) {
+          updates.transcript = transcript
+          transcribed++
+        }
+      } catch (err) {
+        console.error('[ingest] Transcription failed for %s: %s', doc.id, err.message)
         errors++
       }
     }
@@ -115,6 +132,7 @@ async function main () {
   console.log('\n[ingest] === Ingest Complete ===')
   console.log('[ingest] Processed: %d', processed)
   console.log('[ingest] Text extracted: %d', textExtracted)
+  console.log('[ingest] Transcribed: %d', transcribed)
   console.log('[ingest] Thumbnails generated: %d', thumbsGenerated)
   console.log('[ingest] Errors: %d', errors)
 
