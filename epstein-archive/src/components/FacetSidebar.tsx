@@ -3,7 +3,8 @@
 import { useCallback } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { ChevronDown } from 'lucide-react'
-import { dataSetName, formatNumber } from '@/lib/api'
+import { formatNumber } from '@/lib/api'
+import { siteConfig } from '@/config/site.config'
 import clsx from 'clsx'
 
 interface FacetSidebarProps {
@@ -12,27 +13,6 @@ interface FacetSidebarProps {
     contentType?: Record<string, number>
     category?: Record<string, number>
   }
-}
-
-const CONTENT_TYPE_LABELS: Record<string, string> = {
-  pdf: 'PDF Documents',
-  image: 'Images',
-  video: 'Videos',
-  audio: 'Audio',
-  email: 'Emails',
-  spreadsheet: 'Spreadsheets',
-}
-
-const CATEGORY_LABELS: Record<string, string> = {
-  court_record: 'Court Records',
-  fbi_report: 'FBI Reports',
-  email: 'Email Correspondence',
-  financial: 'Financial Records',
-  flight_log: 'Flight Logs',
-  photo: 'Photographs',
-  video: 'Video Evidence',
-  deposition: 'Depositions',
-  police_report: 'Police Reports',
 }
 
 export default function FacetSidebar({ facets }: FacetSidebarProps) {
@@ -63,7 +43,7 @@ export default function FacetSidebar({ facets }: FacetSidebarProps) {
             .map(([type, count]) => (
               <FacetItem
                 key={type}
-                label={CONTENT_TYPE_LABELS[type] || type}
+                label={siteConfig.contentTypes[type] || type}
                 count={count}
                 active={activeContentType === type}
                 onClick={() => setFilter('type', activeContentType === type ? null : type)}
@@ -95,7 +75,7 @@ export default function FacetSidebar({ facets }: FacetSidebarProps) {
             .map(([cat, count]) => (
               <FacetItem
                 key={cat}
-                label={CATEGORY_LABELS[cat] || cat}
+                label={siteConfig.categories[cat] || cat}
                 count={count}
                 active={activeCategory === cat}
                 onClick={() => setFilter('cat', activeCategory === cat ? null : cat)}

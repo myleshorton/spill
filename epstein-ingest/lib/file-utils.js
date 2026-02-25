@@ -5,6 +5,10 @@ const path = require('path')
 const crypto = require('crypto')
 const fs = require('fs')
 
+const archiveConfig = JSON.parse(
+  fs.readFileSync(path.join(__dirname, '..', '..', 'archiver', 'archive-config.json'), 'utf8')
+)
+
 const EXTENSION_MAP = {
   // PDF
   '.pdf': { contentType: 'pdf', category: null },
@@ -65,32 +69,30 @@ function getFileSize (filePath) {
 }
 
 function categorizeByDataSet (dataSet, filePath) {
+  const rule = archiveConfig.categoryRules[String(dataSet)]
+
+  // No rule defined — no category
+  if (rule === undefined || rule === null) return null
+
+  // Simple string rule — fixed category
+  if (typeof rule === 'string') return rule
+
+  // Object rule — check match patterns and content type patterns
   const lower = filePath.toLowerCase()
-  const baseName = path.basename(lower)
 
-  if (dataSet >= 1 && dataSet <= 2) return 'fbi_report'
-  if (dataSet >= 3 && dataSet <= 4) return 'police_report'
-  if (dataSet === 5) return 'court_record'
-  if (dataSet === 6) return 'deposition'
-  if (dataSet === 7) return 'court_record'
-  if (dataSet === 8) return 'court_record'
-  if (dataSet === 9) {
-    if (lower.includes('email') || lower.includes('.eml') || lower.includes('.msg')) return 'email'
-    return 'court_record'
+  if (rule.match) {
+    for (const [pattern, category] of Object.entries(rule.match)) {
+      const parts = pattern.split('|')
+      if (parts.some((p) => lower.includes(p))) return category
+    }
   }
-  if (dataSet === 10) {
+
+  if (rule.matchContentType) {
     const { contentType } = detectFileType(filePath)
-    if (contentType === 'image') return 'photo'
-    if (contentType === 'video') return 'video'
-    return null
+    if (rule.matchContentType[contentType]) return rule.matchContentType[contentType]
   }
-  if (dataSet === 11) {
-    if (lower.includes('flight') || lower.includes('manifest')) return 'flight_log'
-    return 'financial'
-  }
-  if (dataSet === 12) return null
 
-  return null
+  return rule.default !== undefined ? rule.default : null
 }
 
 function walkDir (dir) {

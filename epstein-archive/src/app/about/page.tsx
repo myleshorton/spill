@@ -1,8 +1,16 @@
 import Header from '@/components/Header'
 import Footer from '@/components/Footer'
 import { Shield, Database, Search, Globe, FileText, Lock } from 'lucide-react'
+import { siteConfig } from '@/config/site.config'
+
+const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
+  Search, Shield, FileText, Globe,
+}
 
 export default function AboutPage() {
+  const { about } = siteConfig
+  const dsCount = String(siteConfig.dataSets.length)
+
   return (
     <div className="flex min-h-screen flex-col">
       <Header />
@@ -14,42 +22,26 @@ export default function AboutPage() {
 
         <div className="mt-8 space-y-8">
           <Section>
-            <p className="text-spill-text-secondary leading-relaxed">
-              In 2025, the U.S. Department of Justice released over 370 gigabytes of documents related to the
-              investigation of Jeffrey Epstein. These 12 data sets contain approximately 1.4 million files
-              spanning 3.5 million pages — FBI interview summaries, police reports, emails, financial records,
-              flight manifests, seized photographs and videos, and more.
-            </p>
-            <p className="mt-4 text-spill-text-secondary leading-relaxed">
-              This archive exists to make these public records genuinely accessible. Raw document dumps are
-              functionally opaque to most people. We&apos;ve indexed every file, applied OCR to scanned documents,
-              and built full-text search across the entire collection. Every document is browsable, searchable,
-              and downloadable.
-            </p>
+            {about.intro.map((paragraph, i) => (
+              <p key={i} className={`${i > 0 ? 'mt-4 ' : ''}text-spill-text-secondary leading-relaxed`}>
+                {paragraph.replace('{count}', dsCount)}
+              </p>
+            ))}
           </Section>
 
           <Section title="How It Works" icon={Database}>
             <div className="grid gap-4 sm:grid-cols-2">
-              <FeatureCard
-                icon={Search}
-                title="Full-Text Search"
-                description="Every document is OCR'd and indexed with Meilisearch. Search across 3.5 million pages with typo tolerance, faceted filtering by data set and file type, and sub-200ms results."
-              />
-              <FeatureCard
-                icon={Shield}
-                title="Censorship Resistant"
-                description="The archive is distributed via the Spill P2P network using Hyperswarm. If this server goes offline, other peer nodes retain full copies of the data."
-              />
-              <FeatureCard
-                icon={FileText}
-                title="Document Viewer"
-                description="PDFs render inline with PDF.js. Images, videos, and audio files play natively. Extracted text is available for every document for accessibility and copy-paste."
-              />
-              <FeatureCard
-                icon={Globe}
-                title="Open Source"
-                description="The archive software, ingest pipeline, and P2P distribution layer are all open source. Anyone can run their own mirror or contribute improvements."
-              />
+              {about.features.map((feature) => {
+                const Icon = ICON_MAP[feature.iconName]
+                return (
+                  <FeatureCard
+                    key={feature.title}
+                    icon={Icon}
+                    title={feature.title}
+                    description={feature.description}
+                  />
+                )
+              })}
             </div>
           </Section>
 
@@ -59,67 +51,38 @@ export default function AboutPage() {
               The raw data sets are available from:
             </p>
             <ul className="mt-3 space-y-1.5 text-sm text-spill-text-secondary">
-              <li className="flex items-center gap-2">
-                <span className="h-1 w-1 rounded-full bg-spill-accent" />
-                U.S. Department of Justice official release
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="h-1 w-1 rounded-full bg-spill-accent" />
-                Internet Archive community mirrors
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="h-1 w-1 rounded-full bg-spill-accent" />
-                BitTorrent community distribution
-              </li>
+              {about.dataSources.map((source) => (
+                <li key={source} className="flex items-center gap-2">
+                  <span className="h-1 w-1 rounded-full bg-spill-accent" />
+                  {source}
+                </li>
+              ))}
             </ul>
           </Section>
 
           <Section title="Processing Pipeline" icon={FileText}>
             <div className="space-y-3">
-              <Step n={1} title="Download" description="All 12 data sets downloaded via BitTorrent and verified against published checksums." />
-              <Step n={2} title="Catalog" description="Every file cataloged by type, size, and data set membership. File types detected by extension and magic bytes." />
-              <Step n={3} title="Text Extraction" description="Text-layer PDFs processed with PyMuPDF. Scanned documents OCR'd with Tesseract. Emails and spreadsheets parsed for content." />
-              <Step n={4} title="Thumbnail Generation" description="PDF pages, images, and video frames thumbnailed for visual browsing." />
-              <Step n={5} title="Indexing" description="All extracted text indexed in Meilisearch with filterable facets for data set, file type, and category." />
-              <Step n={6} title="P2P Distribution" description="Files published to Hyperdrives and announced on the Spill network for decentralized replication." />
+              {about.pipeline.map((step, i) => (
+                <Step key={step.title} n={i + 1} title={step.title} description={step.description.replace('{count}', dsCount)} />
+              ))}
             </div>
           </Section>
 
           <Section title="Privacy & Security" icon={Lock}>
             <p className="text-spill-text-secondary leading-relaxed">
-              This archive does not require an account, does not set tracking cookies, and does not log
-              search queries. No analytics service is used. The site is served over HTTPS with a Let&apos;s Encrypt
-              certificate. The P2P distribution layer uses end-to-end encrypted connections via the Noise protocol.
+              {about.privacy}
             </p>
           </Section>
 
           <Section title="Technical Stack">
             <div className="rounded-lg border border-spill-divider bg-spill-surface p-4">
               <div className="grid gap-y-2 text-sm sm:grid-cols-2">
-                <div>
-                  <span className="text-spill-text-secondary">Frontend:</span>{' '}
-                  <span className="text-spill-text-primary">Next.js + Tailwind CSS</span>
-                </div>
-                <div>
-                  <span className="text-spill-text-secondary">Search:</span>{' '}
-                  <span className="text-spill-text-primary">Meilisearch</span>
-                </div>
-                <div>
-                  <span className="text-spill-text-secondary">Database:</span>{' '}
-                  <span className="text-spill-text-primary">SQLite</span>
-                </div>
-                <div>
-                  <span className="text-spill-text-secondary">P2P:</span>{' '}
-                  <span className="text-spill-text-primary">Hyperswarm + Hyperdrive</span>
-                </div>
-                <div>
-                  <span className="text-spill-text-secondary">OCR:</span>{' '}
-                  <span className="text-spill-text-primary">Tesseract + PyMuPDF</span>
-                </div>
-                <div>
-                  <span className="text-spill-text-secondary">Hosting:</span>{' '}
-                  <span className="text-spill-text-primary">Hetzner Dedicated</span>
-                </div>
+                {about.techStack.map((item) => (
+                  <div key={item.label}>
+                    <span className="text-spill-text-secondary">{item.label}:</span>{' '}
+                    <span className="text-spill-text-primary">{item.value}</span>
+                  </div>
+                ))}
               </div>
             </div>
           </Section>

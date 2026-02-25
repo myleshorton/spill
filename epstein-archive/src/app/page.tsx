@@ -1,22 +1,16 @@
 'use client'
 
-import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { ArrowRight, FileText, Image, Video, Mail, DollarSign, Plane } from 'lucide-react'
 import Header from '@/components/Header'
 import Footer from '@/components/Footer'
 import SearchBar from '@/components/SearchBar'
 import StatsBar from '@/components/StatsBar'
-import { getStats, type ArchiveStats, formatNumber } from '@/lib/api'
+import { siteConfig } from '@/config/site.config'
 
-const FEATURED_SEARCHES = [
-  { label: 'Flight Logs', query: 'flight log manifest', icon: Plane },
-  { label: 'Financial Records', query: 'bank account wire transfer', icon: DollarSign },
-  { label: 'Email Correspondence', query: 'email correspondence', icon: Mail },
-  { label: 'FBI Interviews', query: 'FBI interview summary', icon: FileText },
-  { label: 'Photographs', query: 'photograph image seized', icon: Image },
-  { label: 'Video Evidence', query: 'video recording', icon: Video },
-]
+const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
+  Plane, DollarSign, Mail, FileText, Image, Video,
+}
 
 export default function HomePage() {
   return (
@@ -38,13 +32,12 @@ export default function HomePage() {
               </div>
 
               <h1 className="font-headline text-4xl font-bold leading-tight tracking-tight text-spill-text-primary sm:text-5xl lg:text-6xl">
-                Epstein Files
-                <span className="block text-spill-accent">Public Archive</span>
+                {siteConfig.hero.heading}
+                <span className="block text-spill-accent">{siteConfig.hero.headingAccent}</span>
               </h1>
 
               <p className="mx-auto mt-5 max-w-2xl text-lg leading-relaxed text-spill-text-secondary">
-                Searchable, censorship-resistant archive of the DOJ&apos;s Jeffrey Epstein document releases.
-                Court records, FBI reports, emails, financial documents, and seized media — all indexed and freely accessible.
+                {siteConfig.hero.description}
               </p>
             </div>
 
@@ -53,16 +46,19 @@ export default function HomePage() {
             </div>
 
             <div className="mt-6 flex flex-wrap items-center justify-center gap-2 animate-slide-up" style={{ animationDelay: '250ms' }}>
-              {FEATURED_SEARCHES.map((item) => (
-                <Link
-                  key={item.label}
-                  href={`/search?q=${encodeURIComponent(item.query)}`}
-                  className="flex items-center gap-1.5 rounded-full border border-spill-divider bg-spill-surface px-3 py-1.5 text-sm text-spill-text-secondary hover:border-spill-accent/30 hover:text-spill-accent transition-all"
-                >
-                  <item.icon className="h-3 w-3" />
-                  {item.label}
-                </Link>
-              ))}
+              {siteConfig.featuredSearches.map((item) => {
+                const Icon = ICON_MAP[item.iconName]
+                return (
+                  <Link
+                    key={item.label}
+                    href={`/search?q=${encodeURIComponent(item.query)}`}
+                    className="flex items-center gap-1.5 rounded-full border border-spill-divider bg-spill-surface px-3 py-1.5 text-sm text-spill-text-secondary hover:border-spill-accent/30 hover:text-spill-accent transition-all"
+                  >
+                    {Icon && <Icon className="h-3 w-3" />}
+                    {item.label}
+                  </Link>
+                )
+              })}
             </div>
           </div>
         </section>
@@ -72,12 +68,14 @@ export default function HomePage() {
         </section>
 
         <section className="mx-auto max-w-7xl px-4 pb-20 sm:px-6">
-          <h2 className="font-headline text-xl font-bold text-spill-text-primary">Browse by Data Set</h2>
-          <p className="mt-1 text-sm text-spill-text-secondary">12 data sets released by the DOJ, totaling ~370GB</p>
+          <h2 className="font-headline text-xl font-bold text-spill-text-primary">{siteConfig.dataSetsIntro.browseHeading}</h2>
+          <p className="mt-1 text-sm text-spill-text-secondary">
+            {siteConfig.dataSetsIntro.browseSummary.replace('{count}', String(siteConfig.dataSets.length))}
+          </p>
 
           <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {Array.from({ length: 12 }, (_, i) => i + 1).map((ds) => (
-              <DataSetCard key={ds} ds={ds} />
+            {siteConfig.dataSets.map((ds) => (
+              <DataSetCard key={ds.id} ds={ds} />
             ))}
           </div>
         </section>
@@ -85,13 +83,10 @@ export default function HomePage() {
         <section className="border-t border-spill-divider bg-spill-surface/30">
           <div className="mx-auto max-w-4xl px-4 py-16 text-center sm:px-6">
             <h2 className="font-headline text-2xl font-bold text-spill-text-primary">
-              Why This Archive Exists
+              {siteConfig.whySection.heading}
             </h2>
             <p className="mx-auto mt-4 max-w-2xl text-spill-text-secondary leading-relaxed">
-              In 2025, the Department of Justice released over 370GB of documents related to the Jeffrey Epstein investigation.
-              These are public records — yet their sheer volume makes them difficult to navigate.
-              This archive indexes every document, applies OCR to scanned pages, and makes everything searchable.
-              It&apos;s distributed via P2P so no single entity can take it offline.
+              {siteConfig.whySection.body}
             </p>
             <Link
               href="/about"
@@ -108,39 +103,18 @@ export default function HomePage() {
   )
 }
 
-function DataSetCard({ ds }: { ds: number }) {
-  const descriptions: Record<number, string> = {
-    1: 'FBI Interview Summaries (Part 1)',
-    2: 'FBI Interview Summaries (Part 2)',
-    3: 'Palm Beach Police Reports (Part 1)',
-    4: 'Palm Beach Police Reports (Part 2)',
-    5: 'Grand Jury Materials',
-    6: 'Victim Statements & Depositions',
-    7: 'Search Warrants & Seizure Records',
-    8: 'Prosecution Memoranda',
-    9: 'Emails & DOJ Correspondence',
-    10: 'Seized Images & Videos',
-    11: 'Financial Records & Flight Logs',
-    12: 'Supplemental Productions',
-  }
-
-  const sizes: Record<number, string> = {
-    1: '~2.5GB', 2: '~2.1GB', 3: '~3.2GB', 4: '~2.8GB',
-    5: '~1.5GB', 6: '~0.8GB', 7: '~0.4GB', 8: '~0.3GB',
-    9: '~181GB', 10: '~78.6GB', 11: '~25.5GB', 12: '~114MB',
-  }
-
+function DataSetCard({ ds }: { ds: typeof siteConfig.dataSets[number] }) {
   return (
     <Link
-      href={`/datasets/${ds}`}
+      href={`/datasets/${ds.id}`}
       className="group rounded-lg border border-spill-divider bg-spill-surface p-4 transition-all hover:border-spill-accent/30 hover:shadow-lg hover:shadow-spill-accent/5"
     >
       <div className="flex items-start justify-between">
-        <span className="font-mono text-xs font-bold text-spill-accent">DS {ds}</span>
-        <span className="rounded bg-spill-surface-light px-1.5 py-0.5 text-[10px] text-spill-text-secondary">{sizes[ds]}</span>
+        <span className="font-mono text-xs font-bold text-spill-accent">DS {ds.id}</span>
+        <span className="rounded bg-spill-surface-light px-1.5 py-0.5 text-[10px] text-spill-text-secondary">{ds.size}</span>
       </div>
       <p className="mt-2 font-headline text-sm font-medium text-spill-text-primary group-hover:text-spill-accent transition-colors">
-        {descriptions[ds]}
+        {ds.shortName}
       </p>
       <div className="mt-3 flex items-center gap-1 text-xs text-spill-text-secondary/60 group-hover:text-spill-accent/60 transition-colors">
         Browse files <ArrowRight className="h-3 w-3" />

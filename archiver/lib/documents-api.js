@@ -1,10 +1,14 @@
 /**
- * Express routes for the Epstein document archive API.
+ * Express routes for the document archive API.
  * Sits alongside the existing /api/videos routes.
  */
 const express = require('express')
 const path = require('path')
 const fs = require('fs')
+
+const archiveConfig = JSON.parse(
+  fs.readFileSync(path.join(__dirname, '..', 'archive-config.json'), 'utf8')
+)
 
 const MIME_TYPES = {
   '.pdf': 'application/pdf',
@@ -209,33 +213,13 @@ function createDocumentsRouter (docsDb, searchIndex, archiver) {
   // Data set listing
   router.get('/datasets', (req, res) => {
     const stats = docsDb.stats()
-    const datasets = []
-
-    const descriptions = {
-      1: 'FBI Interview Summaries (Part 1)',
-      2: 'FBI Interview Summaries (Part 2)',
-      3: 'Palm Beach Police Reports (Part 1)',
-      4: 'Palm Beach Police Reports (Part 2)',
-      5: 'Grand Jury Materials',
-      6: 'Victim Statements & Depositions',
-      7: 'Search Warrants & Seizure Records',
-      8: 'Prosecution Memoranda',
-      9: 'Emails & DOJ Correspondence',
-      10: 'Seized Images & Videos',
-      11: 'Financial Records & Flight Logs',
-      12: 'Supplemental Productions'
-    }
-
-    for (let i = 1; i <= 12; i++) {
-      datasets.push({
-        id: i,
-        name: `Data Set ${i}`,
-        description: descriptions[i] || '',
-        fileCount: stats.byDataSet[String(i)] || 0,
-        totalSize: 0
-      })
-    }
-
+    const datasets = archiveConfig.dataSets.map((ds) => ({
+      id: ds.id,
+      name: ds.name,
+      description: ds.description,
+      fileCount: stats.byDataSet[String(ds.id)] || 0,
+      totalSize: 0
+    }))
     res.json(datasets)
   })
 

@@ -140,39 +140,3 @@ export function contentTypeIcon(type: string): string {
     default: return 'file'
   }
 }
-
-export function dataSetName(ds: number): string {
-  const names: Record<number, string> = {
-    1: 'DS 1 — FBI Interview Summaries (Part 1)',
-    2: 'DS 2 — FBI Interview Summaries (Part 2)',
-    3: 'DS 3 — Palm Beach Police Reports (Part 1)',
-    4: 'DS 4 — Palm Beach Police Reports (Part 2)',
-    5: 'DS 5 — Grand Jury Materials',
-    6: 'DS 6 — Victim Statements & Depositions',
-    7: 'DS 7 — Search Warrants & Seizure Records',
-    8: 'DS 8 — Prosecution Memoranda',
-    9: 'DS 9 — Emails & DOJ Correspondence',
-    10: 'DS 10 — Seized Images & Videos',
-    11: 'DS 11 — Financial Records & Flight Logs',
-    12: 'DS 12 — Supplemental Productions',
-  }
-  return names[ds] || `Data Set ${ds}`
-}
-
-export function dataSetDescription(ds: number): string {
-  const desc: Record<number, string> = {
-    1: 'FBI interview summaries from the Palm Beach investigation (2005-2008). Witness statements and investigative notes.',
-    2: 'Continuation of FBI interview summaries. Additional witness accounts and cross-references.',
-    3: 'Palm Beach Police Department reports from the initial investigation. Incident reports, officer statements.',
-    4: 'Additional Palm Beach police documentation. Surveillance records and patrol reports.',
-    5: 'Grand jury materials including testimony transcripts and evidentiary exhibits.',
-    6: 'Victim impact statements, depositions, and related court filings.',
-    7: 'Search warrant applications, execution records, and property seizure inventories.',
-    8: 'Internal DOJ prosecution memoranda, case strategy documents, and legal analysis.',
-    9: 'Email correspondence between DOJ officials, the non-prosecution agreement, and related communications. ~181GB.',
-    10: 'Approximately 180,000 images and 2,000 videos seized from Epstein properties. ~78.6GB.',
-    11: 'Financial ledgers, bank records, flight manifests (including Lolita Express logs), and property seizure records. ~25.5GB.',
-    12: 'Late-produced supplemental items, errata, and additional materials. ~114MB.',
-  }
-  return desc[ds] || ''
-}

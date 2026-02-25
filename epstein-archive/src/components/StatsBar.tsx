@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { FileText, HardDrive, Users, Database } from 'lucide-react'
 import { getStats, formatNumber, formatFileSize, type ArchiveStats } from '@/lib/api'
+import { siteConfig } from '@/config/site.config'
 
 export default function StatsBar() {
   const [stats, setStats] = useState<ArchiveStats | null>(null)
@@ -16,7 +17,7 @@ export default function StatsBar() {
   const items = [
     { icon: FileText, label: 'Documents', value: formatNumber(stats.totalDocuments) },
     { icon: HardDrive, label: 'Archive Size', value: formatFileSize(stats.totalSize) },
-    { icon: Database, label: 'Data Sets', value: '12' },
+    { icon: Database, label: 'Data Sets', value: String(siteConfig.dataSets.length) },
     { icon: Users, label: 'P2P Peers', value: String(stats.peerCount) },
   ]
 

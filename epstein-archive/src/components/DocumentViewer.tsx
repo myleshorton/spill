@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react'
 import { Download, ExternalLink, Copy, Check, ChevronLeft } from 'lucide-react'
 import Link from 'next/link'
-import { type Document, contentUrl, getDocumentText, formatFileSize, dataSetName } from '@/lib/api'
+import { type Document, contentUrl, getDocumentText, formatFileSize } from '@/lib/api'
+import { siteConfig } from '@/config/site.config'
 
 interface DocumentViewerProps {
   doc: Document
@@ -52,7 +53,7 @@ export default function DocumentViewer({ doc }: DocumentViewerProps) {
               {doc.contentType}
             </span>
             <span className="rounded bg-spill-surface-light px-2 py-0.5 text-xs text-spill-text-secondary">
-              {dataSetName(doc.dataSet)}
+              {siteConfig.dataSets.find((d) => d.id === doc.dataSet)?.name ?? `Data Set ${doc.dataSet}`}
             </span>
             {doc.pageCount && (
               <span className="text-xs text-spill-text-secondary">
@@ -124,7 +125,7 @@ export default function DocumentViewer({ doc }: DocumentViewerProps) {
                 className="flex w-full items-center justify-center gap-2 rounded-lg border border-spill-divider bg-spill-surface px-4 py-2.5 text-sm text-spill-text-secondary hover:text-spill-text-primary transition-colors"
               >
                 <ExternalLink className="h-4 w-4" />
-                View on DOJ Site
+                {siteConfig.documentViewer.sourceLabel}
               </a>
             )}
           </div>

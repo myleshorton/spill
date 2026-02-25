@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { Shield } from 'lucide-react'
+import { siteConfig } from '@/config/site.config'
 
 export default function Footer() {
   return (
@@ -10,11 +11,11 @@ export default function Footer() {
             <div className="flex items-center gap-2">
               <Shield className="h-4 w-4 text-spill-accent" />
               <span className="font-headline text-sm font-semibold text-spill-text-primary">
-                Censorship-Resistant
+                {siteConfig.footer.tagline}
               </span>
             </div>
             <p className="mt-2 text-xs leading-relaxed text-spill-text-secondary">
-              This archive is distributed via the Spill P2P network. Even if this server goes down, the data persists across peer nodes worldwide.
+              {siteConfig.footer.disclaimer}
             </p>
           </div>
 
@@ -34,17 +35,19 @@ export default function Footer() {
               Sources
             </h4>
             <nav className="mt-2 flex flex-col gap-1">
-              <a href="https://www.justice.gov/" target="_blank" rel="noopener" className="text-sm text-spill-text-secondary hover:text-spill-accent transition-colors">DOJ Official Release</a>
-              <a href="https://archive.org/" target="_blank" rel="noopener" className="text-sm text-spill-text-secondary hover:text-spill-accent transition-colors">Internet Archive Mirror</a>
+              {siteConfig.footer.sourceLinks.map((link) => (
+                <a key={link.url} href={link.url} target="_blank" rel="noopener" className="text-sm text-spill-text-secondary hover:text-spill-accent transition-colors">
+                  {link.label}
+                </a>
+              ))}
             </nav>
           </div>
         </div>
 
         <div className="mt-8 border-t border-spill-divider pt-6 text-center">
           <p className="text-xs text-spill-text-secondary/60">
-            All documents in this archive are public records released by the U.S. Department of Justice.
-            This is a community-operated transparency project. Powered by{' '}
-            <a href="https://github.com/myleshorton/spill" target="_blank" rel="noopener" className="text-spill-accent/70 hover:text-spill-accent">
+            {siteConfig.footer.creditHtml} Powered by{' '}
+            <a href={siteConfig.links.github} target="_blank" rel="noopener" className="text-spill-accent/70 hover:text-spill-accent">
               Spill P2P
             </a>.
           </p>

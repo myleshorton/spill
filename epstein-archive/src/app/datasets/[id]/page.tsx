@@ -5,7 +5,8 @@ import { useParams } from 'next/navigation'
 import Header from '@/components/Header'
 import Footer from '@/components/Footer'
 import DocumentGrid from '@/components/DocumentGrid'
-import { listDocuments, type Document, dataSetName, dataSetDescription, formatNumber } from '@/lib/api'
+import { listDocuments, type Document, formatNumber } from '@/lib/api'
+import { siteConfig } from '@/config/site.config'
 import { Loader2, ChevronLeft } from 'lucide-react'
 import Link from 'next/link'
 
@@ -17,6 +18,8 @@ export default function DataSetDetailPage() {
   const [loading, setLoading] = useState(true)
   const [offset, setOffset] = useState(0)
   const limit = 50
+
+  const dsConfig = siteConfig.dataSets.find((d) => d.id === dsId)
 
   useEffect(() => {
     setLoading(true)
@@ -54,11 +57,11 @@ export default function DataSetDetailPage() {
               {dsId}
             </span>
             <h1 className="font-headline text-2xl font-bold text-spill-text-primary">
-              {dataSetName(dsId).replace(/^DS \d+ — /, '')}
+              {dsConfig?.name ?? `Data Set ${dsId}`}
             </h1>
           </div>
           <p className="mt-2 max-w-3xl text-spill-text-secondary">
-            {dataSetDescription(dsId)}
+            {dsConfig?.description ?? ''}
           </p>
           <p className="mt-2 text-sm text-spill-text-secondary/60">
             {formatNumber(total)} files in this data set

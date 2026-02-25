@@ -4,6 +4,7 @@ import { Suspense, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Search, Menu, X, Database, FileText, Info } from 'lucide-react'
+import { siteConfig } from '@/config/site.config'
 
 function HeaderSearch() {
   const router = useRouter()
@@ -24,7 +25,7 @@ function HeaderSearch() {
         type="text"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
-        placeholder="Search documents, names, emails, flight logs..."
+        placeholder={siteConfig.search.placeholderSmall}
         className="w-full rounded-lg border border-spill-divider bg-spill-surface py-2 pl-10 pr-4 font-body text-sm text-spill-text-primary placeholder:text-spill-text-secondary/60 focus:border-spill-accent/50 focus:outline-none focus:ring-1 focus:ring-spill-accent/30 transition-colors"
       />
     </form>
@@ -43,10 +44,10 @@ export default function Header() {
           </div>
           <div className="hidden sm:block">
             <span className="font-headline text-sm font-semibold tracking-tight text-spill-text-primary">
-              Epstein Files
+              {siteConfig.name}
             </span>
             <span className="ml-1.5 rounded bg-spill-accent/10 px-1.5 py-0.5 font-mono text-[10px] font-medium text-spill-accent">
-              ARCHIVE
+              {siteConfig.badge}
             </span>
           </div>
         </Link>
@@ -56,7 +57,7 @@ export default function Header() {
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-spill-text-secondary" />
             <input
               type="text"
-              placeholder="Search documents, names, emails, flight logs..."
+              placeholder={siteConfig.search.placeholderSmall}
               className="w-full rounded-lg border border-spill-divider bg-spill-surface py-2 pl-10 pr-4 font-body text-sm text-spill-text-primary placeholder:text-spill-text-secondary/60"
               readOnly
             />
@@ -81,7 +82,7 @@ export default function Header() {
             About
           </Link>
           <a
-            href="https://github.com/myleshorton/spill"
+            href={siteConfig.links.github}
             target="_blank"
             rel="noopener"
             className="ml-1 rounded-md px-3 py-1.5 text-sm text-spill-text-secondary hover:bg-spill-surface hover:text-spill-text-primary transition-colors"

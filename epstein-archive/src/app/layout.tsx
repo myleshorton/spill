@@ -1,12 +1,13 @@
 import type { Metadata } from 'next'
+import { siteConfig } from '@/config/site.config'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'Epstein Files Archive — Public DOJ Document Repository',
-  description: 'Searchable, censorship-resistant archive of 370GB+ of Jeffrey Epstein DOJ document releases. Court records, FBI reports, emails, financial documents, and more — distributed via P2P.',
+  title: siteConfig.meta.title,
+  description: siteConfig.meta.description,
   openGraph: {
-    title: 'Epstein Files Archive',
-    description: 'Searchable public archive of DOJ Epstein document releases. 1.4M+ files, 3.5M+ pages.',
+    title: siteConfig.meta.ogTitle,
+    description: siteConfig.meta.ogDescription,
     type: 'website',
   },
 }

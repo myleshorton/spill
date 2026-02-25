@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Search, ArrowRight, Loader2 } from 'lucide-react'
 import { useDebounce } from '@/lib/hooks'
 import { searchDocuments, type Document } from '@/lib/api'
+import { siteConfig } from '@/config/site.config'
 
 interface SearchBarProps {
   large?: boolean
@@ -81,7 +82,7 @@ export default function SearchBar({ large, initialQuery = '', autoFocus }: Searc
           onChange={(e) => setQuery(e.target.value)}
           onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
           autoFocus={autoFocus}
-          placeholder="Search 1.4M+ files — names, places, dates, keywords..."
+          placeholder={siteConfig.search.placeholderLarge}
           className={`w-full border border-spill-divider bg-spill-surface font-body text-spill-text-primary placeholder:text-spill-text-secondary/50 focus:border-spill-accent/50 focus:outline-none focus:ring-1 focus:ring-spill-accent/30 transition-all ${inputSize}`}
         />
         {loading ? (
