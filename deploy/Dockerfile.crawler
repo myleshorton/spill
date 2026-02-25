@@ -1,0 +1,28 @@
+FROM node:20-slim
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+      poppler-utils \
+      tesseract-ocr \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Install archiver deps (for shared modules)
+COPY archiver/package*.json ./archiver/
+RUN cd archiver && npm ci --production
+
+# Install crawler deps
+COPY crawler/package*.json ./crawler/
+RUN cd crawler && npm ci --production
+
+# Copy ingest modules (text extraction, thumbnails, file utils)
+COPY ingest/ ./ingest/
+
+# Copy application code
+COPY archiver/ ./archiver/
+COPY crawler/ ./crawler/
+
+WORKDIR /app/crawler
+
+CMD ["node", "index.js", "run"]

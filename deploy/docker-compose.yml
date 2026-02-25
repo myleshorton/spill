@@ -78,6 +78,28 @@ services:
     networks:
       - internal
 
+  crawler:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.crawler
+    volumes:
+      - content-data:/data
+      - archiver-data:/app/archiver/data
+      - crawler-data:/app/crawler/data
+    environment:
+      - DOCS_DB_PATH=/app/archiver/data/documents.db
+      - CRAWL_DB_PATH=/app/crawler/data/crawl.db
+      - CONTENT_DIR=/data/content
+      - THUMB_DIR=/data/thumbnails
+      - MEILI_HOST=http://meilisearch:7700
+      - MEILI_API_KEY=${MEILI_API_KEY:-}
+      - DOMAIN=${DOMAIN:-localhost}
+    depends_on:
+      - meilisearch
+    restart: unless-stopped
+    networks:
+      - internal
+
   nginx:
     image: nginx:alpine
     ports:
@@ -106,6 +128,7 @@ volumes:
   content-data:
   meili-data:
   clamav-data:
+  crawler-data:
 
 networks:
   internal:

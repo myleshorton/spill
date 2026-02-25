@@ -37,6 +37,11 @@ export const siteConfig = {
     { id: 10, name: 'Seized Images & Videos', shortName: 'Seized Images & Videos', description: 'Approximately 180,000 images and 2,000 videos seized from Epstein properties. ~78.6GB.', size: '~78.6GB' },
     { id: 11, name: 'Financial Records & Flight Logs', shortName: 'Financial Records & Flight Logs', description: 'Financial ledgers, bank records, flight manifests (including Lolita Express logs), and property seizure records. ~25.5GB.', size: '~25.5GB' },
     { id: 12, name: 'Supplemental Productions', shortName: 'Supplemental Productions', description: 'Late-produced supplemental items, errata, and additional materials. ~114MB.', size: '~114MB' },
+    { id: 2001, name: 'Court Filings', shortName: 'Court Filings', description: 'Federal and state court documents from CourtListener, RECAP, and PACER — dockets, opinions, orders, and motions.', size: 'Ongoing' },
+    { id: 2002, name: 'News Coverage', shortName: 'News Coverage', description: 'Investigative journalism and news articles from major outlets covering the Epstein case.', size: 'Ongoing' },
+    { id: 2003, name: 'Government Records', shortName: 'Government Records', description: 'FBI vault releases, DOJ press statements, SEC filings, and other government documents.', size: 'Ongoing' },
+    { id: 2004, name: 'Web Archive', shortName: 'Web Archive', description: 'Archived web pages and documents from the Internet Archive and Wayback Machine.', size: 'Ongoing' },
+    { id: 2005, name: 'Search Discoveries', shortName: 'Search Discoveries', description: 'Additional content discovered via automated web search and crawling.', size: 'Ongoing' },
   ],
 
   dataSetsIntro: {
@@ -65,6 +70,10 @@ export const siteConfig = {
     video: 'Video Evidence',
     deposition: 'Depositions',
     police_report: 'Police Reports',
+    news_article: 'News Articles',
+    government_report: 'Government Reports',
+    web_archive: 'Web Archive',
+    web_page: 'Web Pages',
   } as Record<string, string>,
 
   contentTypes: {
@@ -74,6 +83,7 @@ export const siteConfig = {
     audio: 'Audio',
     email: 'Emails',
     spreadsheet: 'Spreadsheets',
+    html: 'Web Pages',
   } as Record<string, string>,
 
   about: {

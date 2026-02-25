@@ -1,0 +1,46 @@
+{
+  "seedUrls": [
+    { "url": "https://www.courtlistener.com/docket/6250487/united-states-v-maxwell/", "adapter": "court", "priority": 1.0 },
+    { "url": "https://www.courtlistener.com/docket/4355835/giuffre-v-maxwell/", "adapter": "court", "priority": 1.0 },
+    { "url": "https://www.courtlistener.com/docket/17318376/united-states-v-maxwell/", "adapter": "court", "priority": 1.0 },
+    { "url": "https://www.courtlistener.com/docket/16363530/giuffre-v-prince-andrew-duke-of-york/", "adapter": "court", "priority": 0.9 },
+    { "url": "https://vault.fbi.gov/jeffrey-epstein", "adapter": "government", "priority": 1.0 },
+    { "url": "https://www.justice.gov/usao-sdny/united-states-v-jeffrey-epstein", "adapter": "government", "priority": 1.0 },
+    { "url": "https://www.justice.gov/usao-sdny/united-states-v-ghislaine-maxwell", "adapter": "government", "priority": 1.0 },
+    { "url": "https://archive.org/search?query=epstein+documents", "adapter": "archive-org", "priority": 0.9 },
+    { "url": "https://archive.org/search?query=ghislaine+maxwell+trial", "adapter": "archive-org", "priority": 0.8 },
+    { "url": "https://www.miamiherald.com/topics/jeffrey-epstein", "adapter": "news", "priority": 0.8 },
+    { "url": "https://www.thedailybeast.com/tag/jeffrey-epstein", "adapter": "news", "priority": 0.7 }
+  ],
+  "searchQueries": [
+    "Jeffrey Epstein court documents",
+    "Ghislaine Maxwell trial exhibits",
+    "Epstein flight logs",
+    "Epstein island visitor list",
+    "Jeffrey Epstein FOIA FBI",
+    "Giuffre v Maxwell court filings",
+    "Epstein non-prosecution agreement",
+    "Jeffrey Epstein DOJ document release",
+    "Epstein victim depositions",
+    "Ghislaine Maxwell sentencing documents"
+  ],
+  "keywords": {
+    "primary": ["epstein", "ghislaine maxwell", "jeffrey epstein"],
+    "secondary": ["les wexner", "jean-luc brunel", "prince andrew giuffre", "epstein island", "little st james", "giuffre v maxwell", "lolita express"],
+    "contextual": ["trafficking", "plea deal", "non-prosecution agreement", "southern district", "palm beach", "indictment", "sex trafficking", "minor victims"]
+  },
+  "entities": [
+    "Jeffrey Epstein", "Ghislaine Maxwell", "Virginia Giuffre", "Les Wexner",
+    "Jean-Luc Brunel", "Prince Andrew", "Alan Dershowitz", "Alexander Acosta",
+    "Sarah Kellen", "Nadia Marcinkova", "Bill Clinton", "Leon Black",
+    "Lesley Groff", "Alfredo Rodriguez", "Julie Brown", "Brad Edwards",
+    "Courtney Wild", "Annie Farmer", "Juan Alessi"
+  ],
+  "collections": [
+    { "id": 2001, "name": "Court Filings", "description": "Federal and state court documents from CourtListener/RECAP" },
+    { "id": 2002, "name": "News Coverage", "description": "Investigative journalism and news articles" },
+    { "id": 2003, "name": "Government Records", "description": "FBI, DOJ, SEC, and other government documents" },
+    { "id": 2004, "name": "Web Archive", "description": "Archived web pages and documents from archive.org" },
+    { "id": 2005, "name": "Search Discoveries", "description": "Content discovered via web search" }
+  ]
+}

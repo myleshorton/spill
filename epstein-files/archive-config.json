@@ -11,7 +11,12 @@
     { "id": 9, "name": "Data Set 9", "description": "Emails & DOJ Correspondence" },
     { "id": 10, "name": "Data Set 10", "description": "Seized Images & Videos" },
     { "id": 11, "name": "Data Set 11", "description": "Financial Records & Flight Logs" },
-    { "id": 12, "name": "Data Set 12", "description": "Supplemental Productions" }
+    { "id": 12, "name": "Data Set 12", "description": "Supplemental Productions" },
+    { "id": 2001, "name": "Court Filings", "description": "Federal and state court documents from CourtListener/RECAP" },
+    { "id": 2002, "name": "News Coverage", "description": "Investigative journalism and news articles" },
+    { "id": 2003, "name": "Government Records", "description": "FBI, DOJ, SEC, and other government documents" },
+    { "id": 2004, "name": "Web Archive", "description": "Archived web pages and documents from archive.org" },
+    { "id": 2005, "name": "Search Discoveries", "description": "Content discovered via web search" }
   ],
   "categoryRules": {
     "1": "fbi_report",

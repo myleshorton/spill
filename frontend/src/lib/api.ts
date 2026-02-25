@@ -143,6 +143,7 @@ export function formatFileSize(bytes: number): string {
 }
 
 export function formatNumber(n: number): string {
+  if (n == null || isNaN(n)) return '0'
   return n.toLocaleString('en-US')
 }
 
