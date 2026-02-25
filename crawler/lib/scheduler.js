@@ -25,7 +25,7 @@ class Scheduler {
     console.log('[scheduler] Starting crawler (concurrency=%d, depth=%d)', this.concurrency, this.maxDepth)
 
     while (this.running) {
-      const batch = this.crawlDb.nextBatch(this.batchSize)
+      const batch = this.crawlDb.nextBatch(this.batchSize, this.enabledAdapters)
       if (batch.length === 0) {
         console.log('[scheduler] Queue empty, waiting 30s...')
         await this._sleep(30000)
@@ -52,28 +52,17 @@ class Scheduler {
         continue
       }
 
-      // Filter by depth and enabled adapters
+      // Filter by depth
       const eligible = batch.filter(row => {
         if (row.depth > this.maxDepth) {
           this.crawlDb.markSkipped(row.id, 'max depth exceeded')
           this.skipped++
           return false
         }
-        if (this.enabledAdapters && row.source && !this.enabledAdapters.includes(row.source)) {
-          return false
-        }
         return true
       })
 
-      if (eligible.length === 0) {
-        // Mark remaining as skipped to avoid infinite loop
-        for (const row of batch) {
-          if (row.depth > this.maxDepth) continue
-          this.crawlDb.markSkipped(row.id, 'adapter not enabled')
-          this.skipped++
-        }
-        continue
-      }
+      if (eligible.length === 0) continue
 
       // Process batch with concurrency limiting and per-domain delays
       const tasks = eligible.map(row => this._limit(() => this._processUrl(row)))
@@ -160,7 +149,7 @@ class Scheduler {
       }
 
       if (result.dryRun) {
-        console.log('[dry-run] %.2f %s — %s', result.score, result.title.slice(0, 60), result.url)
+        console.log('[dry-run] ' + result.score.toFixed(2) + ' ' + result.title.slice(0, 60) + ' — ' + result.url)
         this.crawlDb.markProcessed(row.id, result.score)
         this.processed++
         return
@@ -170,7 +159,7 @@ class Scheduler {
         this.crawlDb.markProcessed(row.id, result.score)
         this.crawlDb.bumpDomainRelevance(row.domain)
         this.indexed++
-        console.log('[indexed] %.2f [%s] %s', result.score, result.category, result.title.slice(0, 60))
+        console.log('[indexed] ' + result.score.toFixed(2) + ' [' + result.category + '] ' + result.title.slice(0, 60))
       }
       this.processed++
     } catch (err) {

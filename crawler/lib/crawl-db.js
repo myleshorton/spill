@@ -128,7 +128,18 @@ class CrawlDatabase {
     return insert(urls)
   }
 
-  nextBatch (limit = 10) {
+  nextBatch (limit = 10, sources = null) {
+    if (sources && sources.length > 0) {
+      const placeholders = sources.map(() => '?').join(', ')
+      return this.db.prepare(`
+        SELECT u.*, d.last_fetched_at AS domain_last_fetched, d.min_delay_ms
+        FROM urls u
+        JOIN domains d ON u.domain = d.domain
+        WHERE u.status = 'pending' AND u.source IN (${placeholders})
+        ORDER BY u.priority DESC, u.created_at ASC
+        LIMIT ?
+      `).all(...sources, limit)
+    }
     return this.db.prepare(`
       SELECT u.*, d.last_fetched_at AS domain_last_fetched, d.min_delay_ms
       FROM urls u
