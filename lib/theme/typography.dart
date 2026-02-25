@@ -7,85 +7,85 @@ class SpillTypography {
 
   static TextTheme get textTheme {
     return TextTheme(
-      displayLarge: GoogleFonts.inter(
-        fontSize: 48,
+      displayLarge: GoogleFonts.sora(
+        fontSize: 52,
         fontWeight: FontWeight.w600,
-        letterSpacing: 0,
+        letterSpacing: -1.0,
         color: SpillColors.textPrimary,
       ),
-      displayMedium: GoogleFonts.inter(
-        fontSize: 36,
+      displayMedium: GoogleFonts.sora(
+        fontSize: 40,
         fontWeight: FontWeight.w600,
-        letterSpacing: 0,
+        letterSpacing: -0.8,
         color: SpillColors.textPrimary,
       ),
-      displaySmall: GoogleFonts.inter(
-        fontSize: 28,
+      displaySmall: GoogleFonts.sora(
+        fontSize: 30,
         fontWeight: FontWeight.w600,
-        letterSpacing: 0,
+        letterSpacing: -0.5,
         color: SpillColors.textPrimary,
       ),
-      headlineLarge: GoogleFonts.inter(
+      headlineLarge: GoogleFonts.sora(
         fontSize: 24,
         fontWeight: FontWeight.w600,
-        letterSpacing: 0,
+        letterSpacing: -0.5,
         color: SpillColors.textPrimary,
       ),
-      headlineMedium: GoogleFonts.inter(
+      headlineMedium: GoogleFonts.sora(
         fontSize: 20,
         fontWeight: FontWeight.w600,
-        letterSpacing: 0,
+        letterSpacing: -0.3,
         color: SpillColors.textPrimary,
       ),
-      headlineSmall: GoogleFonts.inter(
+      headlineSmall: GoogleFonts.sora(
         fontSize: 18,
         fontWeight: FontWeight.w600,
-        letterSpacing: 0,
+        letterSpacing: -0.3,
         color: SpillColors.textPrimary,
       ),
-      titleLarge: GoogleFonts.inter(
+      titleLarge: GoogleFonts.plusJakartaSans(
         fontSize: 16,
         fontWeight: FontWeight.w600,
         letterSpacing: 0.2,
         color: SpillColors.textPrimary,
       ),
-      titleMedium: GoogleFonts.inter(
+      titleMedium: GoogleFonts.plusJakartaSans(
         fontSize: 14,
         fontWeight: FontWeight.w500,
         color: SpillColors.textPrimary,
       ),
-      titleSmall: GoogleFonts.inter(
+      titleSmall: GoogleFonts.plusJakartaSans(
         fontSize: 12,
         fontWeight: FontWeight.w500,
         color: SpillColors.textSecondary,
       ),
-      bodyLarge: GoogleFonts.inter(
+      bodyLarge: GoogleFonts.plusJakartaSans(
         fontSize: 14,
         fontWeight: FontWeight.w400,
         color: SpillColors.textPrimary,
       ),
-      bodyMedium: GoogleFonts.inter(
+      bodyMedium: GoogleFonts.plusJakartaSans(
         fontSize: 12,
         fontWeight: FontWeight.w400,
         color: SpillColors.textPrimary,
       ),
-      bodySmall: GoogleFonts.inter(
+      bodySmall: GoogleFonts.plusJakartaSans(
         fontSize: 11,
         fontWeight: FontWeight.w400,
         color: SpillColors.textSecondary,
       ),
-      labelLarge: GoogleFonts.inter(
+      labelLarge: GoogleFonts.plusJakartaSans(
         fontSize: 16,
         fontWeight: FontWeight.w600,
         letterSpacing: 0.2,
         color: SpillColors.textPrimary,
       ),
-      labelMedium: GoogleFonts.inter(
+      labelMedium: GoogleFonts.plusJakartaSans(
         fontSize: 11,
         fontWeight: FontWeight.w500,
         color: SpillColors.textSecondary,
       ),
-      labelSmall: GoogleFonts.inter(
+      labelSmall: GoogleFonts.plusJakartaSans(
         fontSize: 10,
         fontWeight: FontWeight.w400,
         color: SpillColors.textSecondary,

@@ -51,7 +51,7 @@ class ArchiveApp extends StatelessWidget {
       value: api,
       child: MaterialApp.router(
         title: 'Spill',
-        theme: SpillTheme.dark,
+        theme: SpillTheme.theme,
         routerConfig: router,
         debugShowCheckedModeBanner: false,
       ),

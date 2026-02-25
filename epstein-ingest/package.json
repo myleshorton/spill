@@ -1,0 +1,19 @@
+{
+  "name": "epstein-ingest",
+  "version": "1.0.0",
+  "description": "Ingest pipeline for Epstein DOJ document releases — catalog, extract text, generate thumbnails, index in Meilisearch",
+  "main": "ingest.js",
+  "scripts": {
+    "ingest": "node ingest.js",
+    "index": "node index-search.js",
+    "catalog": "node catalog.js",
+    "stats": "node stats.js"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.0.0",
+    "meilisearch": "^0.41.0",
+    "file-type": "^16.5.4",
+    "pdf-parse": "^1.1.1",
+    "sharp": "^0.33.0"
+  }
+}

@@ -254,7 +254,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
             ),
             Positioned.fill(
               child: Container(
-                color: SpillColors.surface.withValues(alpha: 0.5),
+                color: SpillColors.background.withValues(alpha: 0.7),
                 child: const Center(
                   child: CircularProgressIndicator(),
                 ),
@@ -373,7 +373,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
                       player.seek(Duration(milliseconds: value.round()));
                     },
                     activeColor: SpillColors.accent,
-                    inactiveColor: SpillColors.surfaceLight,
+                    inactiveColor: SpillColors.divider,
                   ),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -627,6 +627,7 @@ class _StatChip extends StatelessWidget {
       decoration: BoxDecoration(
         color: SpillColors.surface,
         borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: SpillColors.divider),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

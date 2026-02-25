@@ -57,9 +57,8 @@ class MyVideosScreen extends StatelessWidget {
               overlayBuilder: (video) => PopupMenuButton<String>(
                 icon: Icon(
                   Icons.more_vert,
-                  color: SpillColors.textPrimary.withValues(alpha: 0.8),
+                  color: SpillColors.textSecondary.withValues(alpha: 0.8),
                 ),
-                color: SpillColors.surface,
                 onSelected: (value) {
                   if (value == 'delete') _confirmDelete(context, video);
                 },

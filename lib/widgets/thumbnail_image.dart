@@ -152,7 +152,7 @@ class _ThumbnailImageState extends State<ThumbnailImage> {
           colors: [
             SpillColors.surface,
             SpillColors.surfaceLight,
-            SpillColors.accent.withValues(alpha: 0.15),
+            SpillColors.accent.withValues(alpha: 0.08),
           ],
         ),
       ),

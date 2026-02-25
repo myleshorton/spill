@@ -1,0 +1,73 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root {
+  --bg: #0B0F19;
+  --surface: #141926;
+  --surface-light: #1C2436;
+  --accent: #00BFA6;
+  --accent-hover: #00D9BC;
+  --accent-secondary: #FFB74D;
+  --text-primary: #E8ECF4;
+  --text-secondary: #6B7994;
+  --success: #00E676;
+  --error: #FF5252;
+  --divider: #1E2842;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--bg);
+  color: var(--text-primary);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+::selection {
+  background-color: rgba(0, 191, 166, 0.3);
+  color: var(--text-primary);
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--divider);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-secondary);
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .glow-accent {
+    box-shadow: 0 0 12px rgba(0, 191, 166, 0.4);
+  }
+
+  .border-glow {
+    border: 1px solid var(--accent);
+    box-shadow: 0 0 8px rgba(0, 191, 166, 0.2), inset 0 0 8px rgba(0, 191, 166, 0.05);
+  }
+}

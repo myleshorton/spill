@@ -3,6 +3,7 @@
  *
  * Entry point: creates Corestore, starts the P2P archiver and HTTP server.
  * Wires archiver events to the SQLite database.
+ * Also serves the Epstein document archive API via Meilisearch.
  */
 const Corestore = require('corestore')
 const express = require('express')
@@ -12,20 +13,37 @@ const path = require('path')
 const ArchiveDatabase = require('./lib/database')
 const Archiver = require('./lib/archiver')
 const createRouter = require('./lib/api')
+const DocumentsDatabase = require('./lib/documents-db')
+const SearchIndex = require('./lib/meilisearch')
+const createDocumentsRouter = require('./lib/documents-api')
 
 const DATA_DIR = path.join(__dirname, 'data')
 const CONTENT_DIR = path.join(DATA_DIR, 'content')
 const DB_PATH = path.join(DATA_DIR, 'archive.db')
+const DOCS_DB_PATH = path.join(DATA_DIR, 'documents.db')
 const STORE_PATH = path.join(DATA_DIR, 'corestore')
-const PORT = process.env.PORT || 3000
+const PORT = process.env.PORT || 4000
 const WEB_DIR = path.join(__dirname, '..', 'build', 'web')
 
 async function main () {
   console.log('[main] Starting Samizdat archiver...')
 
-  // Initialize database
+  // Initialize databases
   const db = new ArchiveDatabase(DB_PATH)
-  console.log('[main] Database ready')
+  console.log('[main] Video database ready')
+
+  const docsDb = new DocumentsDatabase(DOCS_DB_PATH)
+  console.log('[main] Documents database ready (%d documents)', docsDb.count())
+
+  // Initialize Meilisearch
+  const searchIndex = new SearchIndex()
+  try {
+    await searchIndex.setup()
+    console.log('[main] Meilisearch index configured')
+  } catch (err) {
+    console.warn('[main] Meilisearch not available:', err.message)
+    console.warn('[main] Search will be unavailable until Meilisearch is running')
+  }
 
   // Initialize Corestore and archiver
   const store = new Corestore(STORE_PATH)
@@ -59,7 +77,12 @@ async function main () {
   // Start HTTP server
   const app = express()
   app.use(cors())
+
+  // Video API (existing)
   app.use('/api', createRouter(db, archiver))
+
+  // Documents API (Epstein archive)
+  app.use('/api', createDocumentsRouter(docsDb, searchIndex, archiver))
 
   // Serve Flutter web app (static files)
   app.use(express.static(WEB_DIR))
@@ -90,6 +113,7 @@ async function main () {
     console.log('\n[main] Shutting down...')
     await archiver.destroy()
     db.close()
+    docsDb.close()
     process.exit(0)
   })
 }

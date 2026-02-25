@@ -5,15 +5,15 @@ import 'typography.dart';
 class SpillTheme {
   SpillTheme._();
 
-  static ThemeData get dark {
-    return ThemeData.light().copyWith(
+  static ThemeData get theme {
+    return ThemeData.dark().copyWith(
       scaffoldBackgroundColor: SpillColors.background,
-      colorScheme: const ColorScheme.light(
+      colorScheme: const ColorScheme.dark(
         primary: SpillColors.accent,
         secondary: SpillColors.accentSecondary,
         surface: SpillColors.surface,
         error: SpillColors.error,
-        onPrimary: Colors.white,
+        onPrimary: SpillColors.background,
         onSecondary: SpillColors.textPrimary,
         onSurface: SpillColors.textPrimary,
         onError: Colors.white,
@@ -28,16 +28,17 @@ class SpillTheme {
       ),
       cardTheme: CardThemeData(
         color: SpillColors.surface,
-        elevation: 1,
+        elevation: 0,
         margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
+          side: const BorderSide(color: SpillColors.divider),
         ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: SpillColors.accent,
-          foregroundColor: Colors.white,
+          foregroundColor: SpillColors.background,
           elevation: 0,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
@@ -92,9 +93,25 @@ class SpillTheme {
         linearTrackColor: SpillColors.surfaceLight,
       ),
       snackBarTheme: SnackBarThemeData(
-        backgroundColor: SpillColors.surfaceLight,
-        contentTextStyle: const TextStyle(color: SpillColors.textPrimary),
+        backgroundColor: SpillColors.surface,
+        contentTextStyle: const TextStyle(color: SpillColors.accent),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      ),
+      dialogTheme: DialogThemeData(
+        backgroundColor: SpillColors.surface,
+        titleTextStyle: SpillTypography.textTheme.headlineSmall,
+        contentTextStyle: SpillTypography.textTheme.bodyMedium,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: const BorderSide(color: SpillColors.divider),
+        ),
+      ),
+      popupMenuTheme: PopupMenuThemeData(
+        color: SpillColors.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+          side: const BorderSide(color: SpillColors.divider),
+        ),
       ),
     );
   }

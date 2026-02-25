@@ -135,7 +135,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                               color: p2p.connected
                                   ? SpillColors.success
-                                  : SpillColors.accent,
+                                  : SpillColors.error,
                             ),
                       ),
                     ],

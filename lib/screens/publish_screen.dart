@@ -231,7 +231,8 @@ class _PublishScreenState extends State<PublishScreen> {
                     )
                   : AngularContainer(
                       cutSize: 20,
-                      color: SpillColors.surface,
+                      color: SpillColors.surfaceLight,
+                      borderColor: SpillColors.divider,
                       padding: const EdgeInsets.symmetric(vertical: 48, horizontal: 24),
                       child: Column(
                         children: [

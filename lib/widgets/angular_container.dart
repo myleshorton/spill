@@ -28,11 +28,9 @@ class AngularContainer extends StatelessWidget {
     return Container(
       margin: margin,
       decoration: BoxDecoration(
-        color: color ?? SpillColors.surfaceLight,
+        color: color ?? SpillColors.surface,
         borderRadius: BorderRadius.circular(12),
-        border: borderColor != null
-            ? Border.all(color: borderColor!)
-            : null,
+        border: Border.all(color: borderColor ?? SpillColors.divider),
       ),
       padding: padding ?? const EdgeInsets.all(16),
       child: child,
@@ -61,7 +59,7 @@ class AngularButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final bgColor = onPressed != null
         ? (color ?? SpillColors.accent)
-        : SpillColors.surfaceLight;
+        : SpillColors.surfaceLight.withValues(alpha: 0.5);
     return Material(
       color: bgColor,
       borderRadius: BorderRadius.circular(12),

@@ -37,7 +37,7 @@ class VideoCard extends StatelessWidget {
             child: AspectRatio(
               aspectRatio: 16 / 9,
               child: Container(
-                color: SpillColors.surfaceLight,
+                color: SpillColors.surface,
                 child: Stack(
                   children: [
                     ThumbnailImage(video: video),

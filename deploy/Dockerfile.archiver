@@ -1,0 +1,22 @@
+FROM node:20-slim
+
+RUN apt-get update && apt-get install -y \
+    python3 \
+    make \
+    g++ \
+    ffmpeg \
+    tesseract-ocr \
+    poppler-utils \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Copy archiver
+COPY archiver/package*.json ./archiver/
+RUN cd archiver && npm install --production
+
+COPY archiver/ ./archiver/
+
+EXPOSE 4000
+
+CMD ["node", "archiver/index.js"]

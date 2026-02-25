@@ -116,11 +116,19 @@ class _HomeScreenState extends State<HomeScreen>
                           )
                         : null,
                     filled: true,
-                    fillColor: SpillColors.surfaceLight,
+                    fillColor: SpillColors.surface,
                     contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 12),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide.none,
+                      borderSide: const BorderSide(color: SpillColors.divider),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: const BorderSide(color: SpillColors.divider),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: const BorderSide(color: SpillColors.accent, width: 2),
                     ),
                   ),
                   textInputAction: TextInputAction.search,
@@ -531,15 +539,22 @@ class _CategoryPill extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
-            color: selected ? SpillColors.accent : SpillColors.surfaceLight,
+            color: selected
+                ? SpillColors.accent.withValues(alpha: 0.15)
+                : SpillColors.surfaceLight.withValues(alpha: 0.5),
             borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: selected
+                  ? SpillColors.accent
+                  : SpillColors.divider,
+            ),
           ),
           child: Text(
             label,
             style: TextStyle(
               fontSize: 13,
               fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
-              color: selected ? Colors.white : SpillColors.textPrimary,
+              color: selected ? SpillColors.accent : SpillColors.textSecondary,
             ),
           ),
         ),

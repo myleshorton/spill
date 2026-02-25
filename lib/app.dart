@@ -55,7 +55,7 @@ class SpillApp extends StatelessWidget {
       child: MaterialApp.router(
         title: 'Spill',
         debugShowCheckedModeBanner: false,
-        theme: SpillTheme.dark,
+        theme: SpillTheme.theme,
         routerConfig: router,
       ),
     );

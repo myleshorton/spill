@@ -61,7 +61,7 @@ class _ConnectionIndicatorState extends State<ConnectionIndicator>
   @override
   Widget build(BuildContext context) {
     final color =
-        widget.connected ? SpillColors.success : SpillColors.accent;
+        widget.connected ? SpillColors.success : SpillColors.error;
 
     return AnimatedBuilder(
       animation: _animation,
@@ -75,8 +75,8 @@ class _ConnectionIndicatorState extends State<ConnectionIndicator>
             boxShadow: [
               BoxShadow(
                 color: color.withValues(alpha: 0.4),
-                blurRadius: widget.connected ? 8 : 4,
-                spreadRadius: widget.connected ? 2 : 0,
+                blurRadius: widget.connected ? 12 : 4,
+                spreadRadius: widget.connected ? 3 : 0,
               ),
             ],
           ),
