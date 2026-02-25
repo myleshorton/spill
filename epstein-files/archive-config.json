@@ -1,0 +1,30 @@
+{
+  "dataSets": [
+    { "id": 1, "name": "Data Set 1", "description": "FBI Interview Summaries (Part 1)" },
+    { "id": 2, "name": "Data Set 2", "description": "FBI Interview Summaries (Part 2)" },
+    { "id": 3, "name": "Data Set 3", "description": "Palm Beach Police Reports (Part 1)" },
+    { "id": 4, "name": "Data Set 4", "description": "Palm Beach Police Reports (Part 2)" },
+    { "id": 5, "name": "Data Set 5", "description": "Grand Jury Materials" },
+    { "id": 6, "name": "Data Set 6", "description": "Victim Statements & Depositions" },
+    { "id": 7, "name": "Data Set 7", "description": "Search Warrants & Seizure Records" },
+    { "id": 8, "name": "Data Set 8", "description": "Prosecution Memoranda" },
+    { "id": 9, "name": "Data Set 9", "description": "Emails & DOJ Correspondence" },
+    { "id": 10, "name": "Data Set 10", "description": "Seized Images & Videos" },
+    { "id": 11, "name": "Data Set 11", "description": "Financial Records & Flight Logs" },
+    { "id": 12, "name": "Data Set 12", "description": "Supplemental Productions" }
+  ],
+  "categoryRules": {
+    "1": "fbi_report",
+    "2": "fbi_report",
+    "3": "police_report",
+    "4": "police_report",
+    "5": "court_record",
+    "6": "deposition",
+    "7": "court_record",
+    "8": "court_record",
+    "9": { "default": "court_record", "match": { "email|.eml|.msg": "email" } },
+    "10": { "default": null, "matchContentType": { "image": "photo", "video": "video" } },
+    "11": { "default": "financial", "match": { "flight|manifest": "flight_log" } },
+    "12": null
+  }
+}

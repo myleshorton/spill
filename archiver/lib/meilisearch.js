@@ -27,7 +27,8 @@ class SearchIndex {
       filterableAttributes: [
         'dataSet',
         'contentType',
-        'category'
+        'category',
+        'collectionId'
       ],
       sortableAttributes: [
         'dataSet',

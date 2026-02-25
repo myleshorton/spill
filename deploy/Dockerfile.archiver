@@ -17,6 +17,12 @@ RUN cd archiver && npm install --production
 
 COPY archiver/ ./archiver/
 
+# Copy ingest pipeline (for upload text extraction / thumbnailing)
+COPY ingest/ ./ingest/
+
+# If an override archive-config.json is mounted at runtime, the archiver reads it;
+# otherwise it uses the default bundled in archiver/archive-config.json
+
 EXPOSE 4000
 
 CMD ["node", "archiver/index.js"]

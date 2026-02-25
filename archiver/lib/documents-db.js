@@ -1,11 +1,8 @@
-/**
- * SQLite database for Epstein archive documents.
- * Separate from the videos table — stores document metadata,
- * extracted text, and references to Meilisearch-indexed content.
- */
 const Database = require('better-sqlite3')
 const path = require('path')
 const fs = require('fs')
+
+const archiveConfigPath = path.join(__dirname, '..', 'archive-config.json')
 
 class DocumentsDatabase {
   constructor (dbPath) {
@@ -37,13 +34,65 @@ class DocumentsDatabase {
         transcript TEXT,
         source_url TEXT,
         created_at INTEGER,
-        indexed_at INTEGER
+        indexed_at INTEGER,
+        collection_id INTEGER DEFAULT 1,
+        sha256_hash TEXT
+      );
+
+      CREATE TABLE IF NOT EXISTS collections (
+        id INTEGER PRIMARY KEY,
+        name TEXT NOT NULL,
+        description TEXT,
+        torrent_hash TEXT,
+        magnet_link TEXT,
+        torrent_path TEXT,
+        created_at INTEGER,
+        updated_at INTEGER
       );
 
       CREATE INDEX IF NOT EXISTS idx_docs_dataset ON documents(data_set);
       CREATE INDEX IF NOT EXISTS idx_docs_type ON documents(content_type);
       CREATE INDEX IF NOT EXISTS idx_docs_category ON documents(category);
+      CREATE INDEX IF NOT EXISTS idx_docs_collection ON documents(collection_id);
+      CREATE INDEX IF NOT EXISTS idx_docs_hash ON documents(sha256_hash);
     `)
+
+    this._migrate()
+    this._seedCollections()
+  }
+
+  _migrate () {
+    // Add new columns to existing databases
+    const cols = this.db.prepare("PRAGMA table_info('documents')").all()
+    const colNames = new Set(cols.map(c => c.name))
+    if (!colNames.has('collection_id')) {
+      this.db.exec('ALTER TABLE documents ADD COLUMN collection_id INTEGER DEFAULT 1')
+    }
+    if (!colNames.has('sha256_hash')) {
+      this.db.exec('ALTER TABLE documents ADD COLUMN sha256_hash TEXT')
+    }
+  }
+
+  _seedCollections () {
+    if (!fs.existsSync(archiveConfigPath)) return
+    const config = JSON.parse(fs.readFileSync(archiveConfigPath, 'utf8'))
+    if (!config.dataSets || config.dataSets.length === 0) return
+
+    const existing = this.db.prepare('SELECT COUNT(*) as count FROM collections').get()
+    if (existing.count > 0) return
+
+    const insert = this.db.prepare(`
+      INSERT OR IGNORE INTO collections (id, name, description, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?)
+    `)
+    const now = Date.now()
+    const seed = this.db.transaction(() => {
+      for (const ds of config.dataSets) {
+        insert.run(ds.id, ds.name, ds.description, now, now)
+      }
+    })
+    seed()
+    console.log('[docs-db] Seeded %d collections from archive-config.json', config.dataSets.length)
   }
 
   insert (doc) {
@@ -52,12 +101,12 @@ class DocumentsDatabase {
         (id, title, file_name, data_set, content_type, category,
          file_size, page_count, file_path, thumb_path,
          drive_key, file_key, extracted_text, transcript,
-         source_url, created_at, indexed_at)
+         source_url, created_at, indexed_at, collection_id, sha256_hash)
       VALUES
         (@id, @title, @file_name, @data_set, @content_type, @category,
          @file_size, @page_count, @file_path, @thumb_path,
          @drive_key, @file_key, @extracted_text, @transcript,
-         @source_url, @created_at, @indexed_at)
+         @source_url, @created_at, @indexed_at, @collection_id, @sha256_hash)
     `)
     stmt.run({
       id: doc.id,
@@ -76,7 +125,9 @@ class DocumentsDatabase {
       transcript: doc.transcript || null,
       source_url: doc.sourceUrl || doc.source_url || null,
       created_at: doc.createdAt || doc.created_at || Date.now(),
-      indexed_at: doc.indexedAt || doc.indexed_at || null
+      indexed_at: doc.indexedAt || doc.indexed_at || null,
+      collection_id: doc.collectionId || doc.collection_id || 1,
+      sha256_hash: doc.sha256Hash || doc.sha256_hash || null
     })
   }
 
@@ -170,6 +221,40 @@ class DocumentsDatabase {
 
   count () {
     return this.db.prepare('SELECT COUNT(*) as count FROM documents').get().count
+  }
+
+  // --- Collection methods ---
+
+  getCollection (id) {
+    return this.db.prepare('SELECT * FROM collections WHERE id = ?').get(id)
+  }
+
+  listCollections () {
+    return this.db.prepare('SELECT * FROM collections ORDER BY id ASC').all()
+  }
+
+  updateCollectionTorrent (id, torrentHash, magnetLink, torrentPath) {
+    this.db.prepare(`
+      UPDATE collections SET torrent_hash = ?, magnet_link = ?, torrent_path = ?, updated_at = ?
+      WHERE id = ?
+    `).run(torrentHash, magnetLink, torrentPath, Date.now(), id)
+  }
+
+  getDatasetFilePaths (datasetId) {
+    return this.db.prepare(
+      'SELECT id, file_name, file_path, file_size FROM documents WHERE data_set = ? AND file_path IS NOT NULL ORDER BY file_name ASC'
+    ).all(datasetId)
+  }
+
+  getDatasetTotalSize (datasetId) {
+    const row = this.db.prepare(
+      'SELECT COALESCE(SUM(file_size), 0) as total FROM documents WHERE data_set = ?'
+    ).get(datasetId)
+    return row.total
+  }
+
+  findByHash (sha256) {
+    return this.db.prepare('SELECT * FROM documents WHERE sha256_hash = ?').get(sha256)
   }
 
   close () {

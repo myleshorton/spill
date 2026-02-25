@@ -10,12 +10,15 @@ services:
     volumes:
       - archiver-data:/app/archiver/data
       - content-data:/data
+      - ${ARCHIVE_CONFIG:-/dev/null}:/app/archiver/archive-config.override.json:ro
     environment:
       - PORT=4000
       - MEILI_HOST=http://meilisearch:7700
       - MEILI_API_KEY=${MEILI_API_KEY:-}
+      - DOMAIN=${DOMAIN:-localhost}
     depends_on:
       - meilisearch
+      - clamav
     restart: unless-stopped
     networks:
       - internal
@@ -24,6 +27,8 @@ services:
     build:
       context: ..
       dockerfile: deploy/Dockerfile.frontend
+      args:
+        SITE_CONFIG: ${SITE_CONFIG:-}
     ports:
       - "3000:3000"
     environment:
@@ -45,6 +50,30 @@ services:
       - MEILI_ENV=production
       - MEILI_MASTER_KEY=${MEILI_API_KEY:-changeme}
       - MEILI_NO_ANALYTICS=true
+    restart: unless-stopped
+    networks:
+      - internal
+
+  transmission:
+    image: lscr.io/linuxserver/transmission:latest
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=UTC
+    volumes:
+      - content-data:/data
+      - archiver-data:/app/archiver/data
+    ports:
+      - "51413:51413"
+      - "51413:51413/udp"
+    restart: unless-stopped
+    networks:
+      - internal
+
+  clamav:
+    image: clamav/clamav:stable
+    volumes:
+      - clamav-data:/var/lib/clamav
     restart: unless-stopped
     networks:
       - internal
@@ -76,6 +105,7 @@ volumes:
   archiver-data:
   content-data:
   meili-data:
+  clamav-data:
 
 networks:
   internal:

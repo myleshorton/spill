@@ -1,0 +1,22 @@
+# Epstein Files Archive — site-specific docker-compose override
+# Usage: docker compose -f ../deploy/docker-compose.yml -f docker-compose.yml up -d
+#
+# Or set env vars in .env and use the framework's compose directly.
+
+version: '3.8'
+
+services:
+  frontend:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.frontend
+      args:
+        SITE_CONFIG: /site/site.config.ts
+    volumes:
+      - ./site.config.ts:/site/site.config.ts:ro
+
+  archiver:
+    volumes:
+      - ./archive-config.json:/app/archiver/archive-config.json:ro
+    environment:
+      - DOMAIN=unredact.org

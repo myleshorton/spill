@@ -5,7 +5,8 @@ import { useParams } from 'next/navigation'
 import Header from '@/components/Header'
 import Footer from '@/components/Footer'
 import DocumentGrid from '@/components/DocumentGrid'
-import { listDocuments, type Document, formatNumber } from '@/lib/api'
+import TorrentDownload from '@/components/TorrentDownload'
+import { listDocuments, getDataSet, type Document, type DataSetInfo, formatNumber } from '@/lib/api'
 import { siteConfig } from '@/config/site.config'
 import { Loader2, ChevronLeft } from 'lucide-react'
 import Link from 'next/link'
@@ -14,12 +15,17 @@ export default function DataSetDetailPage() {
   const params = useParams()
   const dsId = Number(params.id)
   const [documents, setDocuments] = useState<Document[]>([])
+  const [datasetInfo, setDatasetInfo] = useState<DataSetInfo | null>(null)
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(true)
   const [offset, setOffset] = useState(0)
   const limit = 50
 
   const dsConfig = siteConfig.dataSets.find((d) => d.id === dsId)
+
+  useEffect(() => {
+    getDataSet(dsId).then(setDatasetInfo).catch(() => {})
+  }, [dsId])
 
   useEffect(() => {
     setLoading(true)
@@ -66,6 +72,8 @@ export default function DataSetDetailPage() {
           <p className="mt-2 text-sm text-spill-text-secondary/60">
             {formatNumber(total)} files in this data set
           </p>
+
+          {datasetInfo && <div className="mt-4"><TorrentDownload dataset={datasetInfo} /></div>}
         </div>
 
         {loading ? (

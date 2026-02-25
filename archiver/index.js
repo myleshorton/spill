@@ -16,6 +16,10 @@ const createRouter = require('./lib/api')
 const DocumentsDatabase = require('./lib/documents-db')
 const SearchIndex = require('./lib/meilisearch')
 const createDocumentsRouter = require('./lib/documents-api')
+const TorrentManager = require('./lib/torrent-manager')
+const VirusScanner = require('./lib/virus-scanner')
+const UploadProcessor = require('./lib/upload-processor')
+const createUploadRouter = require('./lib/upload-api')
 
 const DATA_DIR = path.join(__dirname, 'data')
 const CONTENT_DIR = path.join(DATA_DIR, 'content')
@@ -70,9 +74,23 @@ async function main () {
     console.log('[main] Published video', meta.id)
   })
 
+  // Initialize torrent manager
+  const torrentManager = new TorrentManager()
+  try {
+    await torrentManager.generateAll(docsDb)
+    console.log('[main] Torrent generation complete')
+  } catch (err) {
+    console.warn('[main] Torrent generation failed (non-fatal):', err.message)
+  }
+
   // Start P2P networking
   await archiver.start()
   console.log('[main] P2P archiver running')
+
+  // Initialize upload system
+  const virusScanner = new VirusScanner()
+  const uploadProcessor = new UploadProcessor(docsDb, searchIndex, archiver, virusScanner, torrentManager)
+  console.log('[main] Upload processor ready')
 
   // Start HTTP server
   const app = express()
@@ -81,8 +99,11 @@ async function main () {
   // Video API (existing)
   app.use('/api', createRouter(db, archiver))
 
-  // Documents API (Epstein archive)
-  app.use('/api', createDocumentsRouter(docsDb, searchIndex, archiver))
+  // Documents API (archive)
+  app.use('/api', createDocumentsRouter(docsDb, searchIndex, archiver, torrentManager))
+
+  // Upload API
+  app.use('/api', createUploadRouter(docsDb, uploadProcessor))
 
   // Serve Flutter web app (static files)
   app.use(express.static(WEB_DIR))

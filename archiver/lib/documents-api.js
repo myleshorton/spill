@@ -52,7 +52,7 @@ function rowToDoc (row) {
   }
 }
 
-function createDocumentsRouter (docsDb, searchIndex, archiver) {
+function createDocumentsRouter (docsDb, searchIndex, archiver, torrentManager) {
   const router = express.Router()
 
   // Paginated document list with filtering
@@ -210,17 +210,81 @@ function createDocumentsRouter (docsDb, searchIndex, archiver) {
     res.json(stats)
   })
 
-  // Data set listing
+  // Data set listing — enriched with torrent info
   router.get('/datasets', (req, res) => {
     const stats = docsDb.stats()
-    const datasets = archiveConfig.dataSets.map((ds) => ({
-      id: ds.id,
-      name: ds.name,
-      description: ds.description,
-      fileCount: stats.byDataSet[String(ds.id)] || 0,
-      totalSize: 0
-    }))
+    const collections = docsDb.listCollections()
+    const collectionMap = Object.fromEntries(collections.map(c => [c.id, c]))
+
+    const datasets = archiveConfig.dataSets.map((ds) => {
+      const col = collectionMap[ds.id]
+      return {
+        id: ds.id,
+        name: ds.name,
+        description: ds.description,
+        fileCount: stats.byDataSet[String(ds.id)] || 0,
+        totalSize: docsDb.getDatasetTotalSize(ds.id),
+        magnetLink: col ? col.magnet_link : null,
+        hasTorrent: col ? !!col.torrent_path : false
+      }
+    })
     res.json(datasets)
+  })
+
+  // Single dataset detail
+  router.get('/datasets/:id', (req, res) => {
+    const dsId = parseInt(req.params.id, 10)
+    const dsConfig = archiveConfig.dataSets.find(d => d.id === dsId)
+    if (!dsConfig) {
+      return res.status(404).json({ error: 'Dataset not found' })
+    }
+
+    const col = docsDb.getCollection(dsId)
+    const stats = docsDb.stats()
+
+    res.json({
+      id: dsConfig.id,
+      name: dsConfig.name,
+      description: dsConfig.description,
+      fileCount: stats.byDataSet[String(dsId)] || 0,
+      totalSize: docsDb.getDatasetTotalSize(dsId),
+      magnetLink: col ? col.magnet_link : null,
+      hasTorrent: col ? !!col.torrent_path : false
+    })
+  })
+
+  // Serve .torrent file for dataset
+  router.get('/datasets/:id/torrent', (req, res) => {
+    if (!torrentManager) {
+      return res.status(503).json({ error: 'Torrent manager not available' })
+    }
+
+    const dsId = parseInt(req.params.id, 10)
+    const torrentPath = torrentManager.getTorrentPath(dsId)
+    if (!torrentPath) {
+      return res.status(404).json({ error: 'Torrent not available for this dataset' })
+    }
+
+    const dsConfig = archiveConfig.dataSets.find(d => d.id === dsId)
+    const fileName = dsConfig
+      ? `${dsConfig.name.replace(/[^a-zA-Z0-9 ]/g, '').replace(/\s+/g, '_')}.torrent`
+      : `dataset_${dsId}.torrent`
+
+    res.setHeader('Content-Type', 'application/x-bittorrent')
+    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`)
+    fs.createReadStream(torrentPath).pipe(res)
+  })
+
+  // Collections listing (datasets + upload collections)
+  router.get('/collections', (req, res) => {
+    const collections = docsDb.listCollections()
+    res.json(collections.map(c => ({
+      id: c.id,
+      name: c.name,
+      description: c.description,
+      hasTorrent: !!c.torrent_path,
+      magnetLink: c.magnet_link
+    })))
   })
 
   return router

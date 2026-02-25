@@ -1,12 +1,19 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import Header from '@/components/Header'
 import Footer from '@/components/Footer'
-import { ArrowRight } from 'lucide-react'
+import { ArrowRight, Download } from 'lucide-react'
 import { siteConfig } from '@/config/site.config'
+import { getDataSets, type DataSetInfo, torrentUrl } from '@/lib/api'
 
 export default function DatasetsPage() {
+  const [datasets, setDatasets] = useState<DataSetInfo[]>([])
+
+  useEffect(() => {
+    getDataSets().then(setDatasets).catch(() => {})
+  }, [])
   return (
     <div className="flex min-h-screen flex-col">
       <Header />
@@ -43,7 +50,19 @@ export default function DatasetsPage() {
                   <span className="rounded bg-spill-surface-light px-2 py-0.5 text-xs text-spill-text-secondary">
                     {ds.size}
                   </span>
-                  <ArrowRight className="h-4 w-4 text-spill-text-secondary/40 group-hover:text-spill-accent transition-colors" />
+                  <div className="flex items-center gap-2">
+                    {datasets.find(d => d.id === ds.id)?.hasTorrent && (
+                      <a
+                        href={torrentUrl(ds.id)}
+                        onClick={(e) => e.stopPropagation()}
+                        className="rounded-md p-1 text-spill-text-secondary/40 hover:bg-emerald-500/10 hover:text-emerald-400 transition-colors"
+                        title="Download .torrent"
+                      >
+                        <Download className="h-4 w-4" />
+                      </a>
+                    )}
+                    <ArrowRight className="h-4 w-4 text-spill-text-secondary/40 group-hover:text-spill-accent transition-colors" />
+                  </div>
                 </div>
               </div>
             </Link>

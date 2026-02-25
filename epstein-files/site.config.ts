@@ -129,6 +129,16 @@ export const siteConfig = {
     ],
   },
 
+  torrent: {
+    enabled: true,
+  },
+
+  upload: {
+    enabled: true,
+    maxSizeMB: 500,
+    allowedTypes: ['.pdf', '.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.tiff', '.tif', '.mp4', '.mov', '.avi', '.mkv', '.webm', '.wmv', '.mp3', '.wav', '.flac', '.m4a', '.ogg', '.doc', '.docx', '.xls', '.xlsx', '.txt', '.rtf', '.eml', '.msg'],
+  },
+
   documentViewer: {
     sourceLabel: 'View on DOJ Site',
   },

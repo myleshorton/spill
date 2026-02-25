@@ -36,6 +36,23 @@ export interface DataSetInfo {
   description: string
   fileCount: number
   totalSize: number
+  magnetLink: string | null
+  hasTorrent: boolean
+}
+
+export interface UploadJob {
+  jobId: string
+  status: 'pending' | 'scanning' | 'extracting' | 'indexing' | 'complete' | 'failed'
+  documentId?: string
+  error?: string
+}
+
+export interface Collection {
+  id: number
+  name: string
+  description: string | null
+  hasTorrent: boolean
+  magnetLink: string | null
 }
 
 export interface ArchiveStats {
@@ -139,4 +156,37 @@ export function contentTypeIcon(type: string): string {
     case 'spreadsheet': return 'table'
     default: return 'file'
   }
+}
+
+export function torrentUrl(datasetId: number): string {
+  return `${API_BASE}/datasets/${datasetId}/torrent`
+}
+
+export async function getDataSet(id: number): Promise<DataSetInfo> {
+  const res = await fetch(`${API_BASE}/datasets/${id}`)
+  if (!res.ok) throw new Error(`Dataset not found: ${res.status}`)
+  return res.json()
+}
+
+export async function uploadDocument(file: File): Promise<UploadJob> {
+  const form = new FormData()
+  form.append('file', file)
+  const res = await fetch(`${API_BASE}/upload`, { method: 'POST', body: form })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: `Upload failed: ${res.status}` }))
+    throw new Error(err.error || `Upload failed: ${res.status}`)
+  }
+  return res.json()
+}
+
+export async function getUploadStatus(jobId: string): Promise<UploadJob> {
+  const res = await fetch(`${API_BASE}/upload/${jobId}/status`)
+  if (!res.ok) throw new Error(`Status check failed: ${res.status}`)
+  return res.json()
+}
+
+export async function listCollections(): Promise<Collection[]> {
+  const res = await fetch(`${API_BASE}/collections`)
+  if (!res.ok) throw new Error(`Collections failed: ${res.status}`)
+  return res.json()
 }

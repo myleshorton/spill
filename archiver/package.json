@@ -11,11 +11,14 @@
     "compact-encoding": "^2.0.0",
     "cors": "^2.8.5",
     "corestore": "^6.0.0",
+    "create-torrent": "^5.0.9",
     "express": "^4.21.0",
+    "express-rate-limit": "^7.0.0",
     "hyperdrive": "^11.0.0",
     "hyperswarm": "^4.0.0",
     "meilisearch": "^0.41.0",
     "multer": "^1.4.5-lts.1",
+    "parse-torrent": "^9.1.5",
     "protomux": "^3.0.0"
   }
 }
