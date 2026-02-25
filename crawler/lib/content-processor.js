@@ -17,7 +17,7 @@ const SOURCE_CATEGORY_MAP = {
 }
 
 class ContentProcessor {
-  constructor ({ docsDb, searchIndex, relevanceScorer, textExtract, thumbnails, fileUtils, transcriber, options = {} }) {
+  constructor ({ docsDb, searchIndex, relevanceScorer, textExtract, thumbnails, fileUtils, transcriber, embedder, options = {} }) {
     this.docsDb = docsDb
     this.searchIndex = searchIndex
     this.scorer = relevanceScorer
@@ -25,6 +25,7 @@ class ContentProcessor {
     this.thumbnails = thumbnails
     this.fileUtils = fileUtils
     this.transcriber = transcriber
+    this.embedder = embedder
     this.minRelevance = options.minRelevance || 0.3
     this.autoIndexThreshold = options.autoIndexThreshold || 0.5
     this.dryRun = options.dryRun || false
@@ -168,6 +169,21 @@ class ContentProcessor {
         await this.searchIndex.addDocuments([doc])
       } catch (err) {
         console.warn('[processor] Search indexing failed for %s: %s', docId, err.message)
+      }
+    }
+
+    // 14. Generate embedding
+    if (this.embedder) {
+      try {
+        const embText = [doc.title, text, transcript].filter(Boolean).join('\n\n')
+        if (embText.length >= 20) {
+          const emb = await this.embedder.embed(embText)
+          if (emb) {
+            this.docsDb.setEmbedding(docId, this.embedder.toBuffer(emb))
+          }
+        }
+      } catch (err) {
+        console.warn('[processor] Embedding failed for %s: %s', docId, err.message)
       }
     }
 

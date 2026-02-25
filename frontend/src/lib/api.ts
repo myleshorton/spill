@@ -1,3 +1,5 @@
+import { fetchWithUser } from './user'
+
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || '/api'
 
 export interface Document {
@@ -189,5 +191,58 @@ export async function getUploadStatus(jobId: string): Promise<UploadJob> {
 export async function listCollections(): Promise<Collection[]> {
   const res = await fetch(`${API_BASE}/collections`)
   if (!res.ok) throw new Error(`Collections failed: ${res.status}`)
+  return res.json()
+}
+
+export interface SimilarDocument extends Document {
+  similarityScore: number
+}
+
+export async function recordView(docId: string): Promise<void> {
+  try {
+    await fetchWithUser(`${API_BASE}/views/${docId}`, { method: 'POST' })
+  } catch {
+    // fire-and-forget
+  }
+}
+
+export async function getSimilarDocuments(
+  docId: string,
+  limit = 8
+): Promise<SimilarDocument[]> {
+  const res = await fetch(`${API_BASE}/documents/${docId}/similar?limit=${limit}`)
+  if (!res.ok) return []
+  const data = await res.json()
+  return data.documents || []
+}
+
+export async function getRecommendations(limit = 12): Promise<SimilarDocument[]> {
+  const res = await fetchWithUser(`${API_BASE}/recommendations?limit=${limit}`)
+  if (!res.ok) return []
+  const data = await res.json()
+  return data.documents || []
+}
+
+export async function requestMagicLink(email: string): Promise<{ ok: boolean }> {
+  const res = await fetchWithUser(`${API_BASE}/auth/magic-link`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email }),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: 'Failed' }))
+    throw new Error(err.error || `Magic link failed: ${res.status}`)
+  }
+  return res.json()
+}
+
+export async function verifyMagicLink(
+  token: string
+): Promise<{ ok: boolean; userId: string; email: string }> {
+  const res = await fetch(`${API_BASE}/auth/verify?token=${encodeURIComponent(token)}`)
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: 'Invalid token' }))
+    throw new Error(err.error || `Verification failed: ${res.status}`)
+  }
   return res.json()
 }

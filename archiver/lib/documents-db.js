@@ -71,6 +71,9 @@ class DocumentsDatabase {
     if (!colNames.has('sha256_hash')) {
       this.db.exec('ALTER TABLE documents ADD COLUMN sha256_hash TEXT')
     }
+    if (!colNames.has('embedding')) {
+      this.db.exec('ALTER TABLE documents ADD COLUMN embedding BLOB')
+    }
   }
 
   _seedCollections () {
@@ -255,6 +258,34 @@ class DocumentsDatabase {
 
   findByHash (sha256) {
     return this.db.prepare('SELECT * FROM documents WHERE sha256_hash = ?').get(sha256)
+  }
+
+  setEmbedding (id, buffer) {
+    this.db.prepare('UPDATE documents SET embedding = ? WHERE id = ?').run(buffer, id)
+  }
+
+  getEmbedding (id) {
+    const row = this.db.prepare('SELECT embedding FROM documents WHERE id = ?').get(id)
+    return row ? row.embedding : null
+  }
+
+  getAllEmbeddings () {
+    return this.db.prepare('SELECT id, embedding FROM documents WHERE embedding IS NOT NULL').all()
+  }
+
+  getEmbeddingsForIds (ids) {
+    if (ids.length === 0) return []
+    const placeholders = ids.map(() => '?').join(',')
+    return this.db.prepare(`SELECT id, embedding FROM documents WHERE id IN (${placeholders}) AND embedding IS NOT NULL`).all(...ids)
+  }
+
+  getUnembeddedDocs (limit = 100) {
+    return this.db.prepare(`
+      SELECT id, title, extracted_text, transcript
+      FROM documents
+      WHERE embedding IS NULL AND (extracted_text IS NOT NULL OR transcript IS NOT NULL)
+      LIMIT ?
+    `).all(limit)
   }
 
   close () {

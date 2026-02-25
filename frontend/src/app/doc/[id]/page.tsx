@@ -5,7 +5,8 @@ import { useParams } from 'next/navigation'
 import Header from '@/components/Header'
 import Footer from '@/components/Footer'
 import DocumentViewer from '@/components/DocumentViewer'
-import { getDocument, type Document } from '@/lib/api'
+import SimilarDocuments from '@/components/SimilarDocuments'
+import { getDocument, recordView, type Document } from '@/lib/api'
 import { Loader2, AlertCircle } from 'lucide-react'
 
 export default function DocPage() {
@@ -17,7 +18,10 @@ export default function DocPage() {
 
   useEffect(() => {
     getDocument(id)
-      .then(setDoc)
+      .then((d) => {
+        setDoc(d)
+        recordView(id)
+      })
       .catch(() => setError(true))
       .finally(() => setLoading(false))
   }, [id])
@@ -40,7 +44,10 @@ export default function DocPage() {
             </p>
           </div>
         ) : (
-          <DocumentViewer doc={doc} />
+          <>
+            <DocumentViewer doc={doc} />
+            <SimilarDocuments docId={id} />
+          </>
         )}
       </main>
 

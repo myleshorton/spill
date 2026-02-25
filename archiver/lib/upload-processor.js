@@ -8,6 +8,11 @@ try {
   transcriber = require('../../ingest/lib/transcriber')
 } catch {}
 
+let embedder = null
+try {
+  embedder = require('../../ingest/lib/embedder')
+} catch {}
+
 const UPLOAD_DIR = path.join(__dirname, '..', 'data', 'content', 'uploads')
 
 const ALLOWED_EXTENSIONS = new Set([
@@ -195,7 +200,22 @@ class UploadProcessor extends EventEmitter {
         console.warn('[upload] Meilisearch indexing failed:', err.message)
       }
 
-      // 9. Publish to Hyperdrive
+      // 9. Generate embedding
+      if (embedder) {
+        try {
+          const embText = [path.basename(job.originalName, ext), transcript].filter(Boolean).join('\n\n')
+          if (embText.length >= 20) {
+            const emb = await embedder.embed(embText)
+            if (emb) {
+              this.docsDb.setEmbedding(docId, embedder.toBuffer(emb))
+            }
+          }
+        } catch (err) {
+          console.warn('[upload] Embedding failed for %s: %s', docId, err.message)
+        }
+      }
+
+      // 10. Publish to Hyperdrive
       if (this.archiver && this.archiver.localDrive) {
         try {
           const driveKey = this.archiver.localDrive.key.toString('hex')
@@ -207,13 +227,13 @@ class UploadProcessor extends EventEmitter {
         }
       }
 
-      // 10. Mark complete
+      // 11. Mark complete
       job.status = 'complete'
       job.documentId = docId
       this.emit('status', job)
       console.log('[upload] Processed %s → %s', job.originalName, docId)
 
-      // 11. Periodic torrent regeneration
+      // 12. Periodic torrent regeneration
       this._uploadsSinceLastTorrent++
       if (this._uploadsSinceLastTorrent >= 10 && this.torrentManager) {
         this._uploadsSinceLastTorrent = 0

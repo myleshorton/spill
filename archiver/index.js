@@ -20,11 +20,14 @@ const TorrentManager = require('./lib/torrent-manager')
 const VirusScanner = require('./lib/virus-scanner')
 const UploadProcessor = require('./lib/upload-processor')
 const createUploadRouter = require('./lib/upload-api')
+const UsersDatabase = require('./lib/users-db')
+const createUsersRouter = require('./lib/users-api')
 
 const DATA_DIR = path.join(__dirname, 'data')
 const CONTENT_DIR = path.join(DATA_DIR, 'content')
 const DB_PATH = path.join(DATA_DIR, 'archive.db')
 const DOCS_DB_PATH = path.join(DATA_DIR, 'documents.db')
+const USERS_DB_PATH = path.join(DATA_DIR, 'users.db')
 const STORE_PATH = path.join(DATA_DIR, 'corestore')
 const PORT = process.env.PORT || 4000
 const WEB_DIR = path.join(__dirname, '..', 'build', 'web')
@@ -38,6 +41,9 @@ async function main () {
 
   const docsDb = new DocumentsDatabase(DOCS_DB_PATH)
   console.log('[main] Documents database ready (%d documents)', docsDb.count())
+
+  const usersDb = new UsersDatabase(USERS_DB_PATH)
+  console.log('[main] Users database ready')
 
   // Initialize Meilisearch
   const searchIndex = new SearchIndex()
@@ -94,7 +100,7 @@ async function main () {
 
   // Start HTTP server
   const app = express()
-  app.use(cors())
+  app.use(cors({ exposedHeaders: ['X-User-ID'] }))
 
   // Video API (existing)
   app.use('/api', createRouter(db, archiver))
@@ -104,6 +110,9 @@ async function main () {
 
   // Upload API
   app.use('/api', createUploadRouter(docsDb, uploadProcessor))
+
+  // Users & recommendations API
+  app.use('/api', createUsersRouter(docsDb, usersDb))
 
   // Serve Flutter web app (static files)
   app.use(express.static(WEB_DIR))
@@ -135,6 +144,7 @@ async function main () {
     await archiver.destroy()
     db.close()
     docsDb.close()
+    usersDb.close()
     process.exit(0)
   })
 }
