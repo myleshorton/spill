@@ -1,4 +1,4 @@
-const fetch = require('node-fetch')
+const nodeFetch = require('node-fetch')
 const robotsParser = require('robots-parser')
 const fs = require('fs')
 const path = require('path')
@@ -58,7 +58,7 @@ class Fetcher {
 
     // Fetch fresh robots.txt
     try {
-      const resp = await fetch(robotsUrl, {
+      const resp = await nodeFetch(robotsUrl, {
         headers: { 'User-Agent': USER_AGENT },
         timeout: 10000,
         redirect: 'follow',
@@ -107,7 +107,7 @@ class Fetcher {
     const timeout = isLikelyFile ? this.timeoutFile : this.timeoutHtml
 
     try {
-      const resp = await fetch(url, {
+      const resp = await nodeFetch(url, {
         headers: {
           'User-Agent': USER_AGENT,
           'Accept': 'text/html,application/xhtml+xml,application/pdf,*/*;q=0.8',
