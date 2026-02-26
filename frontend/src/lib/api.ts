@@ -137,6 +137,10 @@ export function thumbnailUrl(id: string): string {
   return `${API_BASE}/documents/${id}/thumbnail`
 }
 
+export function previewUrl(id: string): string {
+  return `${API_BASE}/documents/${id}/preview`
+}
+
 export function formatFileSize(bytes: number): string {
   if (bytes === 0) return '0 B'
   const units = ['B', 'KB', 'MB', 'GB', 'TB']

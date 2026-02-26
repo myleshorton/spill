@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Download, ExternalLink, Copy, Check, ChevronLeft, Loader2 } from 'lucide-react'
 import Link from 'next/link'
-import { type Document, contentUrl, getDocumentText, formatFileSize } from '@/lib/api'
+import { type Document, contentUrl, previewUrl, getDocumentText, formatFileSize } from '@/lib/api'
 import { siteConfig } from '@/config/site.config'
 
 interface DocumentViewerProps {
@@ -148,16 +148,10 @@ export default function DocumentViewer({ doc }: DocumentViewerProps) {
 }
 
 function HtmlRenderer({ doc, url }: { doc: Document, url: string }) {
-  const [text, setText] = useState<string | null>(null)
-
-  useEffect(() => {
-    getDocumentText(doc.id).then(setText).catch(() => setText(''))
-  }, [doc.id])
-
   return (
     <div className="rounded-lg border border-spill-divider">
       <div className="flex items-center justify-between border-b border-spill-divider bg-spill-surface px-4 py-2">
-        <span className="text-xs text-spill-text-secondary">Extracted text preview</span>
+        <span className="text-xs text-spill-text-secondary">Sanitized preview</span>
         <div className="flex items-center gap-2">
           <a
             href={url}
@@ -182,19 +176,12 @@ function HtmlRenderer({ doc, url }: { doc: Document, url: string }) {
           )}
         </div>
       </div>
-      <div className="max-h-[75vh] overflow-auto bg-spill-bg p-6">
-        {text === null ? (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-6 w-6 animate-spin text-spill-accent" />
-          </div>
-        ) : text ? (
-          <pre className="whitespace-pre-wrap font-body text-sm leading-relaxed text-spill-text-secondary">
-            {text}
-          </pre>
-        ) : (
-          <p className="text-center text-sm text-spill-text-secondary">No extracted text available</p>
-        )}
-      </div>
+      <iframe
+        src={previewUrl(doc.id)}
+        sandbox="allow-same-origin"
+        className="h-[75vh] w-full bg-white"
+        title={doc.title}
+      />
     </div>
   )
 }

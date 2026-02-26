@@ -66,21 +66,26 @@ if [ "$SKIP_DOWNLOAD" = false ]; then
 
   for ds in "${DS_LIST[@]}"; do
     ZIP_FILE="$DOWNLOAD_DIR/ds${ds}.zip"
-    URL="https://archive.org/download/data-set-1/DataSet%20${ds}.zip"
 
-    if [ -f "$ZIP_FILE" ]; then
-      echo "  DS $ds: ZIP exists, resuming/verifying..."
+    # Skip files that are already fully downloaded (non-zero size)
+    if [ -f "$ZIP_FILE" ] && [ -s "$ZIP_FILE" ]; then
+      echo "  DS $ds: Already downloaded ($(du -h "$ZIP_FILE" | cut -f1)), resuming/verifying..."
     else
       echo "  DS $ds: Downloading..."
     fi
 
-    wget -c -q --show-progress "$URL" -O "$ZIP_FILE" || {
-      echo "  WARNING: DS $ds download failed. Trying alternate URL..."
-      # Try alternate archive.org URL pattern
-      ALT_URL="https://archive.org/download/data-set-${ds}/DataSet%20${ds}.zip"
-      wget -c -q --show-progress "$ALT_URL" -O "$ZIP_FILE" || {
-        echo "  ERROR: DS $ds download failed from both URLs. Skipping."
-        continue
+    # Try DOJ direct first, then archive.org mirrors
+    DOJ_URL="https://www.justice.gov/epstein/files/DataSet%20${ds}.zip"
+    ARCHIVE_URL1="https://archive.org/download/data-set-1/DataSet%20${ds}.zip"
+    ARCHIVE_URL2="https://archive.org/download/data-set-${ds}/DataSet%20${ds}.zip"
+
+    wget -c -q --show-progress "$DOJ_URL" -O "$ZIP_FILE" || {
+      echo "  WARNING: DOJ download failed for DS $ds. Trying archive.org..."
+      wget -c -q --show-progress "$ARCHIVE_URL1" -O "$ZIP_FILE" || {
+        wget -c -q --show-progress "$ARCHIVE_URL2" -O "$ZIP_FILE" || {
+          echo "  ERROR: DS $ds download failed from all URLs. Skipping."
+          continue
+        }
       }
     }
 

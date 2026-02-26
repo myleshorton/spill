@@ -194,6 +194,56 @@ function createDocumentsRouter (docsDb, searchIndex, archiver, torrentManager) {
     fs.createReadStream(doc.thumb_path).pipe(res)
   })
 
+  // Serve sanitized HTML preview (strips scripts/iframes/event handlers)
+  router.get('/documents/:id/preview', (req, res) => {
+    const doc = docsDb.get(req.params.id)
+    if (!doc || doc.content_type !== 'html') {
+      return res.status(404).json({ error: 'HTML preview not available' })
+    }
+    if (!doc.file_path || !fs.existsSync(doc.file_path)) {
+      return res.status(404).json({ error: 'File not available' })
+    }
+
+    let html = fs.readFileSync(doc.file_path, 'utf8')
+
+    // Strip dangerous elements
+    html = html.replace(/<script[\s\S]*?<\/script>/gi, '')
+    html = html.replace(/<iframe[\s\S]*?<\/iframe>/gi, '')
+    html = html.replace(/<iframe[^>]*\/>/gi, '')
+    html = html.replace(/<object[\s\S]*?<\/object>/gi, '')
+    html = html.replace(/<embed[^>]*\/?>/gi, '')
+    html = html.replace(/<noscript[\s\S]*?<\/noscript>/gi, '')
+
+    // Strip event handlers from all tags
+    html = html.replace(/\s+on\w+\s*=\s*("[^"]*"|'[^']*'|[^\s>]*)/gi, '')
+
+    // Strip javascript: URLs
+    html = html.replace(/href\s*=\s*["']javascript:[^"']*["']/gi, 'href="#"')
+
+    // Inject base tag for relative asset resolution and basic styling override
+    const baseUrl = doc.source_url || ''
+    const baseTag = baseUrl ? `<base href="${baseUrl.replace(/"/g, '&quot;')}" target="_blank">` : ''
+    const styleOverride = `<style>
+      body { background: #fff !important; color: #1a1a1a !important; max-width: 100% !important;
+             overflow-x: hidden !important; font-family: system-ui, sans-serif !important; }
+      img { max-width: 100% !important; height: auto !important; }
+      .noscript, .js-required { display: none !important; }
+    </style>`
+
+    if (html.includes('<head')) {
+      html = html.replace(/<head([^>]*)>/i, `<head$1>${baseTag}${styleOverride}`)
+    } else if (html.includes('<html')) {
+      html = html.replace(/<html([^>]*)>/i, `<html$1><head>${baseTag}${styleOverride}</head>`)
+    } else {
+      html = `${baseTag}${styleOverride}${html}`
+    }
+
+    res.setHeader('Content-Type', 'text/html; charset=utf-8')
+    res.setHeader('Cache-Control', 'public, max-age=86400')
+    res.setHeader('Content-Security-Policy', "script-src 'none'; object-src 'none';")
+    res.send(html)
+  })
+
   // Return extracted text
   router.get('/documents/:id/text', (req, res) => {
     const text = docsDb.getText(req.params.id)
