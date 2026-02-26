@@ -8,8 +8,8 @@
 const MAX_RETRIES = 3
 const RETRY_DELAYS = [1000, 4000, 16000]
 const DIMENSIONS = 1536
-const MAX_CHARS = 32000
-const BATCH_SIZE = 100
+const MAX_CHARS = 8000
+const BATCH_SIZE = 20
 
 let OpenAI = null
 let openai = null
