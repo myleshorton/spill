@@ -23,6 +23,7 @@ const MIME_TYPES = {
   '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
   '.xls': 'application/vnd.ms-excel',
   '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  '.html': 'text/html', '.htm': 'text/html',
   '.txt': 'text/plain', '.rtf': 'application/rtf',
   '.eml': 'message/rfc822', '.msg': 'application/vnd.ms-outlook'
 }

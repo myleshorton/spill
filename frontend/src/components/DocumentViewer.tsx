@@ -160,6 +160,19 @@ function ContentRenderer({ doc, url }: { doc: Document, url: string }) {
     )
   }
 
+  if (doc.contentType === 'html') {
+    return (
+      <div className="overflow-hidden rounded-lg border border-spill-divider">
+        <iframe
+          src={url}
+          sandbox="allow-same-origin"
+          className="h-[75vh] w-full bg-white"
+          title={doc.title}
+        />
+      </div>
+    )
+  }
+
   if (doc.contentType === 'image') {
     return (
       <div className="overflow-hidden rounded-lg border border-spill-divider bg-spill-bg">

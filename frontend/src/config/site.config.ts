@@ -145,7 +145,7 @@ export const siteConfig = {
   },
 
   documentViewer: {
-    sourceLabel: 'View on DOJ Site',
+    sourceLabel: 'View Original Source',
   },
 
   links: {
