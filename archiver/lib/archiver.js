@@ -16,10 +16,11 @@ const fs = require('fs')
 const path = require('path')
 
 class Archiver extends EventEmitter {
-  constructor (store, contentDir) {
+  constructor (store, contentDir, opts = {}) {
     super()
     this.store = store
     this.contentDir = contentDir
+    this._dhtPort = opts.port || null
     this.swarm = null
     this.catalog = null
     this.localDrive = null
@@ -48,7 +49,12 @@ class Archiver extends EventEmitter {
     fs.mkdirSync(path.join(this.contentDir, 'thumbs'), { recursive: true })
 
     // Start the swarm
-    this.swarm = new Hyperswarm()
+    const swarmOpts = {}
+    if (this._dhtPort) swarmOpts.port = this._dhtPort
+    this.swarm = new Hyperswarm(swarmOpts)
+    if (this._dhtPort) {
+      console.log('[archiver] DHT listening on fixed port', this._dhtPort)
+    }
     const discovery = this.swarm.join(this._topic, { server: true, client: true })
     discovery.flushed().then(() => {
       console.log('[archiver] DHT discovery flushed')

@@ -7,12 +7,15 @@ services:
       dockerfile: deploy/Dockerfile.archiver
     ports:
       - "4000:4000"
+      - "49737:49737"
+      - "49737:49737/udp"
     volumes:
       - archiver-data:/app/archiver/data
       - content-data:/data
       - ${ARCHIVE_CONFIG:-/dev/null}:/app/archiver/archive-config.override.json:ro
     environment:
       - PORT=4000
+      - DHT_PORT=49737
       - MEILI_HOST=http://meilisearch:7700
       - MEILI_API_KEY=${MEILI_API_KEY:-}
       - DOMAIN=${DOMAIN:-localhost}

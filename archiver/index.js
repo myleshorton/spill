@@ -57,7 +57,8 @@ async function main () {
 
   // Initialize Corestore and archiver
   const store = new Corestore(STORE_PATH)
-  const archiver = new Archiver(store, CONTENT_DIR)
+  const dhtPort = process.env.DHT_PORT ? parseInt(process.env.DHT_PORT, 10) : null
+  const archiver = new Archiver(store, CONTENT_DIR, { port: dhtPort })
 
   // Wire archiver events to database
   archiver.on('videoDiscovered', (meta) => {
