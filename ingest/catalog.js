@@ -58,11 +58,10 @@ async function main () {
     }
 
     console.log('[catalog] Scanning DS %d...', ds)
-    const files = walkDir(dsDir)
-    console.log('[catalog] DS %d: %d files found', ds, files.length)
 
+    let dsFiles = 0
     const batch = []
-    for (const filePath of files) {
+    for (const filePath of walkDir(dsDir)) {
       const { contentType } = detectFileType(filePath)
       const category = categorizeByDataSet(ds, filePath)
       const fileSize = getFileSize(filePath)
@@ -95,11 +94,12 @@ async function main () {
       })
 
       totalFiles++
+      dsFiles++
       totalBytes += fileSize
 
       if (batch.length >= 1000) {
         db.insertBatch(batch)
-        process.stdout.write(`\r[catalog] DS ${ds}: ${totalFiles} files cataloged...`)
+        process.stdout.write(`\r[catalog] DS ${ds}: ${dsFiles} files cataloged...`)
         batch.length = 0
       }
     }
@@ -108,7 +108,7 @@ async function main () {
       db.insertBatch(batch)
     }
 
-    console.log('\n[catalog] DS %d complete: %d files', ds, files.length)
+    console.log('\n[catalog] DS %d complete: %d files', ds, dsFiles)
   }
 
   const stats = db.stats()

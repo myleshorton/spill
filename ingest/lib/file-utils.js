@@ -95,20 +95,18 @@ function categorizeByDataSet (dataSet, filePath) {
   return rule.default !== undefined ? rule.default : null
 }
 
-function walkDir (dir) {
-  const results = []
-  if (!fs.existsSync(dir)) return results
+function * walkDir (dir) {
+  if (!fs.existsSync(dir)) return
 
   const entries = fs.readdirSync(dir, { withFileTypes: true })
   for (const entry of entries) {
     const fullPath = path.join(dir, entry.name)
     if (entry.isDirectory()) {
-      results.push(...walkDir(fullPath))
+      yield * walkDir(fullPath)
     } else if (entry.isFile() && !entry.name.startsWith('.')) {
-      results.push(fullPath)
+      yield fullPath
     }
   }
-  return results
 }
 
 module.exports = {
