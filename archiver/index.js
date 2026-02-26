@@ -102,11 +102,11 @@ async function main () {
   const app = express()
   app.use(cors({ exposedHeaders: ['X-User-ID'] }))
 
+  // Documents API (archive) — registered first so /stats serves document stats
+  app.use('/api', createDocumentsRouter(docsDb, searchIndex, archiver, torrentManager))
+
   // Video API (existing)
   app.use('/api', createRouter(db, archiver))
-
-  // Documents API (archive)
-  app.use('/api', createDocumentsRouter(docsDb, searchIndex, archiver, torrentManager))
 
   // Upload API
   app.use('/api', createUploadRouter(docsDb, uploadProcessor))
