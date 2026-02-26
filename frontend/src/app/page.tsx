@@ -29,7 +29,7 @@ export default function HomePage() {
             <div className="animate-fade-in text-center">
               <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-spill-divider bg-spill-surface px-3 py-1">
                 <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-spill-accent" />
-                <span className="font-mono text-xs text-spill-text-secondary">LIVE P2P ARCHIVE</span>
+                <span className="font-mono text-xs text-spill-text-secondary">LIVE P2P ARCHIVE — CONTINUOUSLY CRAWLING</span>
               </div>
 
               <h1 className="font-headline text-4xl font-bold leading-tight tracking-tight text-spill-text-primary sm:text-5xl lg:text-6xl">

@@ -16,7 +16,7 @@ export const siteConfig = {
     heading: 'Epstein Files',
     headingAccent: 'Public Archive',
     description:
-      "Searchable, censorship-resistant archive of the DOJ's Jeffrey Epstein document releases. Court records, FBI reports, emails, financial documents, and seized media \u2014 all indexed and freely accessible.",
+      "Searchable, censorship-resistant archive of the DOJ's Jeffrey Epstein document releases. Court records, FBI reports, emails, financial documents, and seized media \u2014 all indexed and freely accessible. Our crawler continuously discovers and indexes new Epstein-related documents from court filings, government sites, and public archives.",
   },
 
   search: {
@@ -80,17 +80,21 @@ export const siteConfig = {
     intro: [
       'In 2025, the U.S. Department of Justice released over 370 gigabytes of documents related to the investigation of Jeffrey Epstein. These {count} data sets contain approximately 1.4 million files spanning 3.5 million pages \u2014 FBI interview summaries, police reports, emails, financial records, flight manifests, seized photographs and videos, and more.',
       "This archive exists to make these public records genuinely accessible. Raw document dumps are functionally opaque to most people. We've indexed every file, applied OCR to scanned documents, and built full-text search across the entire collection. Every document is browsable, searchable, and downloadable.",
+      'Beyond the original DOJ release, our web crawler continuously discovers and indexes new Epstein-related documents from court dockets, government transparency portals, the Internet Archive, and news publications. New content is scored for relevance, deduplicated, and added to the searchable archive automatically.',
     ],
     features: [
       { title: 'Full-Text Search', iconName: 'Search', description: 'Every document is OCR\'d and indexed with Meilisearch. Search across 3.5 million pages with typo tolerance, faceted filtering by data set and file type, and sub-200ms results.' },
+      { title: 'Continuous Crawling', iconName: 'Globe', description: 'Our web crawler actively discovers new Epstein-related documents from court dockets, government sites, news outlets, and public archives. New content is automatically scored for relevance, deduplicated, and indexed.' },
       { title: 'Censorship Resistant', iconName: 'Shield', description: 'The archive is distributed via the Spill P2P network using Hyperswarm. If this server goes offline, other peer nodes retain full copies of the data.' },
       { title: 'Document Viewer', iconName: 'FileText', description: 'PDFs render inline with PDF.js. Images, videos, and audio files play natively. Extracted text is available for every document for accessibility and copy-paste.' },
-      { title: 'Open Source', iconName: 'Globe', description: 'The archive software, ingest pipeline, and P2P distribution layer are all open source. Anyone can run their own mirror or contribute improvements.' },
     ],
     dataSources: [
       'U.S. Department of Justice official release',
       'Internet Archive community mirrors',
       'BitTorrent community distribution',
+      'Court docket filings (PACER / public access)',
+      'Government transparency portals',
+      'News publications and investigative journalism',
     ],
     pipeline: [
       { title: 'Download', description: 'All {count} data sets downloaded via BitTorrent and verified against published checksums.' },
@@ -99,6 +103,7 @@ export const siteConfig = {
       { title: 'Thumbnail Generation', description: 'PDF pages, images, and video frames thumbnailed for visual browsing.' },
       { title: 'Indexing', description: 'All extracted text indexed in Meilisearch with filterable facets for data set, file type, and category.' },
       { title: 'P2P Distribution', description: 'Files published to Hyperdrives and announced on the Spill network for decentralized replication.' },
+      { title: 'Web Crawling', description: 'A continuous crawler discovers new Epstein-related documents from court systems, government sites, and public archives. Content is scored for relevance by source-specific adapters and added to the archive automatically.' },
     ],
     privacy:
       "This archive does not require an account, does not set tracking cookies, and does not log search queries. No analytics service is used. The site is served over HTTPS with a Let's Encrypt certificate. The P2P distribution layer uses end-to-end encrypted connections via the Noise protocol.",
@@ -114,7 +119,7 @@ export const siteConfig = {
 
   whySection: {
     heading: 'Why This Archive Exists',
-    body: 'In 2025, the Department of Justice released over 370GB of documents related to the Jeffrey Epstein investigation. These are public records \u2014 yet their sheer volume makes them difficult to navigate. This archive indexes every document, applies OCR to scanned pages, and makes everything searchable. It\u2019s distributed via P2P so no single entity can take it offline.',
+    body: 'In 2025, the Department of Justice released over 370GB of documents related to the Jeffrey Epstein investigation. These are public records \u2014 yet their sheer volume makes them difficult to navigate. This archive indexes every document, applies OCR to scanned pages, and makes everything searchable. Beyond the original release, our crawler continuously discovers new related documents from court dockets, government portals, and public archives. It\u2019s distributed via P2P so no single entity can take it offline.',
   },
 
   footer: {
