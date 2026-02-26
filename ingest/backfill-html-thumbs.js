@@ -7,7 +7,7 @@ const DocumentsDatabase = require('../archiver/lib/documents-db')
 const { generateThumbnail } = require('./lib/thumbnails')
 
 const DB_PATH = process.env.DOCS_DB_PATH || path.join(__dirname, '..', 'archiver', 'data', 'documents.db')
-const THUMB_DIR = process.env.THUMB_DIR || path.join(__dirname, '..', 'data', 'thumbnails')
+const THUMB_DIR = process.env.THUMB_DIR || '/data/thumbnails'
 
 async function main () {
   const db = new DocumentsDatabase(DB_PATH)
