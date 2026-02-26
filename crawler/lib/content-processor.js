@@ -52,7 +52,7 @@ class ContentProcessor {
     // 3. Extract text
     let text = ''
     const isHtml = (contentType || '').includes('html')
-    const isPdf = (contentType || '').includes('pdf') || filePath.endsWith('.pdf')
+    let isPdf = (contentType || '').includes('pdf') || filePath.endsWith('.pdf')
 
     if (isHtml) {
       text = this._extractHtmlText(filePath)
@@ -110,11 +110,26 @@ class ContentProcessor {
 
     // 7. Determine file type and category
     const ext = path.extname(filePath)
-    let fileType = { contentType: 'pdf', category: null }
+    let fileType = { contentType: 'unknown', category: null }
     if (isHtml) {
       fileType = { contentType: 'html', category: SOURCE_CATEGORY_MAP[urlRow.source] || 'web_page' }
     } else if (this.fileUtils) {
       fileType = this.fileUtils.detectFileType(filePath)
+    }
+
+    // Validate PDF classification by checking file magic bytes
+    if (fileType.contentType === 'pdf' || isPdf) {
+      try {
+        const head = Buffer.alloc(5)
+        const fd = fs.openSync(filePath, 'r')
+        fs.readSync(fd, head, 0, 5, 0)
+        fs.closeSync(fd)
+        if (head.toString('ascii') !== '%PDF-') {
+          console.warn('[processor] File classified as PDF but header is %s: %s', JSON.stringify(head.toString('ascii')), path.basename(filePath))
+          fileType = { contentType: 'unknown', category: null }
+          isPdf = false
+        }
+      } catch {}
     }
 
     const category = SOURCE_CATEGORY_MAP[urlRow.source] || fileType.category || 'web_page'
@@ -131,9 +146,11 @@ class ContentProcessor {
     if (this.thumbnails && (isPdf || isHtml || fileType.contentType === 'image')) {
       const thumbDest = path.join(this.thumbDir, 'crawled', `${docId}.jpg`)
       try {
-        const ok = await this.thumbnails.generateThumbnail(filePath, thumbDest, fileType.contentType)
+        const ok = await this.thumbnails.generateThumbnail(destFile, thumbDest, fileType.contentType)
         if (ok) thumbPath = thumbDest
-      } catch {}
+      } catch (err) {
+        console.warn('[processor] Thumbnail failed for %s: %s', docId, err.message)
+      }
     }
 
     // 10. Determine collection

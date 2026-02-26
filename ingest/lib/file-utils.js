@@ -53,7 +53,7 @@ const EXTENSION_MAP = {
 
 function detectFileType (filePath) {
   const ext = path.extname(filePath).toLowerCase()
-  return EXTENSION_MAP[ext] || { contentType: 'pdf', category: null }
+  return EXTENSION_MAP[ext] || { contentType: 'unknown', category: null }
 }
 
 function generateId (filePath) {
