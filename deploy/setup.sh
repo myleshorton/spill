@@ -45,7 +45,8 @@ echo ""
 # System updates
 echo "[1/8] Updating system..."
 apt-get update && apt-get upgrade -y
-apt-get install -y curl git docker.io docker-compose-plugin gettext-base
+apt-get install -y curl git docker.io gettext-base
+apt-get install -y docker-compose-plugin 2>/dev/null || apt-get install -y docker-compose-v2 2>/dev/null || true
 
 # Enable Docker
 systemctl enable docker
