@@ -61,7 +61,7 @@ function thumbnailVideo (filePath, outputPath) {
   }
 }
 
-function thumbnailPdf (filePath, outputPath) {
+async function thumbnailPdf (filePath, outputPath) {
   try {
     // Use pdftoppm to render first page, then resize with sharp (or just use the raw output)
     const tmpPath = outputPath + '.ppm'
@@ -80,7 +80,7 @@ function thumbnailPdf (filePath, outputPath) {
     }
 
     if (sharp && fs.existsSync(outputPath)) {
-      const buffer = sharp(outputPath)
+      const buffer = await sharp(outputPath)
         .resize(THUMB_WIDTH, THUMB_HEIGHT, { fit: 'cover' })
         .jpeg({ quality: 75 })
         .toBuffer()
