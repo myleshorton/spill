@@ -71,7 +71,7 @@ async function thumbnailPdf (filePath, outputPath) {
       '-singlefile',
       filePath,
       outputPath.replace('.jpg', '')
-    ], { timeout: 30000, stdio: 'pipe' })
+    ], { timeout: 30000, stdio: ['pipe', 'pipe', 'ignore'] })
 
     // pdftoppm creates output with .jpg extension
     const generatedPath = outputPath.replace('.jpg', '') + '.jpg'
