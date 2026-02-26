@@ -19,7 +19,7 @@ export default function HomePage() {
       <Header />
 
       <main className="flex-1">
-        <section className="relative overflow-hidden">
+        <section className="relative z-10">
           <div className="absolute inset-0 bg-gradient-to-b from-spill-accent/[0.03] via-transparent to-transparent" />
           <div className="absolute inset-0" style={{
             backgroundImage: 'radial-gradient(circle at 50% 0%, rgba(0, 191, 166, 0.08) 0%, transparent 50%)',
@@ -42,7 +42,7 @@ export default function HomePage() {
               </p>
             </div>
 
-            <div className="mt-10 animate-slide-up" style={{ animationDelay: '150ms' }}>
+            <div className="relative z-10 mt-10 animate-slide-up" style={{ animationDelay: '150ms' }}>
               <SearchBar large autoFocus />
             </div>
 
