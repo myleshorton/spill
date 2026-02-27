@@ -20,7 +20,7 @@ export default function FacetSidebar({ facets }: FacetSidebarProps) {
   const searchParams = useSearchParams()
 
   const activeDataSet = searchParams.get('ds')
-  const activeContentType = searchParams.get('type')
+  const activeContentTypes = (searchParams.get('type') || '').split(',').filter(Boolean)
   const activeCategory = searchParams.get('cat')
 
   const setFilter = useCallback((key: string, value: string | null) => {
@@ -34,23 +34,34 @@ export default function FacetSidebar({ facets }: FacetSidebarProps) {
     router.push(`/search?${params.toString()}`)
   }, [router, searchParams])
 
+  const toggleContentType = useCallback((type: string) => {
+    const next = activeContentTypes.includes(type)
+      ? activeContentTypes.filter(t => t !== type)
+      : [...activeContentTypes, type]
+    setFilter('type', next.length > 0 ? next.join(',') : null)
+  }, [activeContentTypes, setFilter])
+
   return (
     <aside className="w-full shrink-0 space-y-6 lg:w-64">
-      {facets?.contentType && Object.keys(facets.contentType).length > 0 && (
-        <FacetGroup title="File Type">
-          {Object.entries(facets.contentType)
-            .sort(([, a], [, b]) => b - a)
-            .map(([type, count]) => (
+      {(() => {
+        const hasFacets = facets?.contentType && Object.keys(facets.contentType).length > 0
+        const entries: [string, number | null][] = hasFacets
+          ? Object.entries(facets.contentType!).sort(([, a], [, b]) => b - a)
+          : Object.keys(siteConfig.contentTypes).map(k => [k, null])
+        return entries.length > 0 ? (
+          <FacetGroup title="File Type">
+            {entries.map(([type, count]) => (
               <FacetItem
                 key={type}
                 label={siteConfig.contentTypes[type] || type}
                 count={count}
-                active={activeContentType === type}
-                onClick={() => setFilter('type', activeContentType === type ? null : type)}
+                active={activeContentTypes.includes(type)}
+                onClick={() => toggleContentType(type)}
               />
             ))}
-        </FacetGroup>
-      )}
+          </FacetGroup>
+        ) : null
+      })()}
 
       {facets?.dataSet && Object.keys(facets.dataSet).length > 0 && (
         <FacetGroup title="Data Set">
@@ -108,7 +119,7 @@ function FacetItem({
   onClick,
 }: {
   label: string
-  count: number
+  count: number | null
   active: boolean
   onClick: () => void
 }) {
@@ -123,12 +134,14 @@ function FacetItem({
       )}
     >
       <span className="truncate">{label}</span>
-      <span className={clsx(
-        'ml-2 shrink-0 font-mono text-xs',
-        active ? 'text-spill-accent/70' : 'text-spill-text-secondary/60'
-      )}>
-        {formatNumber(count)}
-      </span>
+      {count != null && (
+        <span className={clsx(
+          'ml-2 shrink-0 font-mono text-xs',
+          active ? 'text-spill-accent/70' : 'text-spill-text-secondary/60'
+        )}>
+          {formatNumber(count)}
+        </span>
+      )}
     </button>
   )
 }

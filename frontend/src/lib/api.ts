@@ -89,7 +89,7 @@ export async function listDocuments(options: {
   limit?: number
   offset?: number
   dataSet?: number
-  contentType?: string
+  contentType?: string  // comma-separated for multiple types
   category?: string
 } = {}): Promise<{ documents: Document[], total: number }> {
   const params = new URLSearchParams()

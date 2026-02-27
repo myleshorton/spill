@@ -61,7 +61,8 @@ function createDocumentsRouter (docsDb, searchIndex, archiverRef, torrentManager
     const limit = Math.min(parseInt(req.query.limit) || 50, 200)
     const offset = parseInt(req.query.offset) || 0
     const dataSet = req.query.data_set ? parseInt(req.query.data_set) : undefined
-    const contentType = req.query.content_type || undefined
+    const rawType = req.query.content_type || undefined
+    const contentType = rawType && rawType.includes(',') ? rawType.split(',') : rawType
     const category = req.query.category || undefined
 
     const result = docsDb.list({ limit, offset, dataSet, contentType, category })

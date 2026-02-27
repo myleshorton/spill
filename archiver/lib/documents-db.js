@@ -74,6 +74,9 @@ class DocumentsDatabase {
     if (!colNames.has('embedding')) {
       this.db.exec('ALTER TABLE documents ADD COLUMN embedding BLOB')
     }
+    if (!colNames.has('image_keywords')) {
+      this.db.exec('ALTER TABLE documents ADD COLUMN image_keywords TEXT')
+    }
   }
 
   _seedCollections () {
@@ -157,8 +160,13 @@ class DocumentsDatabase {
       params.push(dataSet)
     }
     if (contentType) {
-      conditions.push('content_type = ?')
-      params.push(contentType)
+      if (Array.isArray(contentType)) {
+        conditions.push(`content_type IN (${contentType.map(() => '?').join(',')})`)
+        params.push(...contentType)
+      } else {
+        conditions.push('content_type = ?')
+        params.push(contentType)
+      }
     }
     if (category) {
       conditions.push('category = ?')
@@ -286,6 +294,28 @@ class DocumentsDatabase {
       WHERE embedding IS NULL AND (extracted_text IS NOT NULL OR transcript IS NOT NULL)
       LIMIT ?
     `).all(limit)
+  }
+
+  setImageKeywords (id, keywords) {
+    this.db.prepare('UPDATE documents SET image_keywords = ? WHERE id = ?').run(keywords, id)
+  }
+
+  getUnkeywordedImages (dataSet, limit = 100) {
+    return this.db.prepare(`
+      SELECT id, file_name, file_path
+      FROM documents
+      WHERE data_set = ? AND content_type = 'image' AND image_keywords IS NULL AND file_path IS NOT NULL
+      LIMIT ?
+    `).all(dataSet, limit)
+  }
+
+  getUnkeywordedPdfs (dataSet, limit = 100) {
+    return this.db.prepare(`
+      SELECT id, file_name, file_path
+      FROM documents
+      WHERE data_set = ? AND content_type = 'pdf' AND image_keywords IS NULL AND file_path IS NOT NULL
+      LIMIT ?
+    `).all(dataSet, limit)
   }
 
   close () {

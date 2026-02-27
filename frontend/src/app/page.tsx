@@ -49,10 +49,13 @@ export default function HomePage() {
             <div className="mt-6 flex flex-wrap items-center justify-center gap-2 animate-slide-up" style={{ animationDelay: '250ms' }}>
               {siteConfig.featuredSearches.map((item) => {
                 const Icon = ICON_MAP[item.iconName]
+                const href = item.type
+                  ? `/search?type=${encodeURIComponent(item.type)}`
+                  : `/search?q=${encodeURIComponent(item.query!)}`
                 return (
                   <Link
                     key={item.label}
-                    href={`/search?q=${encodeURIComponent(item.query)}`}
+                    href={href}
                     className="flex items-center gap-1.5 rounded-full border border-spill-divider bg-spill-surface px-3 py-1.5 text-sm text-spill-text-secondary hover:border-spill-accent/30 hover:text-spill-accent transition-all"
                   >
                     {Icon && <Icon className="h-3 w-3" />}

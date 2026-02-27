@@ -51,8 +51,8 @@ export const siteConfig = {
     { label: 'Financial Records', query: 'bank account wire transfer', iconName: 'DollarSign' as const },
     { label: 'Email Correspondence', query: 'email correspondence', iconName: 'Mail' as const },
     { label: 'FBI Interviews', query: 'FBI interview summary', iconName: 'FileText' as const },
-    { label: 'Photographs', query: 'photograph image seized', iconName: 'Image' as const },
-    { label: 'Video Evidence', query: 'video recording', iconName: 'Video' as const },
+    { label: 'Photographs', type: 'image', iconName: 'Image' as const },
+    { label: 'Video Evidence', type: 'video', iconName: 'Video' as const },
   ],
 
   categories: {

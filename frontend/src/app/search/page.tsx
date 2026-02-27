@@ -30,7 +30,14 @@ function SearchContent() {
 
     const filters: string[] = []
     if (dataSet) filters.push(`dataSet = ${dataSet}`)
-    if (contentType) filters.push(`contentType = "${contentType}"`)
+    if (contentType) {
+      const types = contentType.split(',')
+      if (types.length > 1) {
+        filters.push(`(${types.map(t => `contentType = "${t}"`).join(' OR ')})`)
+      } else {
+        filters.push(`contentType = "${contentType}"`)
+      }
+    }
     if (category) filters.push(`category = "${category}"`)
     const filterStr = filters.join(' AND ')
 
