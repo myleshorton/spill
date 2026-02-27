@@ -296,6 +296,14 @@ class DocumentsDatabase {
     `).all(limit)
   }
 
+  updateContentType (id, contentType, category, filePath, fileSize) {
+    this.db.prepare(`
+      UPDATE documents
+      SET content_type = ?, category = ?, file_path = ?, file_size = ?, thumb_path = NULL
+      WHERE id = ?
+    `).run(contentType, category, filePath, fileSize, id)
+  }
+
   setImageKeywords (id, keywords) {
     this.db.prepare('UPDATE documents SET image_keywords = ? WHERE id = ?').run(keywords, id)
   }

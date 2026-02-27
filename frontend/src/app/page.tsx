@@ -51,6 +51,8 @@ export default function HomePage() {
                 const Icon = ICON_MAP[item.iconName]
                 const href = item.type
                   ? `/search?type=${encodeURIComponent(item.type)}`
+                  : item.ds
+                  ? `/search?ds=${encodeURIComponent(item.ds)}`
                   : `/search?q=${encodeURIComponent(item.query!)}`
                 return (
                   <Link
