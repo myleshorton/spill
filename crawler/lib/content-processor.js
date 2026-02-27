@@ -17,7 +17,7 @@ const SOURCE_CATEGORY_MAP = {
 }
 
 class ContentProcessor {
-  constructor ({ docsDb, searchIndex, relevanceScorer, textExtract, thumbnails, fileUtils, transcriber, embedder, options = {} }) {
+  constructor ({ docsDb, searchIndex, relevanceScorer, textExtract, thumbnails, fileUtils, transcriber, embedder, imageKeywords, options = {} }) {
     this.docsDb = docsDb
     this.searchIndex = searchIndex
     this.scorer = relevanceScorer
@@ -26,6 +26,7 @@ class ContentProcessor {
     this.fileUtils = fileUtils
     this.transcriber = transcriber
     this.embedder = embedder
+    this.imageKeywords = imageKeywords
     this.minRelevance = options.minRelevance || 0.3
     this.autoIndexThreshold = options.autoIndexThreshold || 0.5
     this.dryRun = options.dryRun || false
@@ -175,6 +176,7 @@ class ContentProcessor {
       indexed_at: relevanceScore >= this.autoIndexThreshold ? Date.now() : null,
       collection_id: collectionId,
       sha256_hash: sha256,
+      image_keywords: null,
     }
 
     // 12. Insert into documents DB
@@ -201,6 +203,19 @@ class ContentProcessor {
         }
       } catch (err) {
         console.warn('[processor] Embedding failed for %s: %s', docId, err.message)
+      }
+    }
+
+    // 15. Extract image keywords
+    if (this.imageKeywords && fileType.contentType === 'image') {
+      try {
+        const keywords = await this.imageKeywords.extractKeywords(destFile)
+        if (keywords) {
+          this.docsDb.setImageKeywords(docId, keywords)
+          doc.image_keywords = keywords
+        }
+      } catch (err) {
+        console.warn('[processor] Image keywords failed for %s: %s', docId, err.message)
       }
     }
 

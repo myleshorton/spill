@@ -7,13 +7,16 @@ const { URL } = require('url')
 
 const USER_AGENT = 'UnredactBot/1.0 (+https://unredact.org/bot)'
 
+const ARCHIVE_FILE_PATTERN = /\.(zip|tar|tar\.gz|tgz|gz)$/i
+const ARCHIVE_ORG_DOMAINS = /^(.*\.)?archive\.org$/i
+
 const EXCLUDE_PATTERNS = [
   /\/login/i, /\/signup/i, /\/register/i, /\/account/i,
   /\/cart/i, /\/checkout/i, /\/subscribe/i,
   /\/ads\//i, /\/tracking\//i, /\/analytics\//i,
   /\.css$/i, /\.js$/i, /\.woff/i, /\.svg$/i,
   /\/wp-admin/i, /\/wp-login/i,
-  /\.(zip|tar|gz|rar|exe|dmg|iso|apk)$/i,
+  /\.(rar|exe|dmg|iso|apk)$/i,
   /facebook\.com\/sharer/i, /twitter\.com\/intent/i,
   /mailto:/i, /javascript:/i, /tel:/i,
 ]
@@ -29,7 +32,17 @@ class Fetcher {
   }
 
   shouldExclude (url) {
-    return EXCLUDE_PATTERNS.some(pattern => pattern.test(url))
+    if (EXCLUDE_PATTERNS.some(pattern => pattern.test(url))) return true
+    // Block archive files except from archive.org
+    if (ARCHIVE_FILE_PATTERN.test(url)) {
+      try {
+        const hostname = new URL(url).hostname
+        return !ARCHIVE_ORG_DOMAINS.test(hostname)
+      } catch {
+        return true
+      }
+    }
+    return false
   }
 
   async checkRobots (url) {
@@ -103,7 +116,7 @@ class Fetcher {
       return { url, error: 'robots.txt disallowed', skipped: true }
     }
 
-    const isLikelyFile = /\.(pdf|doc|docx|xls|xlsx|csv|txt|eml|msg)$/i.test(url)
+    const isLikelyFile = /\.(pdf|doc|docx|xls|xlsx|csv|txt|eml|msg|zip|tar|tar\.gz|tgz)$/i.test(url)
     const timeout = isLikelyFile ? this.timeoutFile : this.timeoutHtml
 
     try {
@@ -171,6 +184,9 @@ class Fetcher {
     if (contentType.includes('plain')) return '.txt'
     if (contentType.includes('image/jpeg')) return '.jpg'
     if (contentType.includes('image/png')) return '.png'
+    if (contentType.includes('application/zip')) return '.zip'
+    if (contentType.includes('application/gzip') || contentType.includes('application/x-gzip')) return '.gz'
+    if (contentType.includes('application/x-tar')) return '.tar'
 
     // Fallback to URL extension
     try {

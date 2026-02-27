@@ -87,22 +87,44 @@ class ArchiveOrgAdapter {
       const html = fs.readFileSync(fetchResult.filePath, 'utf8')
       const $ = cheerio.load(html)
 
-      // On archive.org detail pages, find downloadable files
+      // On archive.org detail pages, try metadata API first, fall back to HTML scraping
       if (url.includes('archive.org/details/')) {
-        $('a[href*="/download/"]').each((_, el) => {
-          const href = $(el).attr('href')
-          if (!href) return
-          // Focus on PDFs and documents
-          if (/\.(pdf|txt|doc|docx|csv|xls|xlsx)$/i.test(href)) {
-            try {
-              links.push({
-                url: new URL(href, url).toString(),
-                priority: 0.85,
-                source: 'archive-org',
-              })
-            } catch {}
+        const identifier = url.match(/archive\.org\/details\/([^/?#]+)/)?.[1]
+        let usedApi = false
+
+        if (identifier) {
+          try {
+            const metaFiles = await this._fetchMetadata(identifier)
+            if (metaFiles.length > 0) {
+              usedApi = true
+              for (const file of metaFiles) {
+                links.push({
+                  url: `https://archive.org/download/${identifier}/${encodeURIComponent(file.name)}`,
+                  priority: 0.85,
+                  source: 'archive-org',
+                })
+              }
+            }
+          } catch (err) {
+            console.warn('[archive-org] Metadata API failed for %s, falling back to HTML: %s', identifier, err.message)
           }
-        })
+        }
+
+        if (!usedApi) {
+          $('a[href*="/download/"]').each((_, el) => {
+            const href = $(el).attr('href')
+            if (!href) return
+            if (/\.(pdf|txt|doc|docx|csv|xls|xlsx|zip|tar|tar\.gz|tgz)$/i.test(href)) {
+              try {
+                links.push({
+                  url: new URL(href, url).toString(),
+                  priority: 0.85,
+                  source: 'archive-org',
+                })
+              } catch {}
+            }
+          })
+        }
       }
 
       // On search result pages, find item links
@@ -142,6 +164,32 @@ class ArchiveOrgAdapter {
     } catch {}
 
     return links.slice(0, 100)
+  }
+
+  async _fetchMetadata (identifier) {
+    const DOCUMENT_PATTERN = /\.(pdf|txt|doc|docx|csv|xls|xlsx)$/i
+    const ARCHIVE_PATTERN = /\.(zip|tar\.gz|tgz|tar)$/i
+    const MAX_ARCHIVE_SIZE = 2 * 1024 * 1024 * 1024 // 2GB
+
+    const resp = await fetch(`https://archive.org/metadata/${identifier}`, {
+      headers: { 'User-Agent': USER_AGENT },
+      timeout: 30000,
+    })
+    if (!resp.ok) return []
+    const data = await resp.json()
+    const files = data.files || []
+
+    const results = []
+    for (const file of files) {
+      const name = file.name || ''
+      const size = parseInt(file.size || '0', 10)
+      if (DOCUMENT_PATTERN.test(name)) {
+        results.push({ name, size })
+      } else if (ARCHIVE_PATTERN.test(name) && size <= MAX_ARCHIVE_SIZE) {
+        results.push({ name, size })
+      }
+    }
+    return results
   }
 
   async _searchItems (query) {

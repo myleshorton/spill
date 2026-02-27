@@ -15,7 +15,7 @@ const features = [
     ),
     title: 'Publish Anything',
     description:
-      'Documents, video, audio, datasets — any content that needs to survive attempts to suppress it. No file type restrictions, no content gatekeepers.',
+      'Documents, video, audio, datasets — any content that needs to survive attempts to suppress it. Audio and video are automatically transcribed for full-text search. No file type restrictions, no content gatekeepers.',
   },
   {
     icon: (

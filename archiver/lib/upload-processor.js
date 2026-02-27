@@ -13,6 +13,11 @@ try {
   embedder = require('../../ingest/lib/embedder')
 } catch {}
 
+let imageKeywords = null
+try {
+  imageKeywords = require('../../ingest/lib/image-keywords')
+} catch {}
+
 const UPLOAD_DIR = path.join(__dirname, '..', 'data', 'content', 'uploads')
 
 const ALLOWED_EXTENSIONS = new Set([
@@ -181,6 +186,21 @@ class UploadProcessor extends EventEmitter {
         }
       }
 
+      // 7.5 Extract image keywords
+      let keywords = null
+      if (imageKeywords && contentType === 'image') {
+        try {
+          job.status = 'extracting keywords'
+          this.emit('status', job)
+          keywords = await imageKeywords.extractKeywords(destPath)
+          if (keywords) {
+            this.docsDb.setImageKeywords(docId, keywords)
+          }
+        } catch (err) {
+          console.warn('[upload] Image keyword extraction failed for %s: %s', docId, err.message)
+        }
+      }
+
       // 8. Index in Meilisearch
       try {
         const searchDoc = {
@@ -195,6 +215,7 @@ class UploadProcessor extends EventEmitter {
           hasThumbnail: false
         }
         if (transcript) searchDoc.transcript = transcript
+        if (keywords) searchDoc.image_keywords = keywords
         await this.searchIndex.addDocuments([searchDoc])
       } catch (err) {
         console.warn('[upload] Meilisearch indexing failed:', err.message)

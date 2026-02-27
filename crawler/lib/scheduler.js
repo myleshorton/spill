@@ -1,4 +1,8 @@
 const pLimit = require('p-limit')
+const path = require('path')
+
+let archiveExtractor = null
+try { archiveExtractor = require('./archive-extractor') } catch {}
 
 class Scheduler {
   constructor ({ crawlDb, fetcher, processor, adapters, options = {} }) {
@@ -129,6 +133,37 @@ class Scheduler {
         }
       } catch (err) {
         console.warn('[scheduler] Link extraction failed for %s: %s', row.url, err.message)
+      }
+    }
+
+    // Extract archives and process each contained file
+    if (archiveExtractor && fetchResult.filePath && archiveExtractor.isArchiveFile(fetchResult.filePath)) {
+      try {
+        const extracted = await archiveExtractor.extractArchive(fetchResult.filePath)
+        if (extracted.length > 0) {
+          console.log('[scheduler] Extracted %d files from archive %s', extracted.length, path.basename(fetchResult.filePath))
+          for (const file of extracted) {
+            try {
+              const syntheticFetch = {
+                url: fetchResult.url + '#' + encodeURIComponent(file.fileName),
+                finalUrl: fetchResult.finalUrl + '#' + encodeURIComponent(file.fileName),
+                status: 200,
+                contentType: archiveExtractor.guessContentType(file.filePath),
+                filePath: file.filePath,
+                size: file.size,
+                headers: fetchResult.headers,
+              }
+              await this.processor.process(syntheticFetch, row)
+              this.processed++
+            } catch (err) {
+              console.warn('[scheduler] Failed to process extracted file %s: %s', file.fileName, err.message)
+            }
+          }
+          this.crawlDb.markProcessed(row.id, 0.5)
+          return
+        }
+      } catch (err) {
+        console.warn('[scheduler] Archive extraction failed for %s: %s', row.url, err.message)
       }
     }
 

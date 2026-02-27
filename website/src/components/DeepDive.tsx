@@ -96,7 +96,7 @@ announceMsg.send(localCatalogKey)`,
     label: 'Archiver Nodes',
     title: 'Persistent Seeders & REST API',
     content:
-      'Archiver nodes are always-on seeders that auto-download everything on the network. They provide REST API access, full-text search via Meilisearch, torrent bridges, and web interfaces. Run one to guarantee content availability.',
+      'Archiver nodes are always-on seeders that auto-download everything on the network. They provide REST API access, full-text search via Meilisearch, automatic audio/video transcription, torrent bridges, and web interfaces. Run one to guarantee content availability.',
     code: `// Archiver auto-downloads all discovered content
 swarm.on('connection', async (socket) => {
   const mux = Protomux.from(socket)
