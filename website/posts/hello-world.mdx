@@ -1,0 +1,33 @@
+---
+title: "Introducing Spill: A New Protocol for Censorship-Resistant Publishing"
+date: "2025-02-26"
+excerpt: "Today we're open-sourcing Spill — a peer-to-peer protocol for distributing content that can't be taken down."
+category: "Announcement"
+---
+
+Today we're publicly launching Spill — an open protocol for distributing content that powerful actors want to disappear.
+
+## Why Spill?
+
+The internet was designed to route around damage, but modern infrastructure has created new chokepoints. Domain seizures, hosting takedowns, CDN bans, and legal threats can silence any single publisher. Spill makes that impossible by distributing content across a peer-to-peer network with no central point of failure.
+
+## How It Works
+
+Spill is built on the Hypercore Protocol stack:
+
+- **Hyperdrive** provides content-addressed, append-only filesystems for each publisher
+- **Hyperswarm** handles distributed peer discovery via a Kademlia DHT
+- **Protomux** multiplexes protocol channels over encrypted connections
+- **Archiver nodes** provide persistent seeding and REST API access
+
+When you publish on Spill, your content is signed with your keypair, announced on the DHT, and replicated to every peer that subscribes. There's no server to seize, no domain to revoke, no company to pressure.
+
+## First Deployment: The Epstein Files
+
+Our first production deployment is [unredact.org](https://unredact.org) — a searchable archive of 370GB+ of DOJ investigation documents from the Epstein case. Every document is replicated across the Spill network, indexed for full-text search, and available as torrents.
+
+## What's Next
+
+We're working on the MIRAGE protocol — a next-generation transport layer designed to be indistinguishable from normal CDN traffic, making Spill resistant to deep packet inspection and network-level censorship.
+
+Follow the project on GitHub and join the network.
