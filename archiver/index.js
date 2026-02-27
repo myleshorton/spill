@@ -5,13 +5,11 @@
  * Wires archiver events to the SQLite database.
  * Also serves the Epstein document archive API via Meilisearch.
  */
-const Corestore = require('corestore')
 const express = require('express')
 const cors = require('cors')
 const path = require('path')
 
 const ArchiveDatabase = require('./lib/database')
-const Archiver = require('./lib/archiver')
 const createRouter = require('./lib/api')
 const DocumentsDatabase = require('./lib/documents-db')
 const SearchIndex = require('./lib/meilisearch')
@@ -55,59 +53,26 @@ async function main () {
     console.warn('[main] Search will be unavailable until Meilisearch is running')
   }
 
-  // Initialize Corestore and archiver
-  const store = new Corestore(STORE_PATH)
-  const dhtPort = process.env.DHT_PORT ? parseInt(process.env.DHT_PORT, 10) : null
-  const archiver = new Archiver(store, CONTENT_DIR, { port: dhtPort })
-
-  // Wire archiver events to database
-  archiver.on('videoDiscovered', (meta) => {
-    db.upsert(meta)
-  })
-
-  archiver.on('videoArchived', ({ id, videoPath, thumbPath }) => {
-    db.updatePaths(id, videoPath, thumbPath)
-    console.log('[main] Archived video', id)
-  })
-
-  archiver.on('videoDeleted', (id) => {
-    db.remove(id)
-    console.log('[main] Removed video', id)
-  })
-
-  archiver.on('videoPublished', (meta) => {
-    db.upsert(meta)
-    db.updatePaths(meta.id, meta.videoPath, meta.thumbPath)
-    console.log('[main] Published video', meta.id)
-  })
-
-  // Initialize torrent manager
+  // Initialize torrent manager (generation runs in child process)
   const torrentManager = new TorrentManager()
-  try {
-    await torrentManager.generateAll(docsDb)
-    console.log('[main] Torrent generation complete')
-  } catch (err) {
-    console.warn('[main] Torrent generation failed (non-fatal):', err.message)
-  }
-
-  // Start P2P networking
-  await archiver.start()
-  console.log('[main] P2P archiver running')
 
   // Initialize upload system
   const virusScanner = new VirusScanner()
-  const uploadProcessor = new UploadProcessor(docsDb, searchIndex, archiver, virusScanner, torrentManager)
+  const uploadProcessor = new UploadProcessor(docsDb, searchIndex, null, virusScanner, torrentManager)
   console.log('[main] Upload processor ready')
 
-  // Start HTTP server
+  // Start HTTP server first so the API is available during slow startup tasks
   const app = express()
   app.use(cors({ exposedHeaders: ['X-User-ID'] }))
 
+  // P2P archiver runs in a child process; pass null ref to routes
+  const archiverRef = { current: null }
+
   // Documents API (archive) — registered first so /stats serves document stats
-  app.use('/api', createDocumentsRouter(docsDb, searchIndex, archiver, torrentManager))
+  app.use('/api', createDocumentsRouter(docsDb, searchIndex, archiverRef, torrentManager))
 
   // Video API (existing)
-  app.use('/api', createRouter(db, archiver))
+  app.use('/api', createRouter(db, archiverRef))
 
   // Upload API
   app.use('/api', createUploadRouter(docsDb, uploadProcessor))
@@ -139,10 +104,47 @@ async function main () {
     process.exit(1)
   })
 
+  // Start P2P networking and torrent generation in a child process
+  // so the HTTP API stays responsive during heavy Corestore operations
+  const { fork } = require('child_process')
+  const p2pWorker = fork(path.join(__dirname, 'lib', 'p2p-worker.js'), [], {
+    env: {
+      ...process.env,
+      STORE_PATH,
+      CONTENT_DIR,
+      DHT_PORT: process.env.DHT_PORT || '',
+      DOCS_DB_PATH,
+      DB_PATH,
+      DOMAIN: process.env.DOMAIN || 'localhost'
+    }
+  })
+  p2pWorker.on('message', (msg) => {
+    if (msg.type === 'started') {
+      console.log('[main] P2P archiver running (child process)')
+    } else if (msg.type === 'torrentsDone') {
+      console.log('[main] Torrent generation complete')
+    } else if (msg.type === 'videoDiscovered') {
+      db.upsert(msg.meta)
+    } else if (msg.type === 'videoArchived') {
+      db.updatePaths(msg.id, msg.videoPath, msg.thumbPath)
+      console.log('[main] Archived video', msg.id)
+    } else if (msg.type === 'videoDeleted') {
+      db.remove(msg.id)
+      console.log('[main] Removed video', msg.id)
+    } else if (msg.type === 'videoPublished') {
+      db.upsert(msg.meta)
+      db.updatePaths(msg.meta.id, msg.meta.videoPath, msg.meta.thumbPath)
+      console.log('[main] Published video', msg.meta.id)
+    }
+  })
+  p2pWorker.on('exit', (code) => {
+    if (code) console.warn('[main] P2P worker exited with code', code)
+  })
+
   // Graceful shutdown
   process.on('SIGINT', async () => {
     console.log('\n[main] Shutting down...')
-    await archiver.destroy()
+    p2pWorker.kill('SIGINT')
     db.close()
     docsDb.close()
     usersDb.close()

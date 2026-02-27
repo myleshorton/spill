@@ -53,7 +53,7 @@ function rowToDoc (row) {
   }
 }
 
-function createDocumentsRouter (docsDb, searchIndex, archiver, torrentManager) {
+function createDocumentsRouter (docsDb, searchIndex, archiverRef, torrentManager) {
   const router = express.Router()
 
   // Paginated document list with filtering
@@ -140,9 +140,9 @@ function createDocumentsRouter (docsDb, searchIndex, archiver, torrentManager) {
     }
 
     // Fallback: stream from Hyperdrive
-    if (doc.drive_key && doc.file_key && archiver) {
+    if (doc.drive_key && doc.file_key && archiverRef.current) {
       try {
-        const drive = await archiver.openDrive(doc.drive_key)
+        const drive = await archiverRef.current.openDrive(doc.drive_key)
         const node = await drive.entry(doc.file_key)
         if (!node) {
           return res.status(404).json({ error: 'File not found in P2P network' })
@@ -256,6 +256,7 @@ function createDocumentsRouter (docsDb, searchIndex, archiver, torrentManager) {
   // Archive stats
   router.get('/stats', (req, res) => {
     const stats = docsDb.stats()
+    const archiver = archiverRef.current
     stats.peerCount = archiver ? archiver.peerCount : 0
     stats.connected = archiver ? archiver.swarm !== null : false
     res.json(stats)

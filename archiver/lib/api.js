@@ -27,7 +27,7 @@ function getMimeType (filePath) {
   return MIME_TYPES[ext] || 'application/octet-stream'
 }
 
-function createRouter (db, archiver) {
+function createRouter (db, archiverRef) {
   const router = express.Router()
 
   // List all videos (optional category filter)
@@ -107,7 +107,8 @@ function createRouter (db, archiver) {
     }
 
     try {
-      const drive = await archiver.openDrive(video.drive_key)
+      if (!archiverRef.current) return res.status(503).json({ error: 'P2P network starting up' })
+      const drive = await archiverRef.current.openDrive(video.drive_key)
       const node = await drive.entry(video.video_key)
       if (!node) {
         return res.status(404).json({ error: 'Content not found in Hyperdrive' })
@@ -162,7 +163,8 @@ function createRouter (db, archiver) {
     }
 
     try {
-      const drive = await archiver.openDrive(video.drive_key)
+      if (!archiverRef.current) return res.status(503).json({ error: 'P2P network starting up' })
+      const drive = await archiverRef.current.openDrive(video.drive_key)
       const node = await drive.entry(video.thumb_key)
       if (!node) {
         return res.status(404).json({ error: 'Thumbnail not found in Hyperdrive' })
@@ -199,7 +201,8 @@ function createRouter (db, archiver) {
         return res.status(400).json({ error: 'Title is required' })
       }
       const thumbFile = req.files.thumbnail && req.files.thumbnail[0]
-      const result = await archiver.publish({
+      if (!archiverRef.current) return res.status(503).json({ error: 'P2P network starting up' })
+      const result = await archiverRef.current.publish({
         videoData: videoFile.buffer,
         thumbData: thumbFile ? thumbFile.buffer : null,
         title: title.trim(),
@@ -236,7 +239,8 @@ function createRouter (db, archiver) {
       if (!video) {
         return res.status(404).json({ error: 'Video not found' })
       }
-      await archiver.deleteVideo(req.params.id)
+      if (!archiverRef.current) return res.status(503).json({ error: 'P2P network starting up' })
+      await archiverRef.current.deleteVideo(req.params.id)
       res.json({ ok: true })
     } catch (err) {
       console.error('[api] Delete error:', err)
@@ -247,9 +251,10 @@ function createRouter (db, archiver) {
   // Stats
   router.get('/stats', (req, res) => {
     const stats = db.stats()
-    stats.peerCount = archiver.peerCount
-    stats.connected = archiver.swarm !== null
-    stats.nodeId = archiver.nodeId
+    const archiver = archiverRef.current
+    stats.peerCount = archiver ? archiver.peerCount : 0
+    stats.connected = archiver ? archiver.swarm !== null : false
+    stats.nodeId = archiver ? archiver.nodeId : null
     res.json(stats)
   })
 
