@@ -40,6 +40,9 @@ macos/Frameworks/
 *.swp
 *~
 
+# SSL certificates
+deploy/certbot/
+
 # Environment
 .env
 .env.*

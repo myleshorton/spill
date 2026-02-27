@@ -18,6 +18,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 DOWNLOAD_DIR="/data/epstein-raw"
 DATASETS="1,2,3,4,5,6,7,8,9,10,11,12"
 SKIP_DOWNLOAD=false
+SKIP_UNPACK=false
 SKIP_INGEST=false
 ARCHIVER_CONTAINER="deploy-archiver-1"
 
@@ -26,14 +27,16 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --datasets) DATASETS="$2"; shift 2 ;;
     --skip-download) SKIP_DOWNLOAD=true; shift ;;
+    --skip-unpack) SKIP_UNPACK=true; shift ;;
     --skip-ingest) SKIP_INGEST=true; shift ;;
     --download-dir) DOWNLOAD_DIR="$2"; shift 2 ;;
     --help|-h)
-      echo "Usage: $0 [--datasets 1,2,3] [--skip-download] [--skip-ingest] [--download-dir /path]"
+      echo "Usage: $0 [--datasets 1,2,3] [--skip-download] [--skip-unpack] [--skip-ingest] [--download-dir /path]"
       echo ""
       echo "Options:"
       echo "  --datasets      Comma-separated list of data set numbers (default: all 1-12)"
       echo "  --skip-download Skip downloading, use existing files"
+      echo "  --skip-unpack   Skip unpacking, use already-unpacked files"
       echo "  --skip-ingest   Download only, don't run ingest pipeline"
       echo "  --download-dir  Where to download ZIPs (default: /data/epstein-raw)"
       exit 0 ;;
@@ -47,6 +50,7 @@ echo "=== Epstein Files Data Loader ==="
 echo "Data sets:    ${DS_LIST[*]}"
 echo "Download dir: $DOWNLOAD_DIR"
 echo "Skip download: $SKIP_DOWNLOAD"
+echo "Skip unpack:   $SKIP_UNPACK"
 echo "Skip ingest:   $SKIP_INGEST"
 echo ""
 
@@ -91,7 +95,13 @@ if [ "$SKIP_DOWNLOAD" = false ]; then
 
     echo "  DS $ds: Download complete ($(du -h "$ZIP_FILE" | cut -f1))"
   done
+else
+  echo "[1/4] Skipping download (--skip-download)"
+fi
 
+# ── Step 2: Unpack ──────────────────────────────────────────────
+
+if [ "$SKIP_UNPACK" = false ]; then
   echo ""
   echo "[2/4] Unpacking into Docker volume..."
   echo ""
@@ -105,21 +115,26 @@ if [ "$SKIP_DOWNLOAD" = false ]; then
 
     # Unpack into a temp dir on the host, then copy into the Docker volume
     UNPACK_DIR="$DOWNLOAD_DIR/unpacked/ds${ds}"
-    mkdir -p "$UNPACK_DIR"
 
-    echo "  DS $ds: Unpacking..."
-    unzip -o -q "$ZIP_FILE" -d "$UNPACK_DIR/"
-    echo "  DS $ds: Unpacked ($(find "$UNPACK_DIR" -type f | wc -l) files)"
+    # Skip if already unpacked with files present
+    if [ -d "$UNPACK_DIR" ] && [ "$(find "$UNPACK_DIR" -type f 2>/dev/null | head -1)" ]; then
+      FILE_COUNT=$(find "$UNPACK_DIR" -type f | wc -l)
+      echo "  DS $ds: Already unpacked ($FILE_COUNT files), copying into container..."
+    else
+      mkdir -p "$UNPACK_DIR"
+      echo "  DS $ds: Unpacking..."
+      unzip -o -q "$ZIP_FILE" -d "$UNPACK_DIR/"
+      echo "  DS $ds: Unpacked ($(find "$UNPACK_DIR" -type f | wc -l) files)"
+      echo "  DS $ds: Copying into container volume..."
+    fi
 
     # Copy into the container's /data/raw/ds{N}/ path
-    echo "  DS $ds: Copying into container volume..."
     docker exec "$ARCHIVER_CONTAINER" mkdir -p "/data/raw/ds${ds}"
     docker cp "$UNPACK_DIR/." "$ARCHIVER_CONTAINER:/data/raw/ds${ds}/"
     echo "  DS $ds: Done"
   done
 else
-  echo "[1/4] Skipping download (--skip-download)"
-  echo "[2/4] Skipping unpack"
+  echo "[2/4] Skipping unpack (--skip-unpack)"
 fi
 
 # ── Step 2: Ingest pipeline ──────────────────────────────────────

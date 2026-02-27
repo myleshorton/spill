@@ -7,7 +7,7 @@
  * and updates the database.
  *
  * Usage:
- *   node ingest.js [--db-path /path/to/documents.db] [--thumb-dir /path/to/thumbs] [--limit 1000]
+ *   node ingest.js [--db-path /path/to/documents.db] [--thumb-dir /path/to/thumbs] [--limit 1000] [--concurrency 8]
  */
 const path = require('path')
 const fs = require('fs')
@@ -21,6 +21,8 @@ const args = parseArgs(process.argv.slice(2))
 const DB_PATH = args['db-path'] || path.join(__dirname, '..', 'archiver', 'data', 'documents.db')
 const THUMB_DIR = args['thumb-dir'] || path.join(__dirname, '..', 'data', 'thumbs')
 const LIMIT = parseInt(args.limit || '0') || 0
+const CONCURRENCY = parseInt(args.concurrency || '8') || 8
+const BATCH_SIZE = 10000
 
 function parseArgs (argv) {
   const result = {}
@@ -32,10 +34,22 @@ function parseArgs (argv) {
   return result
 }
 
+async function processPool (items, concurrency, fn) {
+  let i = 0
+  const workers = Array.from({ length: concurrency }, async () => {
+    while (i < items.length) {
+      const idx = i++
+      await fn(items[idx])
+    }
+  })
+  await Promise.all(workers)
+}
+
 async function main () {
   console.log('[ingest] Starting text extraction and thumbnail generation...')
   console.log('[ingest] Database:', DB_PATH)
   console.log('[ingest] Thumbnail dir:', THUMB_DIR)
+  console.log('[ingest] Concurrency:', CONCURRENCY)
 
   if (!fs.existsSync(THUMB_DIR)) {
     fs.mkdirSync(THUMB_DIR, { recursive: true })
@@ -45,32 +59,45 @@ async function main () {
   const total = db.count()
   console.log('[ingest] %d total documents in database', total)
 
-  // Process documents that haven't been fully processed yet
-  // (no extracted_text and a file_path exists)
-  const stmt = db.db.prepare(`
-    SELECT * FROM documents
+  // Count pending documents
+  const pendingCount = db.db.prepare(`
+    SELECT COUNT(*) as cnt FROM documents
     WHERE file_path IS NOT NULL
       AND (extracted_text IS NULL OR thumb_path IS NULL
            OR (transcript IS NULL AND content_type IN ('audio', 'video')))
-    ORDER BY data_set ASC, rowid ASC
-    ${LIMIT > 0 ? `LIMIT ${LIMIT}` : ''}
-  `)
-  const pending = stmt.all()
-  console.log('[ingest] %d documents pending processing', pending.length)
+  `).get().cnt
+  const totalPending = LIMIT > 0 ? Math.min(pendingCount, LIMIT) : pendingCount
+  console.log('[ingest] %d documents pending processing', totalPending)
 
   let processed = 0
   let textExtracted = 0
   let transcribed = 0
   let thumbsGenerated = 0
   let errors = 0
+  let totalFetched = 0
+  const startTime = Date.now()
 
-  for (const doc of pending) {
-    processed++
-    if (processed % 100 === 0 || processed === 1) {
-      console.log('[ingest] Progress: %d/%d (text: %d, transcribed: %d, thumbs: %d, errors: %d)',
-        processed, pending.length, textExtracted, transcribed, thumbsGenerated, errors)
-    }
+  // Prepare the batched query — always OFFSET 0 because processed rows
+  // get updated and drop out of the WHERE clause
+  const batchStmt = db.db.prepare(`
+    SELECT * FROM documents
+    WHERE file_path IS NOT NULL
+      AND (extracted_text IS NULL OR thumb_path IS NULL
+           OR (transcript IS NULL AND content_type IN ('audio', 'video')))
+    ORDER BY data_set ASC, rowid ASC
+    LIMIT @limit
+  `)
 
+  // Progress ticker — logs throughput every 5 seconds
+  const ticker = setInterval(() => {
+    const elapsed = (Date.now() - startTime) / 1000
+    const rate = processed / elapsed
+    console.log('[ingest] Progress: %d/%d (%.1f docs/sec) — text: %d, transcribed: %d, thumbs: %d, errors: %d',
+      processed, totalPending, rate, textExtracted, transcribed, thumbsGenerated, errors)
+  }, 5000)
+
+  // Process document
+  async function processDoc (doc) {
     const updates = {}
 
     // Extract text if needed
@@ -127,10 +154,26 @@ async function main () {
       updates.id = doc.id
       db.db.prepare(`UPDATE documents SET ${sets} WHERE id = @id`).run(updates)
     }
+
+    processed++
   }
 
+  // Fetch and process in batches — each query re-selects pending docs
+  // since processed rows drop out of the WHERE clause after UPDATE
+  while (processed < totalPending) {
+    const batchLimit = Math.min(BATCH_SIZE, totalPending - processed)
+    const batch = batchStmt.all({ limit: batchLimit })
+    if (batch.length === 0) break
+    totalFetched += batch.length
+    console.log('[ingest] Fetched batch of %d docs (total fetched: %d/%d)', batch.length, totalFetched, totalPending)
+    await processPool(batch, CONCURRENCY, processDoc)
+  }
+
+  clearInterval(ticker)
+
+  const elapsed = (Date.now() - startTime) / 1000
   console.log('\n[ingest] === Ingest Complete ===')
-  console.log('[ingest] Processed: %d', processed)
+  console.log('[ingest] Processed: %d in %.1fs (%.1f docs/sec)', processed, elapsed, processed / elapsed)
   console.log('[ingest] Text extracted: %d', textExtracted)
   console.log('[ingest] Transcribed: %d', transcribed)
   console.log('[ingest] Thumbnails generated: %d', thumbsGenerated)
