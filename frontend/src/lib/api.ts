@@ -18,6 +18,11 @@ export interface Document {
   indexedAt: number
   hasContent: boolean
   hasThumbnail: boolean
+  locationLatitude: number | null
+  locationLongitude: number | null
+  mediaDate: string | null
+  documentDate: string | null
+  _geo?: { lat: number; lng: number }
 }
 
 export interface SearchResult {
@@ -248,5 +253,117 @@ export async function verifyMagicLink(
     const err = await res.json().catch(() => ({ error: 'Invalid token' }))
     throw new Error(err.error || `Verification failed: ${res.status}`)
   }
+  return res.json()
+}
+
+// --- Feature 1: Transcription ---
+
+export async function getDocumentTranscript(id: string): Promise<string> {
+  const res = await fetch(`${API_BASE}/documents/${id}/transcript`)
+  if (!res.ok) return ''
+  const data = await res.json()
+  return data.transcript || ''
+}
+
+// --- Feature 3: Entities ---
+
+export interface Entity {
+  id: number
+  name: string
+  type: string
+  documentCount: number
+  mentionCount?: number
+}
+
+export interface EntityEdge {
+  source: number
+  target: number
+  sharedDocs: number
+}
+
+export interface EntityGraph {
+  nodes: Entity[]
+  edges: EntityEdge[]
+}
+
+export async function getDocumentEntities(id: string): Promise<Entity[]> {
+  const res = await fetch(`${API_BASE}/documents/${id}/entities`)
+  if (!res.ok) return []
+  const data = await res.json()
+  return data.entities || []
+}
+
+export async function getTopEntities(type?: string, limit?: number): Promise<Entity[]> {
+  const params = new URLSearchParams()
+  if (type) params.set('type', type)
+  if (limit) params.set('limit', String(limit))
+  const res = await fetch(`${API_BASE}/entities?${params}`)
+  if (!res.ok) return []
+  const data = await res.json()
+  return data.entities || []
+}
+
+export async function getEntityDocuments(entityId: number, limit = 50, offset = 0): Promise<{ documents: { id: string; title: string; fileName: string; dataSet: number; contentType: string; category: string | null; mentionCount: number }[]; total: number }> {
+  const res = await fetch(`${API_BASE}/entities/${entityId}/documents?limit=${limit}&offset=${offset}`)
+  if (!res.ok) return { documents: [], total: 0 }
+  return res.json()
+}
+
+export async function getEntityGraph(minShared = 2, limit = 100): Promise<EntityGraph> {
+  const res = await fetch(`${API_BASE}/entities/graph?minShared=${minShared}&limit=${limit}`)
+  if (!res.ok) return { nodes: [], edges: [] }
+  return res.json()
+}
+
+// --- Feature 4: Financial ---
+
+export interface FinancialRecord {
+  id: number
+  documentId: string
+  type: string
+  amount: number | null
+  currency: string
+  date: string | null
+  from: string | null
+  to: string | null
+  description: string | null
+}
+
+export interface FinancialSummary {
+  totalRecords: number
+  totalAmount: number
+  topFromEntities: { name: string; total: number }[]
+  topToEntities: { name: string; total: number }[]
+  dateRange: { min: string | null; max: string | null }
+}
+
+export async function getDocumentFinancials(id: string): Promise<FinancialRecord[]> {
+  const res = await fetch(`${API_BASE}/documents/${id}/financials`)
+  if (!res.ok) return []
+  const data = await res.json()
+  return data.records || []
+}
+
+export async function getFinancialSummary(): Promise<FinancialSummary> {
+  const res = await fetch(`${API_BASE}/analysis/financial/summary`)
+  if (!res.ok) return { totalRecords: 0, totalAmount: 0, topFromEntities: [], topToEntities: [], dateRange: { min: null, max: null } }
+  return res.json()
+}
+
+export async function getFinancialRecords(params: {
+  entity?: string
+  from?: string
+  to?: string
+  limit?: number
+  offset?: number
+} = {}): Promise<{ records: FinancialRecord[]; total: number }> {
+  const searchParams = new URLSearchParams()
+  if (params.entity) searchParams.set('entity', params.entity)
+  if (params.from) searchParams.set('from', params.from)
+  if (params.to) searchParams.set('to', params.to)
+  if (params.limit) searchParams.set('limit', String(params.limit))
+  if (params.offset) searchParams.set('offset', String(params.offset))
+  const res = await fetch(`${API_BASE}/analysis/financial/records?${searchParams}`)
+  if (!res.ok) return { records: [], total: 0 }
   return res.json()
 }

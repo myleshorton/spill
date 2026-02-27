@@ -1,9 +1,13 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Download, ExternalLink, Copy, Check, ChevronLeft, Loader2 } from 'lucide-react'
+import { Download, ExternalLink, Copy, Check, ChevronLeft } from 'lucide-react'
 import Link from 'next/link'
-import { type Document, contentUrl, previewUrl, getDocumentText, formatFileSize } from '@/lib/api'
+import {
+  type Document, type Entity, type FinancialRecord,
+  contentUrl, previewUrl, getDocumentText, getDocumentTranscript,
+  getDocumentEntities, getDocumentFinancials, formatFileSize
+} from '@/lib/api'
 import { siteConfig } from '@/config/site.config'
 
 interface DocumentViewerProps {
@@ -13,14 +17,31 @@ interface DocumentViewerProps {
 export default function DocumentViewer({ doc }: DocumentViewerProps) {
   const [extractedText, setExtractedText] = useState<string | null>(null)
   const [showText, setShowText] = useState(false)
+  const [transcript, setTranscript] = useState<string | null>(null)
+  const [showTranscript, setShowTranscript] = useState(false)
+  const [entities, setEntities] = useState<Entity[]>([])
+  const [financials, setFinancials] = useState<FinancialRecord[]>([])
   const [copied, setCopied] = useState(false)
   const url = contentUrl(doc.id)
+
+  const isMedia = doc.contentType === 'audio' || doc.contentType === 'video'
 
   useEffect(() => {
     if (showText && extractedText === null) {
       getDocumentText(doc.id).then(setExtractedText).catch(() => setExtractedText(''))
     }
   }, [showText, doc.id, extractedText])
+
+  useEffect(() => {
+    if (showTranscript && transcript === null) {
+      getDocumentTranscript(doc.id).then(setTranscript).catch(() => setTranscript(''))
+    }
+  }, [showTranscript, doc.id, transcript])
+
+  useEffect(() => {
+    getDocumentEntities(doc.id).then(setEntities).catch(() => {})
+    getDocumentFinancials(doc.id).then(setFinancials).catch(() => {})
+  }, [doc.id])
 
   function copyText() {
     if (extractedText) {
@@ -66,6 +87,7 @@ export default function DocumentViewer({ doc }: DocumentViewerProps) {
             <ContentRenderer doc={doc} url={url} />
           </div>
 
+          {/* Extracted Text toggle */}
           <div className="mt-6">
             <div className="flex items-center gap-3">
               <button
@@ -93,6 +115,26 @@ export default function DocumentViewer({ doc }: DocumentViewerProps) {
               </div>
             )}
           </div>
+
+          {/* Transcript toggle (audio/video only) */}
+          {isMedia && (
+            <div className="mt-4">
+              <button
+                onClick={() => setShowTranscript(!showTranscript)}
+                className="rounded-md border border-spill-divider bg-spill-surface px-3 py-1.5 text-sm text-spill-text-secondary hover:text-spill-text-primary transition-colors"
+              >
+                {showTranscript ? 'Hide' : 'Show'} Transcript
+              </button>
+
+              {showTranscript && (
+                <div className="mt-3 max-h-[600px] overflow-auto rounded-lg border border-spill-divider bg-spill-bg p-4">
+                  <pre className="whitespace-pre-wrap font-body text-sm leading-relaxed text-spill-text-secondary">
+                    {transcript === null ? 'Loading...' : transcript || 'No transcript available'}
+                  </pre>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="space-y-4">
@@ -107,6 +149,60 @@ export default function DocumentViewer({ doc }: DocumentViewerProps) {
               {doc.pageCount && <DetailRow label="Pages" value={String(doc.pageCount)} />}
             </dl>
           </div>
+
+          {/* Entity tags */}
+          {entities.length > 0 && (
+            <div className="rounded-lg border border-spill-divider bg-spill-surface p-4">
+              <h3 className="font-headline text-sm font-semibold text-spill-text-primary">Entities</h3>
+              <div className="mt-3 flex flex-wrap gap-1.5">
+                {entities.map((e) => (
+                  <Link
+                    key={`${e.type}-${e.id}`}
+                    href={`/search?q=${encodeURIComponent(e.name)}`}
+                    className={`rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors ${
+                      e.type === 'person'
+                        ? 'bg-blue-500/15 text-blue-400 hover:bg-blue-500/25'
+                        : e.type === 'organization'
+                        ? 'bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25'
+                        : 'bg-orange-500/15 text-orange-400 hover:bg-orange-500/25'
+                    }`}
+                  >
+                    {e.name}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Financial records */}
+          {financials.length > 0 && (
+            <div className="rounded-lg border border-spill-divider bg-spill-surface p-4">
+              <h3 className="font-headline text-sm font-semibold text-spill-text-primary">Financial Records</h3>
+              <div className="mt-3 space-y-2 max-h-[300px] overflow-auto">
+                {financials.map((r) => (
+                  <div key={r.id} className="rounded bg-spill-bg p-2 text-xs">
+                    <div className="flex items-center justify-between">
+                      <span className="font-mono uppercase text-spill-accent">{r.type}</span>
+                      {r.amount != null && (
+                        <span className="font-medium text-spill-text-primary">
+                          {r.currency} {r.amount.toLocaleString()}
+                        </span>
+                      )}
+                    </div>
+                    {r.date && <div className="text-spill-text-secondary mt-0.5">{r.date}</div>}
+                    {(r.from || r.to) && (
+                      <div className="text-spill-text-secondary mt-0.5">
+                        {r.from && <span>{r.from}</span>}
+                        {r.from && r.to && <span> → </span>}
+                        {r.to && <span>{r.to}</span>}
+                      </div>
+                    )}
+                    {r.description && <div className="text-spill-text-secondary/70 mt-0.5">{r.description}</div>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className="space-y-2">
             <a

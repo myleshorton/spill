@@ -49,7 +49,11 @@ function rowToDoc (row) {
     createdAt: row.created_at,
     indexedAt: row.indexed_at,
     hasContent: !!row.file_path,
-    hasThumbnail: !!row.thumb_path
+    hasThumbnail: !!row.thumb_path,
+    locationLatitude: row.location_latitude || null,
+    locationLongitude: row.location_longitude || null,
+    mediaDate: row.media_date || null,
+    documentDate: row.document_date || null
   }
 }
 
@@ -338,6 +342,153 @@ function createDocumentsRouter (docsDb, searchIndex, archiverRef, torrentManager
       hasTorrent: !!c.torrent_path,
       magnetLink: c.magnet_link
     })))
+  })
+
+  // --- Feature 1: Transcript endpoint ---
+  router.get('/documents/:id/transcript', (req, res) => {
+    const doc = docsDb.get(req.params.id)
+    if (!doc || !doc.transcript) return res.status(404).json({ error: 'No transcript available' })
+    res.json({ transcript: doc.transcript })
+  })
+
+  // --- Feature 3: Entity endpoints ---
+  router.get('/documents/:id/entities', (req, res) => {
+    try {
+      const entities = docsDb.getDocumentEntities(req.params.id)
+      res.json({ entities })
+    } catch (err) {
+      console.error('[docs-api] Entity fetch error:', err.message)
+      res.status(500).json({ error: 'Failed to fetch entities' })
+    }
+  })
+
+  router.get('/entities', (req, res) => {
+    try {
+      const type = req.query.type || undefined
+      const limit = Math.min(parseInt(req.query.limit) || 50, 200)
+      const entities = docsDb.getTopEntities(type, limit)
+      res.json({ entities })
+    } catch (err) {
+      console.error('[docs-api] Top entities error:', err.message)
+      res.status(500).json({ error: 'Failed to fetch entities' })
+    }
+  })
+
+  router.get('/entities/:id/documents', (req, res) => {
+    try {
+      const limit = Math.min(parseInt(req.query.limit) || 50, 200)
+      const offset = parseInt(req.query.offset) || 0
+      const result = docsDb.getEntityDocuments(parseInt(req.params.id), limit, offset)
+      res.json({
+        documents: result.documents.map(r => ({
+          id: r.id,
+          title: r.title,
+          fileName: r.file_name,
+          dataSet: r.data_set,
+          contentType: r.content_type,
+          category: r.category,
+          mentionCount: r.mention_count
+        })),
+        total: result.total
+      })
+    } catch (err) {
+      console.error('[docs-api] Entity documents error:', err.message)
+      res.status(500).json({ error: 'Failed to fetch entity documents' })
+    }
+  })
+
+  router.get('/entities/graph', (req, res) => {
+    try {
+      const minShared = parseInt(req.query.minShared) || 2
+      const limit = Math.min(parseInt(req.query.limit) || 100, 500)
+      const edges = docsDb.getEntityCooccurrences(minShared)
+      // Collect unique entity IDs from edges
+      const entityIds = new Set()
+      const limitedEdges = edges.slice(0, limit)
+      for (const e of limitedEdges) {
+        entityIds.add(e.source)
+        entityIds.add(e.target)
+      }
+      // Fetch entity details
+      const nodes = []
+      for (const eid of entityIds) {
+        const entity = docsDb.db.prepare(`
+          SELECT e.id, e.name, e.type, COUNT(de.document_id) as document_count
+          FROM entities e LEFT JOIN document_entities de ON de.entity_id = e.id
+          WHERE e.id = ? GROUP BY e.id
+        `).get(eid)
+        if (entity) nodes.push(entity)
+      }
+      res.json({
+        nodes: nodes.map(n => ({ id: n.id, name: n.name, type: n.type, documentCount: n.document_count })),
+        edges: limitedEdges.map(e => ({ source: e.source, target: e.target, sharedDocs: e.shared_docs }))
+      })
+    } catch (err) {
+      console.error('[docs-api] Entity graph error:', err.message)
+      res.status(500).json({ error: 'Failed to build entity graph' })
+    }
+  })
+
+  // --- Feature 4: Financial endpoints ---
+  router.get('/documents/:id/financials', (req, res) => {
+    try {
+      const records = docsDb.getDocumentFinancials(req.params.id)
+      res.json({
+        records: records.map(r => ({
+          id: r.id, documentId: r.document_id, type: r.record_type,
+          amount: r.amount, currency: r.currency, date: r.date,
+          from: r.from_entity, to: r.to_entity, description: r.description
+        }))
+      })
+    } catch (err) {
+      console.error('[docs-api] Financial records error:', err.message)
+      res.status(500).json({ error: 'Failed to fetch financial records' })
+    }
+  })
+
+  router.get('/analysis/financial/summary', (req, res) => {
+    try {
+      const summary = docsDb.getFinancialSummary()
+      res.json(summary)
+    } catch (err) {
+      console.error('[docs-api] Financial summary error:', err.message)
+      res.status(500).json({ error: 'Failed to build financial summary' })
+    }
+  })
+
+  router.get('/analysis/financial/records', (req, res) => {
+    try {
+      const entity = req.query.entity
+      const from = req.query.from || null
+      const to = req.query.to || null
+      const limit = Math.min(parseInt(req.query.limit) || 50, 200)
+      const offset = parseInt(req.query.offset) || 0
+
+      if (entity) {
+        const records = docsDb.getFinancialsByEntity(entity, limit)
+        return res.json({
+          records: records.map(r => ({
+            id: r.id, documentId: r.document_id, type: r.record_type,
+            amount: r.amount, currency: r.currency, date: r.date,
+            from: r.from_entity, to: r.to_entity, description: r.description
+          })),
+          total: records.length
+        })
+      }
+
+      const result = docsDb.getFinancialsByDateRange(from, to, limit, offset)
+      res.json({
+        records: result.records.map(r => ({
+          id: r.id, documentId: r.document_id, type: r.record_type,
+          amount: r.amount, currency: r.currency, date: r.date,
+          from: r.from_entity, to: r.to_entity, description: r.description
+        })),
+        total: result.total
+      })
+    } catch (err) {
+      console.error('[docs-api] Financial records error:', err.message)
+      res.status(500).json({ error: 'Failed to fetch financial records' })
+    }
   })
 
   return router

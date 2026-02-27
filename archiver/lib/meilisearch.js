@@ -22,18 +22,23 @@ class SearchIndex {
         'title',
         'fileName',
         'extractedText',
-        'transcript'
+        'transcript',
+        'imageKeywords'
       ],
       filterableAttributes: [
         'dataSet',
         'contentType',
         'category',
-        'collectionId'
+        'collectionId',
+        '_geo',
+        'documentDate'
       ],
       sortableAttributes: [
         'dataSet',
         'fileSize',
-        'createdAt'
+        'createdAt',
+        '_geo',
+        'documentDate'
       ],
       rankingRules: [
         'words',
@@ -46,7 +51,8 @@ class SearchIndex {
       displayedAttributes: [
         'id', 'title', 'fileName', 'dataSet', 'contentType', 'category',
         'fileSize', 'pageCount', 'driveKey', 'fileKey', 'sourceUrl',
-        'createdAt', 'indexedAt', 'hasContent', 'hasThumbnail'
+        'createdAt', 'indexedAt', 'hasContent', 'hasThumbnail', 'imageKeywords',
+        '_geo', 'documentDate'
       ],
       faceting: {
         maxValuesPerFacet: 100
@@ -86,7 +92,12 @@ class SearchIndex {
       extractedText: (doc.extracted_text || doc.extractedText || '').slice(0, 100000),
       transcript: (doc.transcript || '').slice(0, 100000),
       hasContent: !!(doc.file_path || doc.filePath),
-      hasThumbnail: !!(doc.thumb_path || doc.thumbPath)
+      hasThumbnail: !!(doc.thumb_path || doc.thumbPath),
+      imageKeywords: doc.image_keywords || doc.imageKeywords || null,
+      documentDate: doc.document_date || doc.documentDate || null,
+      ...((doc.location_latitude != null && doc.location_longitude != null)
+        ? { _geo: { lat: Number(doc.location_latitude), lng: Number(doc.location_longitude) } }
+        : {})
     }))
 
     const task = await index.addDocuments(formatted, { primaryKey: 'id' })
@@ -135,6 +146,8 @@ class SearchIndex {
         indexedAt: hit.indexedAt,
         hasContent: hit.hasContent,
         hasThumbnail: hit.hasThumbnail,
+        _geo: hit._geo || null,
+        documentDate: hit.documentDate || null,
         _highlight: hit._formatted
       })),
       query: result.query,

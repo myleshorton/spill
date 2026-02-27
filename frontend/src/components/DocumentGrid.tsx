@@ -1,11 +1,15 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import Link from 'next/link'
-import { Grid3X3, List, FileText, Image, Video, Headphones, Mail, Table, File } from 'lucide-react'
+import dynamic from 'next/dynamic'
+import { Grid3X3, List, MapPin, Calendar, FileText, Image, Video, Headphones, Mail, Table, File } from 'lucide-react'
 import { type Document, thumbnailUrl, formatFileSize } from '@/lib/api'
 import { useLocalStorage } from '@/lib/hooks'
 import clsx from 'clsx'
+
+const MapView = dynamic(() => import('./MapView'), { ssr: false })
+const TimelineView = dynamic(() => import('./TimelineView'), { ssr: false })
 
 interface DocumentGridProps {
   documents: Document[]
@@ -26,7 +30,17 @@ function ContentTypeIcon({ type, className }: { type: string, className?: string
 }
 
 export default function DocumentGrid({ documents, highlightQuery }: DocumentGridProps) {
-  const [viewMode, setViewMode] = useLocalStorage<'grid' | 'list'>('viewMode', 'list')
+  const [viewMode, setViewMode] = useLocalStorage<'grid' | 'list' | 'map' | 'timeline'>('viewMode', 'list')
+
+  const hasGeoDocuments = useMemo(() =>
+    documents.some(d => d._geo || (d.locationLatitude != null && d.locationLongitude != null)),
+    [documents]
+  )
+
+  const hasDatedDocuments = useMemo(() =>
+    documents.some(d => d.documentDate && d.documentDate !== '_none'),
+    [documents]
+  )
 
   if (documents.length === 0) {
     return (
@@ -63,10 +77,36 @@ export default function DocumentGrid({ documents, highlightQuery }: DocumentGrid
           >
             <List className="h-3.5 w-3.5" />
           </button>
+          {hasGeoDocuments && (
+            <button
+              onClick={() => setViewMode('map')}
+              className={clsx(
+                'rounded p-1.5 transition-colors',
+                viewMode === 'map' ? 'bg-spill-surface-light text-spill-accent' : 'text-spill-text-secondary hover:text-spill-text-primary'
+              )}
+            >
+              <MapPin className="h-3.5 w-3.5" />
+            </button>
+          )}
+          {hasDatedDocuments && (
+            <button
+              onClick={() => setViewMode('timeline')}
+              className={clsx(
+                'rounded p-1.5 transition-colors',
+                viewMode === 'timeline' ? 'bg-spill-surface-light text-spill-accent' : 'text-spill-text-secondary hover:text-spill-text-primary'
+              )}
+            >
+              <Calendar className="h-3.5 w-3.5" />
+            </button>
+          )}
         </div>
       </div>
 
-      {viewMode === 'grid' ? (
+      {viewMode === 'timeline' ? (
+        <TimelineView documents={documents} />
+      ) : viewMode === 'map' ? (
+        <MapView documents={documents} />
+      ) : viewMode === 'grid' ? (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
           {documents.map((doc, i) => (
             <GridCard key={doc.id} doc={doc} index={i} />
