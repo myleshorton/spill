@@ -84,14 +84,7 @@ function extractDate (doc) {
     return { date: filenameDate, source: 'filename' }
   }
 
-  // Priority 3: crawl timestamp
-  if (doc.created_at) {
-    const d = new Date(doc.created_at)
-    if (!isNaN(d.getTime())) {
-      return { date: d.toISOString(), source: 'crawl' }
-    }
-  }
-
+  // No crawl timestamp fallback — those are just ingest dates, not document dates
   return null
 }
 
