@@ -8,6 +8,7 @@ import DocumentGrid from '@/components/DocumentGrid'
 import TorrentDownload from '@/components/TorrentDownload'
 import { listDocuments, getDataSet, type Document, type DataSetInfo, formatNumber } from '@/lib/api'
 import { siteConfig } from '@/config/site.config'
+import Pagination from '@/components/Pagination'
 import { Loader2, ChevronLeft } from 'lucide-react'
 import Link from 'next/link'
 
@@ -84,27 +85,11 @@ export default function DataSetDetailPage() {
           <>
             <DocumentGrid documents={documents} />
 
-            {totalPages > 1 && (
-              <div className="mt-8 flex items-center justify-center gap-3">
-                <button
-                  onClick={() => setOffset(Math.max(0, offset - limit))}
-                  disabled={currentPage <= 1}
-                  className="rounded-md border border-spill-divider bg-spill-surface px-4 py-1.5 text-sm text-spill-text-secondary hover:text-spill-accent disabled:opacity-30 transition-colors"
-                >
-                  Previous
-                </button>
-                <span className="text-sm text-spill-text-secondary">
-                  Page {currentPage} of {formatNumber(totalPages)}
-                </span>
-                <button
-                  onClick={() => setOffset(offset + limit)}
-                  disabled={currentPage >= totalPages}
-                  className="rounded-md border border-spill-divider bg-spill-surface px-4 py-1.5 text-sm text-spill-text-secondary hover:text-spill-accent disabled:opacity-30 transition-colors"
-                >
-                  Next
-                </button>
-              </div>
-            )}
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={(page) => setOffset((page - 1) * limit)}
+            />
           </>
         )}
       </main>

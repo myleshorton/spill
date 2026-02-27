@@ -6,6 +6,7 @@ import Header from '@/components/Header'
 import Footer from '@/components/Footer'
 import FacetSidebar from '@/components/FacetSidebar'
 import DocumentGrid from '@/components/DocumentGrid'
+import Pagination from '@/components/Pagination'
 import { searchDocuments, listDocuments, type Document, type SearchResult, formatNumber } from '@/lib/api'
 import { Loader2 } from 'lucide-react'
 
@@ -105,25 +106,15 @@ function SearchContent() {
             <>
               <DocumentGrid documents={documents} highlightQuery={query} />
 
-              {totalPages > 1 && (
-                <div className="mt-8 flex items-center justify-center gap-2">
-                  {currentPage > 1 && (
-                    <PaginationLink
-                      offset={(currentPage - 2) * limit}
-                      label="Previous"
-                    />
-                  )}
-                  <span className="px-3 py-1.5 text-sm text-spill-text-secondary">
-                    Page {currentPage} of {formatNumber(totalPages)}
-                  </span>
-                  {currentPage < totalPages && (
-                    <PaginationLink
-                      offset={currentPage * limit}
-                      label="Next"
-                    />
-                  )}
-                </div>
-              )}
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                getPageHref={(page) => {
+                  const params = new URLSearchParams(searchParams.toString())
+                  params.set('offset', String((page - 1) * limit))
+                  return `/search?${params.toString()}`
+                }}
+              />
             </>
           )}
         </div>
@@ -134,24 +125,6 @@ function SearchContent() {
   )
 }
 
-function PaginationLink({ offset, label }: { offset: number, label: string }) {
-  const searchParams = useSearchParams()
-
-  const href = (() => {
-    const params = new URLSearchParams(searchParams.toString())
-    params.set('offset', String(offset))
-    return `/search?${params.toString()}`
-  })()
-
-  return (
-    <a
-      href={href}
-      className="rounded-md border border-spill-divider bg-spill-surface px-4 py-1.5 text-sm text-spill-text-secondary hover:text-spill-accent transition-colors"
-    >
-      {label}
-    </a>
-  )
-}
 
 export default function SearchPage() {
   return (
