@@ -27,7 +27,6 @@ export default function ActivityFeed() {
 
   useEffect(() => {
     if (!event) return
-    // Fade out
     setVisible(false)
     const timer = setTimeout(() => {
       setDisplay(event)
@@ -36,25 +35,33 @@ export default function ActivityFeed() {
     return () => clearTimeout(timer)
   }, [event])
 
-  if (!display) return null
-
-  const Icon = ICON_MAP[display.icon]
-
-  return (
-    <div className="rounded-lg border border-spill-divider bg-spill-surface/50 px-4 py-2.5">
-      <div
-        className="flex items-center gap-2.5 transition-opacity duration-300"
-        style={{ opacity: visible ? 1 : 0 }}
-      >
+  if (!display) {
+    return (
+      <div className="flex items-center justify-center gap-2.5 h-7">
         <span className="relative flex h-2 w-2 shrink-0">
           <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
           <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
         </span>
-        <Icon className="h-3.5 w-3.5 shrink-0 text-spill-text-secondary" />
-        <span className="font-mono text-xs text-spill-text-secondary truncate">
-          {display.message}
-        </span>
+        <span className="font-mono text-sm text-spill-text-secondary/60">Connecting\u2026</span>
       </div>
+    )
+  }
+
+  const Icon = ICON_MAP[display.icon]
+
+  return (
+    <div
+      className="flex items-center justify-center gap-2.5 transition-opacity duration-300 h-7"
+      style={{ opacity: visible ? 1 : 0 }}
+    >
+      <span className="relative flex h-2 w-2 shrink-0">
+        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+        <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+      </span>
+      <Icon className="h-3.5 w-3.5 shrink-0 text-spill-accent/70" />
+      <span className="font-mono text-sm text-spill-text-secondary truncate">
+        {display.message}
+      </span>
     </div>
   )
 }

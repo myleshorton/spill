@@ -268,6 +268,9 @@ export interface ActivityData {
     geoLocated: number
     withKeywords: number
     indexed: number
+    totalBytes: number
+    collections: number
+    torrents: number
   }
   pending: {
     textExtracted: number

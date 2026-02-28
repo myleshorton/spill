@@ -15,96 +15,138 @@ function formatCount(n: number): string {
   return String(n)
 }
 
+function formatPct(n: number, total: number): string {
+  if (total === 0) return '0%'
+  return `${((n / total) * 100).toFixed(1)}%`
+}
+
+/** High-priority events from real-time deltas — shown immediately */
 function generateDeltaEvents(data: ActivityData): ActivityEvent[] {
   const events: ActivityEvent[] = []
   const d = data.deltas
   if (!d) return events
 
   if (d.documentsAdded > 0) {
-    events.push({ id: `doc-${data.ts}`, message: `Found ${d.documentsAdded} new document${d.documentsAdded > 1 ? 's' : ''}`, icon: 'file-plus' })
+    events.push({ id: `doc-${data.ts}`, message: `+${d.documentsAdded} new document${d.documentsAdded > 1 ? 's' : ''} discovered`, icon: 'file-plus' })
   }
   if (d.transcriptsAdded > 0) {
-    events.push({ id: `tr-${data.ts}`, message: `Transcribed ${d.transcriptsAdded} audio file${d.transcriptsAdded > 1 ? 's' : ''}`, icon: 'mic' })
+    events.push({ id: `tr-${data.ts}`, message: `Transcribed ${d.transcriptsAdded} recording${d.transcriptsAdded > 1 ? 's' : ''}`, icon: 'mic' })
   }
   if (d.entitiesExtracted > 0) {
-    events.push({ id: `ent-${data.ts}`, message: `Connecting the dots\u2026 extracted entities from ${d.entitiesExtracted} document${d.entitiesExtracted > 1 ? 's' : ''}`, icon: 'brain' })
+    events.push({ id: `ent-${data.ts}`, message: `Extracted ${d.entitiesExtracted} new entit${d.entitiesExtracted > 1 ? 'ies' : 'y'}`, icon: 'brain' })
   }
   if (d.financialsScanned > 0) {
-    events.push({ id: `fin-${data.ts}`, message: `Following the money\u2026 scanned ${d.financialsScanned} financial doc${d.financialsScanned > 1 ? 's' : ''}`, icon: 'dollar-sign' })
+    events.push({ id: `fin-${data.ts}`, message: `Scanned ${d.financialsScanned} financial record${d.financialsScanned > 1 ? 's' : ''}`, icon: 'dollar-sign' })
   }
   if (d.geoLocated > 0) {
-    events.push({ id: `geo-${data.ts}`, message: `Mapped ${d.geoLocated} new location${d.geoLocated > 1 ? 's' : ''} from metadata`, icon: 'map-pin' })
+    events.push({ id: `geo-${data.ts}`, message: `Pinned ${d.geoLocated} new location${d.geoLocated > 1 ? 's' : ''}`, icon: 'map-pin' })
   }
   if (d.keywordsAdded > 0) {
-    events.push({ id: `kw-${data.ts}`, message: `Tagged ${d.keywordsAdded} image${d.keywordsAdded > 1 ? 's' : ''} with visual keywords`, icon: 'tags' })
-  }
-
-  // Text extraction delta
-  if (d.documentsAdded === 0 && data.pending) {
-    const prev = data.pending.textExtracted
-    if (prev > 0) {
-      events.push({ id: `text-${data.ts}`, message: `Text extraction: ${formatCount(prev)} done, ${formatCount(data.pending.textPending)} to go`, icon: 'search' })
-    }
+    events.push({ id: `kw-${data.ts}`, message: `Tagged ${d.keywordsAdded} image${d.keywordsAdded > 1 ? 's' : ''}`, icon: 'tags' })
   }
 
   return events
 }
 
-function formatPct(n: number, total: number): string {
-  if (total === 0) return '0%'
-  return `${((n / total) * 100).toFixed(1)}%`
-}
-
+/** Ambient rotation — mix of witty lines, live stats, and progress */
 function generateAmbientEvents(data: ActivityData): ActivityEvent[] {
   const t = data.totals
   const p = data.pending
-  const events: ActivityEvent[] = [
-    { id: 'amb-indexed', message: `${formatCount(t.indexed)} documents indexed and counting\u2026`, icon: 'search' },
-    { id: 'amb-docs', message: `${formatCount(t.documents)} documents in the archive`, icon: 'database' },
-  ]
+  const events: ActivityEvent[] = []
 
-  // Text extraction progress — show when there's remaining work
-  if (p && p.textPending > 0) {
-    events.push({
-      id: 'amb-text-progress',
-      message: `Extracting text\u2026 ${formatCount(p.textExtracted)}/${formatCount(p.textTotal)} (${formatPct(p.textExtracted, p.textTotal)}) \u2014 ${formatCount(p.textPending)} remaining`,
-      icon: 'search'
-    })
-  } else if (p && p.textTotal > 0) {
-    events.push({ id: 'amb-text-done', message: `Text extraction complete: ${formatCount(p.textExtracted)} documents processed`, icon: 'search' })
-  }
-
-  // Transcription progress
-  if (p && p.avPending > 0) {
-    events.push({
-      id: 'amb-av-progress',
-      message: `Transcribing\u2026 ${formatCount(p.avTranscribed)}/${formatCount(p.avTotal)} (${formatPct(p.avTranscribed, p.avTotal)}) \u2014 ${formatCount(p.avPending)} remaining`,
-      icon: 'mic'
-    })
-  } else if (p && p.avTotal > 0) {
-    events.push({ id: 'amb-av-done', message: `All ${formatCount(p.avTotal)} audio/video files transcribed`, icon: 'mic' })
-  }
-
+  // --- Witty / editorial ---
   events.push(
-    { id: 'amb-motto', message: 'Every document is searchable. Every page is indexed.', icon: 'shield' },
-    { id: 'amb-sleep', message: 'The archive never sleeps.', icon: 'radio' },
+    { id: 'wit-redactions', message: 'Reading between the redactions\u2026', icon: 'search' },
+    { id: 'wit-money', message: 'Following the money\u2026', icon: 'dollar-sign' },
+    { id: 'wit-receipts', message: 'The receipts don\u2019t lie.', icon: 'database' },
+    { id: 'wit-sleep', message: 'The archive never sleeps.', icon: 'radio' },
+    { id: 'wit-stone', message: 'No stone unturned. No file unread.', icon: 'shield' },
+    { id: 'wit-sunlight', message: 'Sunlight is the best disinfectant.', icon: 'shield' },
+    { id: 'wit-paper', message: 'Every page tells a story.', icon: 'file-plus' },
+    { id: 'wit-dots', message: 'Connecting the dots\u2026', icon: 'brain' },
+    { id: 'wit-fine-print', message: 'Reading the fine print so you don\u2019t have to.', icon: 'search' },
   )
 
-  if (data.status.peerCount > 0) {
-    events.push({ id: 'amb-peers', message: `${data.status.peerCount} peer${data.status.peerCount > 1 ? 's' : ''} keeping the archive alive`, icon: 'radio' })
+  // --- Live stats (raw numbers) ---
+  events.push(
+    { id: 'stat-docs', message: `${formatCount(t.documents)} documents archived. And counting.`, icon: 'database' },
+    { id: 'stat-indexed', message: `${formatCount(t.indexed)} documents indexed and searchable`, icon: 'search' },
+  )
+
+  if (t.transcripts > 0) {
+    events.push({ id: 'stat-transcripts', message: `${formatCount(t.transcripts)} recordings transcribed to searchable text`, icon: 'mic' })
   }
   if (t.entities > 0) {
-    events.push({ id: 'amb-ent', message: `${formatCount(t.entities)} entities mapped across the archive`, icon: 'brain' })
+    events.push({ id: 'stat-entities', message: `${formatCount(t.entities)} names, orgs, and connections mapped`, icon: 'brain' })
   }
-  if (t.transcripts > 0) {
-    events.push({ id: 'amb-tr', message: `${formatCount(t.transcripts)} audio files transcribed`, icon: 'mic' })
+  if (t.geoLocated > 0) {
+    events.push({ id: 'stat-geo', message: `${t.geoLocated} documents pinned to locations on the map`, icon: 'map-pin' })
   }
+  if (t.withKeywords > 0) {
+    events.push({ id: 'stat-keywords', message: `${formatCount(t.withKeywords)} images analyzed and tagged`, icon: 'tags' })
+  }
+
+  // --- Progress (text extraction / transcription) ---
+  if (p && p.textPending > 0) {
+    events.push(
+      { id: 'prog-text', message: `OCR in progress\u2026 ${formatCount(p.textExtracted)} of ${formatCount(p.textTotal)} documents (${formatPct(p.textExtracted, p.textTotal)})`, icon: 'search' },
+      { id: 'prog-text-remaining', message: `${formatCount(p.textPending)} documents still being scanned for text`, icon: 'search' },
+    )
+  }
+  if (p && p.avPending > 0) {
+    events.push(
+      { id: 'prog-av', message: `Transcribing audio\u2026 ${formatCount(p.avTranscribed)} of ${formatCount(p.avTotal)} (${formatPct(p.avTranscribed, p.avTotal)})`, icon: 'mic' },
+      { id: 'prog-av-remaining', message: `${formatCount(p.avPending)} recordings waiting for transcription`, icon: 'mic' },
+    )
+  }
+
+  // --- Crawl activity ---
+  if (data.recent.count > 0) {
+    events.push({ id: 'crawl-recent', message: `${data.recent.count} new document${data.recent.count > 1 ? 's' : ''} crawled in the last 5 minutes`, icon: 'radio' })
+    const types = Object.entries(data.recent.byType)
+    if (types.length > 0) {
+      const summary = types.map(([type, count]) => `${count} ${type}${count > 1 ? 's' : ''}`).join(', ')
+      events.push({ id: 'crawl-types', message: `Just crawled: ${summary}`, icon: 'file-plus' })
+    }
+  } else {
+    events.push({ id: 'crawl-scanning', message: 'Scanning court records, FOIA releases, and public archives\u2026', icon: 'radio' })
+  }
+
+  // --- P2P / BitTorrent ---
+  const sizeGB = t.totalBytes ? (t.totalBytes / (1024 * 1024 * 1024)).toFixed(0) : null
+  if (sizeGB) {
+    events.push({ id: 'p2p-size', message: `${sizeGB}GB served over P2P and BitTorrent. Censorship-resistant.`, icon: 'radio' })
+  }
+  if (data.status.peerCount > 0) {
+    events.push(
+      { id: 'p2p-peers', message: `${data.status.peerCount} peer${data.status.peerCount > 1 ? 's' : ''} seeding the archive right now`, icon: 'radio' },
+      { id: 'p2p-distributed', message: `Distributed across ${data.status.peerCount} node${data.status.peerCount > 1 ? 's' : ''}. Can\u2019t be taken down.`, icon: 'shield' },
+    )
+  } else if (data.status.connected) {
+    events.push({ id: 'p2p-listening', message: 'P2P swarm active. Listening for peers\u2026', icon: 'radio' })
+  }
+  if (t.torrents > 0) {
+    events.push({ id: 'p2p-torrents', message: `${t.collections} dataset${t.collections > 1 ? 's' : ''} available via BitTorrent. Download everything.`, icon: 'database' })
+  }
+  events.push(
+    { id: 'p2p-censorship', message: 'Mirrored via P2P and BitTorrent. No single point of failure.', icon: 'shield' },
+    { id: 'p2p-seed', message: 'Download a dataset. Seed it. Keep the archive alive.', icon: 'radio' },
+  )
+
+  // --- Latest doc ---
   if (data.latestDoc) {
     const title = data.latestDoc.title.length > 50
       ? data.latestDoc.title.slice(0, 47) + '\u2026'
       : data.latestDoc.title
-    events.push({ id: 'amb-latest', message: `Just found: ${title}`, icon: 'file-plus' })
+    events.push({ id: 'latest', message: `Latest: ${title}`, icon: 'file-plus' })
   }
+
+  // Shuffle so it's not the same order every time
+  for (let i = events.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[events[i], events[j]] = [events[j], events[i]]
+  }
+
   return events
 }
 
@@ -116,10 +158,12 @@ export function useActivityFeed(pollInterval = 8000, cycleInterval = 5000) {
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const cycle = useCallback(() => {
+    // Delta events take priority
     if (queueRef.current.length > 0) {
       setCurrent(queueRef.current.shift()!)
       return
     }
+    // Otherwise cycle through ambient
     if (ambientRef.current.length > 0) {
       const idx = ambientIndexRef.current % ambientRef.current.length
       setCurrent(ambientRef.current[idx])
@@ -147,7 +191,6 @@ export function useActivityFeed(pollInterval = 8000, cycleInterval = 5000) {
     poll()
     const pollTimer = setInterval(poll, pollInterval)
 
-    // Start cycling after first poll has a chance to return
     const initTimer = setTimeout(() => {
       cycle()
       timerRef.current = setInterval(cycle, cycleInterval)

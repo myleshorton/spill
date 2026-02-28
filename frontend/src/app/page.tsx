@@ -38,9 +38,9 @@ export default function HomePage() {
                 <span className="block text-spill-accent">{siteConfig.hero.headingAccent}</span>
               </h1>
 
-              <p className="mx-auto mt-5 max-w-2xl text-lg leading-relaxed text-spill-text-secondary">
-                {siteConfig.hero.description}
-              </p>
+              <div className="mx-auto mt-5 max-w-2xl">
+                <ActivityFeed />
+              </div>
             </div>
 
             <div className="relative z-10 mt-10 animate-slide-up" style={{ animationDelay: '150ms' }}>
@@ -70,9 +70,8 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section className="mx-auto max-w-7xl px-4 pb-16 sm:px-6 space-y-3">
+        <section className="mx-auto max-w-7xl px-4 pb-16 sm:px-6">
           <StatsBar />
-          <ActivityFeed />
         </section>
 
         <Recommendations />

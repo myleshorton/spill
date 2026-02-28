@@ -643,9 +643,14 @@ class DocumentsDatabase {
       'SELECT title, content_type FROM documents ORDER BY created_at DESC LIMIT 1'
     ).get()
 
+    // Collection / torrent stats
+    const collections = this.db.prepare('SELECT COUNT(*) as c FROM collections').get().c
+    const torrents = this.db.prepare("SELECT COUNT(*) as c FROM collections WHERE torrent_hash IS NOT NULL AND torrent_hash != ''").get().c
+    const totalBytes = this.db.prepare('SELECT COALESCE(SUM(file_size), 0) as s FROM documents').get().s
+
     return {
       ts: now,
-      totals: { documents, transcripts, entities, financials, geoLocated, withKeywords, indexed },
+      totals: { documents, transcripts, entities, financials, geoLocated, withKeywords, indexed, totalBytes, collections, torrents },
       pending: {
         textExtracted,
         textPending,
