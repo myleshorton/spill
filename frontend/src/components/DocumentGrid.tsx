@@ -174,7 +174,7 @@ function ListRow({ doc, index }: { doc: Document, index: number }) {
   return (
     <Link
       href={`/doc/${doc.id}`}
-      className="group flex animate-fade-in items-center gap-3 rounded-md px-3 py-2.5 transition-colors hover:bg-spill-surface"
+      className="group flex animate-fade-in items-center gap-2 sm:gap-3 rounded-md px-2 sm:px-3 py-2.5 transition-colors hover:bg-spill-surface overflow-hidden"
       style={{ animationDelay: `${index * 15}ms` }}
     >
       <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded bg-spill-surface-light text-spill-text-secondary group-hover:text-spill-accent transition-colors">
@@ -191,7 +191,7 @@ function ListRow({ doc, index }: { doc: Document, index: number }) {
       <span className="hidden shrink-0 rounded bg-spill-surface-light px-1.5 py-0.5 font-mono text-[10px] uppercase text-spill-text-secondary sm:block">
         {doc.contentType}
       </span>
-      <span className="shrink-0 text-xs text-spill-text-secondary">
+      <span className="hidden shrink-0 text-xs text-spill-text-secondary sm:block">
         DS {doc.dataSet}
       </span>
       {doc.fileSize > 0 && (

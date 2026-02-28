@@ -42,7 +42,7 @@ export default function FacetSidebar({ facets }: FacetSidebarProps) {
   }, [activeContentTypes, setFilter])
 
   return (
-    <aside className="w-full shrink-0 space-y-6 lg:w-64">
+    <aside className="w-full shrink-0 flex flex-row gap-4 overflow-x-auto lg:flex-col lg:gap-6 lg:w-64 lg:overflow-visible">
       {(() => {
         const hasFacets = facets?.contentType && Object.keys(facets.contentType).length > 0
         const entries: [string, number | null][] = hasFacets
@@ -100,12 +100,12 @@ export default function FacetSidebar({ facets }: FacetSidebarProps) {
 
 function FacetGroup({ title, children }: { title: string, children: React.ReactNode }) {
   return (
-    <div>
-      <h3 className="mb-2 flex items-center gap-1 font-headline text-xs font-semibold uppercase tracking-wider text-spill-text-secondary">
+    <div className="min-w-0 shrink-0 lg:shrink lg:w-full">
+      <h3 className="mb-2 flex items-center gap-1 font-headline text-xs font-semibold uppercase tracking-wider text-spill-text-secondary whitespace-nowrap">
         {title}
         <ChevronDown className="h-3 w-3" />
       </h3>
-      <div className="space-y-0.5">
+      <div className="flex flex-row gap-1 lg:flex-col lg:gap-0.5">
         {children}
       </div>
     </div>
@@ -127,7 +127,7 @@ function FacetItem({
     <button
       onClick={onClick}
       className={clsx(
-        'flex w-full items-center justify-between rounded-md px-2.5 py-1.5 text-sm transition-colors',
+        'flex items-center justify-between rounded-md px-2.5 py-1.5 text-sm transition-colors whitespace-nowrap lg:w-full',
         active
           ? 'bg-spill-accent/15 text-spill-accent'
           : 'text-spill-text-secondary hover:bg-spill-surface-light hover:text-spill-text-primary'
