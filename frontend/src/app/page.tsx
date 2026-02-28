@@ -75,9 +75,9 @@ export default function HomePage() {
           <StatsBar />
         </section>
 
-        <Recommendations />
-
         <FeaturedVideos />
+
+        <Recommendations />
 
         <section className="mx-auto max-w-7xl px-4 pb-20 sm:px-6">
           <h2 className="font-headline text-xl font-bold text-spill-text-primary">{siteConfig.dataSetsIntro.browseHeading}</h2>
