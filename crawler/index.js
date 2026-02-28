@@ -15,6 +15,7 @@ const CourtAdapter = require('./lib/adapters/court')
 const ArchiveOrgAdapter = require('./lib/adapters/archive-org')
 const NewsAdapter = require('./lib/adapters/news')
 const GovernmentAdapter = require('./lib/adapters/government')
+const DocumentCloudAdapter = require('./lib/adapters/documentcloud')
 const SearchDiscoveryAdapter = require('./lib/adapters/search-discovery')
 
 // Reused modules from archiver/ingest
@@ -101,6 +102,7 @@ async function cmdSeed () {
     'archive-org': new ArchiveOrgAdapter(crawlDb),
     news: new NewsAdapter(crawlDb),
     government: new GovernmentAdapter(crawlDb),
+    documentcloud: new DocumentCloudAdapter(crawlDb),
   }
 
   for (const [name, adapter] of Object.entries(adapters)) {
@@ -192,6 +194,7 @@ async function cmdRun (opts) {
     'archive-org': new ArchiveOrgAdapter(crawlDb),
     news: new NewsAdapter(crawlDb),
     government: new GovernmentAdapter(crawlDb),
+    documentcloud: new DocumentCloudAdapter(crawlDb),
     'search-discovery': new SearchDiscoveryAdapter(crawlDb, seeds),
   }
 
@@ -266,7 +269,7 @@ Options:
   --concurrency N     Max concurrent fetches (default: 5)
   --depth N           Max crawl depth from seeds (default: 3)
   --adapters LIST     Comma-separated adapter names to enable (default: all)
-                      Available: court, news, government, archive-org, generic, search-discovery
+                      Available: court, news, government, archive-org, documentcloud, generic, search-discovery
   --min-relevance N   Minimum relevance score to index (default: 0.3)
   --dry-run           Fetch and score but don't insert into archive
 

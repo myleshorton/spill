@@ -54,8 +54,20 @@ class GovernmentAdapter {
         return this._extractFbiVaultLinks($, url)
       }
 
+      if (url.includes('justice.gov/epstein')) {
+        return this._extractDojEpsteinLibrary($, url)
+      }
+
       if (url.includes('justice.gov')) {
         return this._extractDojLinks($, url)
+      }
+
+      if (url.includes('oversight.house.gov')) {
+        return this._extractOversightLinks($, url)
+      }
+
+      if (url.includes('muckrock.com')) {
+        return this._extractMuckrockLinks($, url)
       }
 
       if (url.includes('sec.gov')) {
@@ -153,6 +165,115 @@ class GovernmentAdapter {
         const text = $(el).text().toLowerCase()
         if (absoluteUrl.includes('justice.gov') &&
             (text.includes('press release') || text.includes('court') || text.includes('filing') || text.includes('indictment'))) {
+          links.push({
+            url: absoluteUrl,
+            priority: 0.85,
+            source: 'government',
+          })
+        }
+      } catch {}
+    })
+
+    return links.slice(0, 100)
+  }
+
+  _extractDojEpsteinLibrary ($, baseUrl) {
+    const links = []
+
+    $('a[href]').each((_, el) => {
+      const href = $(el).attr('href')
+      if (!href) return
+
+      try {
+        const absoluteUrl = new URL(href, baseUrl).toString()
+
+        // Direct PDF files from the Epstein library
+        if (absoluteUrl.endsWith('.pdf')) {
+          links.push({
+            url: absoluteUrl,
+            priority: 0.95,
+            source: 'government',
+          })
+        }
+
+        // Data set index pages
+        if (absoluteUrl.includes('/epstein/') && (absoluteUrl.includes('data-set') || absoluteUrl.includes('court-records'))) {
+          links.push({
+            url: absoluteUrl,
+            priority: 0.9,
+            source: 'government',
+          })
+        }
+
+        // Individual file links (EFTA pattern)
+        if (absoluteUrl.includes('/epstein/files/')) {
+          links.push({
+            url: absoluteUrl,
+            priority: 0.95,
+            source: 'government',
+          })
+        }
+      } catch {}
+    })
+
+    return links.slice(0, 500)
+  }
+
+  _extractOversightLinks ($, baseUrl) {
+    const links = []
+
+    $('a[href]').each((_, el) => {
+      const href = $(el).attr('href')
+      if (!href) return
+
+      try {
+        const absoluteUrl = new URL(href, baseUrl).toString()
+
+        // PDF links
+        if (absoluteUrl.endsWith('.pdf')) {
+          links.push({
+            url: absoluteUrl,
+            priority: 0.95,
+            source: 'government',
+          })
+        }
+
+        // Related release pages
+        const text = $(el).text().toLowerCase()
+        if (absoluteUrl.includes('oversight.house.gov') && (text.includes('epstein') || text.includes('release'))) {
+          links.push({
+            url: absoluteUrl,
+            priority: 0.85,
+            source: 'government',
+          })
+        }
+      } catch {}
+    })
+
+    return links.slice(0, 100)
+  }
+
+  _extractMuckrockLinks ($, baseUrl) {
+    const links = []
+
+    $('a[href]').each((_, el) => {
+      const href = $(el).attr('href')
+      if (!href) return
+
+      try {
+        const absoluteUrl = new URL(href, baseUrl).toString()
+
+        // Direct file downloads from MuckRock/DocumentCloud
+        if (absoluteUrl.endsWith('.pdf') || absoluteUrl.includes('documentcloud.org')) {
+          links.push({
+            url: absoluteUrl,
+            priority: 0.9,
+            source: 'government',
+          })
+        }
+
+        // Individual FOIA request pages
+        if (absoluteUrl.includes('muckrock.com/foi/') && !absoluteUrl.includes('/list/')) {
           links.push({
             url: absoluteUrl,
             priority: 0.85,
