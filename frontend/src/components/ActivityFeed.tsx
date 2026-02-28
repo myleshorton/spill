@@ -49,7 +49,31 @@ export default function ActivityFeed() {
 
   const Icon = ICON_MAP[display.icon]
 
-  const content = (
+  // Render message text, turning "Spill P2P" into an inline link when url is set
+  const msg = display.message
+  const url = display.url
+  function renderMessage() {
+    if (!url) return msg
+    const parts = msg.split(/(Spill P2P|Spill\s+peer[s]?|Spill\s+node[s]?)/)
+    if (parts.length === 1) {
+      return (
+        <a href={url} target="_blank" rel="noopener noreferrer" className="text-spill-accent underline decoration-spill-accent/40 underline-offset-2 hover:decoration-spill-accent transition-colors">
+          {msg}
+        </a>
+      )
+    }
+    return parts.map((part, i) =>
+      /^Spill/.test(part) ? (
+        <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="text-spill-accent underline decoration-spill-accent/40 underline-offset-2 hover:decoration-spill-accent transition-colors">
+          {part}
+        </a>
+      ) : (
+        <span key={i}>{part}</span>
+      )
+    )
+  }
+
+  return (
     <div
       className="flex items-center justify-center gap-2.5 transition-opacity duration-300 h-7"
       style={{ opacity: visible ? 1 : 0 }}
@@ -60,18 +84,8 @@ export default function ActivityFeed() {
       </span>
       <Icon className="h-3.5 w-3.5 shrink-0 text-spill-accent/70" />
       <span className="font-mono text-sm text-spill-text-secondary truncate">
-        {display.message}
+        {renderMessage()}
       </span>
     </div>
   )
-
-  if (display.url) {
-    return (
-      <a href={display.url} target="_blank" rel="noopener noreferrer" className="block hover:opacity-80 transition-opacity">
-        {content}
-      </a>
-    )
-  }
-
-  return content
 }
