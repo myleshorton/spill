@@ -158,21 +158,32 @@ export function useActivityFeed(pollInterval = 8000, cycleInterval = 5000) {
   const queueRef = useRef<ActivityEvent[]>([])
   const ambientRef = useRef<ActivityEvent[]>([])
   const ambientIndexRef = useRef(0)
+  const lastIdRef = useRef<string | null>(null)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  const show = useCallback((event: ActivityEvent) => {
+    lastIdRef.current = event.id
+    setCurrent(event)
+  }, [])
 
   const cycle = useCallback(() => {
     // Delta events take priority
     if (queueRef.current.length > 0) {
-      setCurrent(queueRef.current.shift()!)
+      const next = queueRef.current.shift()!
+      show(next)
       return
     }
-    // Otherwise cycle through ambient
-    if (ambientRef.current.length > 0) {
-      const idx = ambientIndexRef.current % ambientRef.current.length
-      setCurrent(ambientRef.current[idx])
-      ambientIndexRef.current = idx + 1
+    // Otherwise cycle through ambient, skipping the current one
+    const list = ambientRef.current
+    if (list.length === 0) return
+    if (list.length === 1) { show(list[0]); return }
+    let idx = ambientIndexRef.current % list.length
+    if (list[idx].id === lastIdRef.current) {
+      idx = (idx + 1) % list.length
     }
-  }, [])
+    ambientIndexRef.current = idx + 1
+    show(list[idx])
+  }, [show])
 
   useEffect(() => {
     let cancelled = false
