@@ -54,8 +54,6 @@ async function extractPdfText (filePath) {
 
 function ocrPdf (filePath) {
   try {
-    // Use Tesseract via pdftoppm + tesseract pipeline
-    // First check if tesseract is available
     execFileSync('which', ['tesseract'], { stdio: 'pipe' })
   } catch {
     console.warn('[text] Tesseract not installed, skipping OCR for', path.basename(filePath))
@@ -63,14 +61,14 @@ function ocrPdf (filePath) {
   }
 
   try {
-    // Convert PDF to images and OCR each page
+    // 200 DPI grayscale rendering + parallel Tesseract across pages
     const result = execFileSync('bash', ['-c', `
       tmpdir=$(mktemp -d)
       trap "rm -rf $tmpdir" EXIT
-      pdftoppm -r 300 -l 20 "${filePath}" "$tmpdir/page" -jpeg 2>/dev/null
-      for img in "$tmpdir"/page-*.jpg; do
-        [ -f "$img" ] && tesseract "$img" stdout --psm 3 -l eng 2>/dev/null
-      done
+      pdftoppm -r 200 -l 20 "${filePath}" "$tmpdir/page" -gray 2>/dev/null
+      ls "$tmpdir"/page-*.pgm 2>/dev/null | sort | \
+        xargs -P 4 -I {} sh -c 'tesseract "$1" "\${1%.pgm}" --oem 1 --psm 6 -l eng 2>/dev/null' _ {}
+      for f in $(ls "$tmpdir"/page-*.txt 2>/dev/null | sort); do cat "$f"; done
     `], {
       maxBuffer: 50 * 1024 * 1024,
       timeout: 120000
