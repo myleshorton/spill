@@ -608,6 +608,18 @@ class DocumentsDatabase {
     `).all(dataSet, limit)
   }
 
+  listFeaturedVideos (options = {}) {
+    const { limit = 12, offset = 0 } = options
+    const where = "WHERE content_type = 'video' AND thumb_path IS NOT NULL AND transcript IS NOT NULL AND LENGTH(transcript) > 100"
+
+    const total = this.db.prepare(`SELECT COUNT(*) as count FROM documents ${where}`).get()
+    const rows = this.db.prepare(
+      `SELECT * FROM documents ${where} ORDER BY created_at DESC LIMIT ? OFFSET ?`
+    ).all(limit, offset)
+
+    return { documents: rows, total: total.count }
+  }
+
   activitySnapshot () {
     const now = Date.now()
     const fiveMinAgo = now - 5 * 60 * 1000

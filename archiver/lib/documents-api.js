@@ -120,6 +120,18 @@ function createDocumentsRouter (docsDb, searchIndex, archiverRef, torrentManager
     })
   })
 
+  // Featured videos — interesting videos with thumbnails and real transcripts
+  router.get('/featured-videos', (req, res) => {
+    const limit = Math.min(parseInt(req.query.limit) || 12, 50)
+    const offset = parseInt(req.query.offset) || 0
+
+    const result = docsDb.listFeaturedVideos({ limit, offset })
+    res.json({
+      documents: result.documents.map(rowToDoc),
+      total: result.total
+    })
+  })
+
   // Full-text search via Meilisearch
   router.get('/documents/search', async (req, res) => {
     const q = req.query.q

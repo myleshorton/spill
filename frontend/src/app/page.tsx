@@ -8,6 +8,7 @@ import SearchBar from '@/components/SearchBar'
 import StatsBar from '@/components/StatsBar'
 import ActivityFeed from '@/components/ActivityFeed'
 import Recommendations from '@/components/Recommendations'
+import FeaturedVideos from '@/components/FeaturedVideos'
 import { siteConfig } from '@/config/site.config'
 
 const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -75,6 +76,8 @@ export default function HomePage() {
         </section>
 
         <Recommendations />
+
+        <FeaturedVideos />
 
         <section className="mx-auto max-w-7xl px-4 pb-20 sm:px-6">
           <h2 className="font-headline text-xl font-bold text-spill-text-primary">{siteConfig.dataSetsIntro.browseHeading}</h2>

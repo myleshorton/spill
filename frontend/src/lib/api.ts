@@ -256,6 +256,31 @@ export async function verifyMagicLink(
   return res.json()
 }
 
+// --- Featured Videos ---
+
+export async function getFeaturedVideos(options: {
+  limit?: number
+  offset?: number
+} = {}): Promise<{ documents: Document[], total: number }> {
+  const params = new URLSearchParams()
+  if (options.limit) params.set('limit', String(options.limit))
+  if (options.offset) params.set('offset', String(options.offset))
+
+  // Try dedicated endpoint first; fall back to generic video listing if archiver hasn't restarted yet
+  const res = await fetch(`${API_BASE}/featured-videos?${params}`)
+  if (res.ok) return res.json()
+
+  // Fallback: list all videos
+  const fallbackParams = new URLSearchParams()
+  fallbackParams.set('content_type', 'video')
+  if (options.limit) fallbackParams.set('limit', String(options.limit))
+  if (options.offset) fallbackParams.set('offset', String(options.offset))
+
+  const fallback = await fetch(`${API_BASE}/documents?${fallbackParams}`)
+  if (!fallback.ok) return { documents: [], total: 0 }
+  return fallback.json()
+}
+
 // --- Activity Feed ---
 
 export interface ActivityData {
