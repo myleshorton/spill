@@ -22,13 +22,21 @@ const DB_PATH = args['db-path'] || path.join(__dirname, '..', 'archiver', 'data'
 const THUMB_DIR = args['thumb-dir'] || path.join(__dirname, '..', 'data', 'thumbs')
 const LIMIT = parseInt(args.limit || '0') || 0
 const CONCURRENCY = parseInt(args.concurrency || '8') || 8
+const TEXT_ONLY = args['text-only'] === 'true'
 const BATCH_SIZE = 10000
 
 function parseArgs (argv) {
   const result = {}
-  for (let i = 0; i < argv.length; i += 2) {
+  for (let i = 0; i < argv.length; i++) {
     if (argv[i].startsWith('--')) {
-      result[argv[i].slice(2)] = argv[i + 1]
+      const key = argv[i].slice(2)
+      const next = argv[i + 1]
+      if (next && !next.startsWith('--')) {
+        result[key] = next
+        i++
+      } else {
+        result[key] = 'true'
+      }
     }
   }
   return result
@@ -50,6 +58,7 @@ async function main () {
   console.log('[ingest] Database:', DB_PATH)
   console.log('[ingest] Thumbnail dir:', THUMB_DIR)
   console.log('[ingest] Concurrency:', CONCURRENCY)
+  if (TEXT_ONLY) console.log('[ingest] Text-only mode: skipping transcription and thumbnails')
 
   if (!fs.existsSync(THUMB_DIR)) {
     fs.mkdirSync(THUMB_DIR, { recursive: true })
@@ -60,12 +69,13 @@ async function main () {
   console.log('[ingest] %d total documents in database', total)
 
   // Count pending documents
-  const pendingCount = db.db.prepare(`
-    SELECT COUNT(*) as cnt FROM documents
-    WHERE file_path IS NOT NULL
-      AND (extracted_text IS NULL OR thumb_path IS NULL
-           OR (transcript IS NULL AND content_type IN ('audio', 'video')))
-  `).get().cnt
+  const pendingQuery = TEXT_ONLY
+    ? `SELECT COUNT(*) as cnt FROM documents WHERE file_path IS NOT NULL AND extracted_text IS NULL`
+    : `SELECT COUNT(*) as cnt FROM documents
+       WHERE file_path IS NOT NULL
+         AND (extracted_text IS NULL OR thumb_path IS NULL
+              OR (transcript IS NULL AND content_type IN ('audio', 'video')))`
+  const pendingCount = db.db.prepare(pendingQuery).get().cnt
   const totalPending = LIMIT > 0 ? Math.min(pendingCount, LIMIT) : pendingCount
   console.log('[ingest] %d documents pending processing', totalPending)
 
@@ -79,14 +89,15 @@ async function main () {
 
   // Prepare the batched query — always OFFSET 0 because processed rows
   // get updated and drop out of the WHERE clause
-  const batchStmt = db.db.prepare(`
-    SELECT * FROM documents
-    WHERE file_path IS NOT NULL
-      AND (extracted_text IS NULL OR thumb_path IS NULL
-           OR (transcript IS NULL AND content_type IN ('audio', 'video')))
-    ORDER BY data_set ASC, rowid ASC
-    LIMIT @limit
-  `)
+  const batchStmt = db.db.prepare(TEXT_ONLY
+    ? `SELECT * FROM documents WHERE file_path IS NOT NULL AND extracted_text IS NULL
+       ORDER BY data_set ASC, rowid ASC LIMIT @limit`
+    : `SELECT * FROM documents
+       WHERE file_path IS NOT NULL
+         AND (extracted_text IS NULL OR thumb_path IS NULL
+              OR (transcript IS NULL AND content_type IN ('audio', 'video')))
+       ORDER BY data_set ASC, rowid ASC LIMIT @limit`
+  )
 
   // Progress ticker — logs throughput every 5 seconds
   const ticker = setInterval(() => {
@@ -107,23 +118,13 @@ async function main () {
         if (text && text.length > 0) {
           updates.extracted_text = text
           textExtracted++
+        } else {
+          // Mark as attempted so we don't retry
+          updates.extracted_text = ''
         }
       } catch (err) {
         console.error('[ingest] Text extraction failed for %s: %s', doc.id, err.message)
-        errors++
-      }
-    }
-
-    // Transcribe audio/video if needed
-    if (!doc.transcript && (doc.content_type === 'audio' || doc.content_type === 'video') && doc.file_path && fs.existsSync(doc.file_path)) {
-      try {
-        const transcript = await transcribe(doc.file_path, doc.content_type)
-        if (transcript && transcript.length > 0) {
-          updates.transcript = transcript
-          transcribed++
-        }
-      } catch (err) {
-        console.error('[ingest] Transcription failed for %s: %s', doc.id, err.message)
+        updates.extracted_text = ''
         errors++
       }
     }
@@ -134,17 +135,33 @@ async function main () {
       if (pages) updates.page_count = pages
     }
 
-    // Generate thumbnail if needed
-    if (!doc.thumb_path && doc.file_path && fs.existsSync(doc.file_path)) {
-      const thumbPath = path.join(THUMB_DIR, doc.id + '.jpg')
-      try {
-        const ok = await generateThumbnail(doc.file_path, thumbPath, doc.content_type)
-        if (ok) {
-          updates.thumb_path = thumbPath
-          thumbsGenerated++
+    if (!TEXT_ONLY) {
+      // Transcribe audio/video if needed
+      if (!doc.transcript && (doc.content_type === 'audio' || doc.content_type === 'video') && doc.file_path && fs.existsSync(doc.file_path)) {
+        try {
+          const transcript = await transcribe(doc.file_path, doc.content_type)
+          if (transcript && transcript.length > 0) {
+            updates.transcript = transcript
+            transcribed++
+          }
+        } catch (err) {
+          console.error('[ingest] Transcription failed for %s: %s', doc.id, err.message)
+          errors++
         }
-      } catch (err) {
-        console.error('[ingest] Thumbnail failed for %s: %s', doc.id, err.message)
+      }
+
+      // Generate thumbnail if needed
+      if (!doc.thumb_path && doc.file_path && fs.existsSync(doc.file_path)) {
+        const thumbPath = path.join(THUMB_DIR, doc.id + '.jpg')
+        try {
+          const ok = await generateThumbnail(doc.file_path, thumbPath, doc.content_type)
+          if (ok) {
+            updates.thumb_path = thumbPath
+            thumbsGenerated++
+          }
+        } catch (err) {
+          console.error('[ingest] Thumbnail failed for %s: %s', doc.id, err.message)
+        }
       }
     }
 

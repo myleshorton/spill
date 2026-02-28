@@ -608,6 +608,57 @@ class DocumentsDatabase {
     `).all(dataSet, limit)
   }
 
+  activitySnapshot () {
+    const now = Date.now()
+    const fiveMinAgo = now - 5 * 60 * 1000
+
+    const documents = this.db.prepare('SELECT COUNT(*) as c FROM documents').get().c
+    const transcripts = this.db.prepare("SELECT COUNT(*) as c FROM documents WHERE transcript IS NOT NULL AND transcript != ''").get().c
+    const geoLocated = this.db.prepare('SELECT COUNT(*) as c FROM documents WHERE location_latitude IS NOT NULL').get().c
+    const withKeywords = this.db.prepare('SELECT COUNT(*) as c FROM documents WHERE image_keywords IS NOT NULL').get().c
+    const indexed = this.db.prepare('SELECT COUNT(*) as c FROM documents WHERE indexed_at IS NOT NULL').get().c
+
+    // These tables are created lazily — guard against missing
+    const tables = this.db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all().map(r => r.name)
+    const entities = tables.includes('entities') ? this.db.prepare('SELECT COUNT(*) as c FROM entities').get().c : 0
+    const financials = tables.includes('financial_records') ? this.db.prepare('SELECT COUNT(*) as c FROM financial_records').get().c : 0
+
+    // Text extraction progress
+    const textExtracted = this.db.prepare("SELECT COUNT(*) as c FROM documents WHERE extracted_text IS NOT NULL AND extracted_text != ''").get().c
+    const textPending = this.db.prepare('SELECT COUNT(*) as c FROM documents WHERE extracted_text IS NULL').get().c
+
+    // Transcription progress (audio/video only)
+    const avTotal = this.db.prepare("SELECT COUNT(*) as c FROM documents WHERE content_type IN ('audio', 'video')").get().c
+    const avTranscribed = this.db.prepare("SELECT COUNT(*) as c FROM documents WHERE content_type IN ('audio', 'video') AND transcript IS NOT NULL AND transcript != ''").get().c
+
+    const recentDocs = this.db.prepare(
+      'SELECT COUNT(*) as c FROM documents WHERE created_at >= ?'
+    ).get(fiveMinAgo).c
+
+    const recentByType = this.db.prepare(
+      'SELECT content_type, COUNT(*) as c FROM documents WHERE created_at >= ? GROUP BY content_type'
+    ).all(fiveMinAgo)
+
+    const latestDoc = this.db.prepare(
+      'SELECT title, content_type FROM documents ORDER BY created_at DESC LIMIT 1'
+    ).get()
+
+    return {
+      ts: now,
+      totals: { documents, transcripts, entities, financials, geoLocated, withKeywords, indexed },
+      pending: {
+        textExtracted,
+        textPending,
+        textTotal: textExtracted + textPending,
+        avTotal,
+        avTranscribed,
+        avPending: avTotal - avTranscribed
+      },
+      recent: { count: recentDocs, byType: Object.fromEntries(recentByType.map(r => [r.content_type, r.c])) },
+      latestDoc: latestDoc ? { title: latestDoc.title, contentType: latestDoc.content_type } : null
+    }
+  }
+
   close () {
     this.db.close()
   }

@@ -6,6 +6,7 @@ import Header from '@/components/Header'
 import Footer from '@/components/Footer'
 import SearchBar from '@/components/SearchBar'
 import StatsBar from '@/components/StatsBar'
+import ActivityFeed from '@/components/ActivityFeed'
 import Recommendations from '@/components/Recommendations'
 import { siteConfig } from '@/config/site.config'
 
@@ -69,8 +70,9 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section className="mx-auto max-w-7xl px-4 pb-16 sm:px-6">
+        <section className="mx-auto max-w-7xl px-4 pb-16 sm:px-6 space-y-3">
           <StatsBar />
+          <ActivityFeed />
         </section>
 
         <Recommendations />

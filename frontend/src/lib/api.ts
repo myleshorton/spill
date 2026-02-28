@@ -256,6 +256,53 @@ export async function verifyMagicLink(
   return res.json()
 }
 
+// --- Activity Feed ---
+
+export interface ActivityData {
+  ts: number
+  totals: {
+    documents: number
+    transcripts: number
+    entities: number
+    financials: number
+    geoLocated: number
+    withKeywords: number
+    indexed: number
+  }
+  pending: {
+    textExtracted: number
+    textPending: number
+    textTotal: number
+    avTotal: number
+    avTranscribed: number
+    avPending: number
+  }
+  recent: {
+    count: number
+    byType: Record<string, number>
+  }
+  deltas: {
+    documentsAdded: number
+    transcriptsAdded: number
+    entitiesExtracted: number
+    financialsScanned: number
+    geoLocated: number
+    keywordsAdded: number
+  } | null
+  latestDoc: { title: string; contentType: string } | null
+  status: {
+    peerCount: number
+    connected: boolean
+    uptime: number
+  }
+}
+
+export async function getActivity(): Promise<ActivityData> {
+  const res = await fetch(`${API_BASE}/activity`)
+  if (!res.ok) throw new Error(`Activity failed: ${res.status}`)
+  return res.json()
+}
+
 // --- Feature 1: Transcription ---
 
 export async function getDocumentTranscript(id: string): Promise<string> {

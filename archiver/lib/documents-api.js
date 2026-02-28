@@ -57,8 +57,52 @@ function rowToDoc (row) {
   }
 }
 
+let prevSnapshot = null
+const startTime = Date.now()
+
 function createDocumentsRouter (docsDb, searchIndex, archiverRef, torrentManager) {
   const router = express.Router()
+
+  // Live activity feed
+  router.get('/activity', (req, res) => {
+    try {
+      const snap = docsDb.activitySnapshot()
+      let deltas = null
+
+      if (prevSnapshot) {
+        const prev = prevSnapshot.totals
+        const curr = snap.totals
+        deltas = {
+          documentsAdded: curr.documents - prev.documents,
+          transcriptsAdded: curr.transcripts - prev.transcripts,
+          entitiesExtracted: curr.entities - prev.entities,
+          financialsScanned: curr.financials - prev.financials,
+          geoLocated: curr.geoLocated - prev.geoLocated,
+          keywordsAdded: curr.withKeywords - prev.withKeywords
+        }
+      }
+
+      prevSnapshot = snap
+
+      const archiver = archiverRef.current
+      res.json({
+        ts: snap.ts,
+        totals: snap.totals,
+        pending: snap.pending,
+        recent: snap.recent,
+        deltas,
+        latestDoc: snap.latestDoc,
+        status: {
+          peerCount: archiver ? archiver.peerCount : 0,
+          connected: archiver ? archiver.swarm !== null : false,
+          uptime: Math.floor((Date.now() - startTime) / 1000)
+        }
+      })
+    } catch (err) {
+      console.error('[docs-api] Activity error:', err.message)
+      res.status(500).json({ error: 'Activity feed unavailable' })
+    }
+  })
 
   // Paginated document list with filtering
   router.get('/documents', (req, res) => {

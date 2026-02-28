@@ -39,8 +39,12 @@ export default function Header() {
     <header className="sticky top-0 z-50 border-b border-spill-divider bg-spill-bg/95 backdrop-blur-md">
       <div className="mx-auto flex max-w-7xl items-center gap-4 px-4 py-3 sm:px-6">
         <Link href="/" className="flex shrink-0 items-center gap-2.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-md bg-spill-accent/15 ring-1 ring-spill-accent/30">
+          <div className="relative flex h-8 w-8 items-center justify-center rounded-md bg-spill-accent/15 ring-1 ring-spill-accent/30">
             <FileText className="h-4 w-4 text-spill-accent" />
+            <span className="absolute -right-0.5 -top-0.5 flex h-2 w-2">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+            </span>
           </div>
           <div className="hidden sm:block">
             <span className="font-headline text-sm font-semibold tracking-tight text-spill-text-primary">
