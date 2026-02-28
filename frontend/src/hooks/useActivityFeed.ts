@@ -112,25 +112,26 @@ function generateAmbientEvents(data: ActivityData): ActivityEvent[] {
     events.push({ id: 'crawl-scanning', message: 'Scanning court records, FOIA releases, and public archives\u2026', icon: 'radio' })
   }
 
-  // --- P2P / BitTorrent ---
+  // --- Spill P2P / BitTorrent ---
   const sizeGB = t.totalBytes ? (t.totalBytes / (1024 * 1024 * 1024)).toFixed(0) : null
   if (sizeGB) {
-    events.push({ id: 'p2p-size', message: `${sizeGB}GB served over P2P and BitTorrent. Censorship-resistant.`, icon: 'radio' })
+    events.push({ id: 'p2p-size', message: `${sizeGB}GB served over Spill P2P and BitTorrent. Censorship-resistant.`, icon: 'radio' })
   }
   if (data.status.peerCount > 0) {
     events.push(
-      { id: 'p2p-peers', message: `${data.status.peerCount} peer${data.status.peerCount > 1 ? 's' : ''} seeding the archive right now`, icon: 'radio' },
-      { id: 'p2p-distributed', message: `Distributed across ${data.status.peerCount} node${data.status.peerCount > 1 ? 's' : ''}. Can\u2019t be taken down.`, icon: 'shield' },
+      { id: 'p2p-peers', message: `${data.status.peerCount} Spill peer${data.status.peerCount > 1 ? 's' : ''} seeding the archive right now`, icon: 'radio' },
+      { id: 'p2p-distributed', message: `Distributed across ${data.status.peerCount} Spill node${data.status.peerCount > 1 ? 's' : ''}. Can\u2019t be taken down.`, icon: 'shield' },
     )
   } else if (data.status.connected) {
-    events.push({ id: 'p2p-listening', message: 'P2P swarm active. Listening for peers\u2026', icon: 'radio' })
+    events.push({ id: 'p2p-listening', message: 'Spill P2P swarm active. Listening for peers\u2026', icon: 'radio' })
   }
   if (t.torrents > 0) {
     events.push({ id: 'p2p-torrents', message: `${t.collections} dataset${t.collections > 1 ? 's' : ''} available via BitTorrent. Download everything.`, icon: 'database' })
   }
   events.push(
-    { id: 'p2p-censorship', message: 'Mirrored via P2P and BitTorrent. No single point of failure.', icon: 'shield' },
+    { id: 'p2p-censorship', message: 'Mirrored via Spill P2P and BitTorrent. No single point of failure.', icon: 'shield' },
     { id: 'p2p-seed', message: 'Download a dataset. Seed it. Keep the archive alive.', icon: 'radio' },
+    { id: 'p2p-spill', message: 'Powered by Spill P2P \u2014 decentralized, unstoppable.', icon: 'radio' },
   )
 
   // --- Latest doc ---
