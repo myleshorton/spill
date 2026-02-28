@@ -49,7 +49,7 @@ export default function ActivityFeed() {
 
   const Icon = ICON_MAP[display.icon]
 
-  return (
+  const content = (
     <div
       className="flex items-center justify-center gap-2.5 transition-opacity duration-300 h-7"
       style={{ opacity: visible ? 1 : 0 }}
@@ -64,4 +64,14 @@ export default function ActivityFeed() {
       </span>
     </div>
   )
+
+  if (display.url) {
+    return (
+      <a href={display.url} target="_blank" rel="noopener noreferrer" className="block hover:opacity-80 transition-opacity">
+        {content}
+      </a>
+    )
+  }
+
+  return content
 }
