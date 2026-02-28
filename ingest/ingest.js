@@ -103,8 +103,7 @@ async function main () {
   const ticker = setInterval(() => {
     const elapsed = (Date.now() - startTime) / 1000
     const rate = processed / elapsed
-    console.log('[ingest] Progress: %d/%d (%.1f docs/sec) — text: %d, transcribed: %d, thumbs: %d, errors: %d',
-      processed, totalPending, rate, textExtracted, transcribed, thumbsGenerated, errors)
+    console.log(`[ingest] Progress: ${processed}/${totalPending} (${rate.toFixed(1)} docs/sec) — text: ${textExtracted}, transcribed: ${transcribed}, thumbs: ${thumbsGenerated}, errors: ${errors}`)
   }, 5000)
 
   // Process document

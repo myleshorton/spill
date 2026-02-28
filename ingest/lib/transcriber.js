@@ -1,9 +1,9 @@
 /**
- * Audio/video transcription via OpenAI Whisper API or local whisper.cpp.
+ * Audio/video transcription via local whisper.cpp or OpenAI Whisper API.
  *
  * Backend selection:
- *   1. OpenAI API if OPENAI_API_KEY is set and `openai` package is available
- *   2. whisper.cpp if WHISPER_CPP_PATH is set and the binary exists
+ *   1. whisper.cpp if WHISPER_CPP_PATH is set and the binary exists (free, local)
+ *   2. OpenAI API if OPENAI_API_KEY is set and `openai` package is available
  *   3. Returns '' with a one-time warning if neither is configured
  */
 const fs = require('fs')
@@ -16,6 +16,7 @@ const CHUNK_MINUTES = 10
 const CHUNK_BYTES_LIMIT = 25 * 1024 * 1024 // 25 MB Whisper API limit
 const MAX_RETRIES = 3
 const RETRY_DELAYS = [1000, 4000, 16000]
+const WHISPER_THREADS = parseInt(process.env.WHISPER_THREADS || '8') || 8
 
 let openai = null
 let OpenAI = null
@@ -26,18 +27,19 @@ try {
 let _warnedOnce = false
 
 function getBackend () {
-  if (process.env.OPENAI_API_KEY && OpenAI) {
-    if (!openai) openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
-    return 'openai'
-  }
-
+  // Prefer local whisper.cpp — free, no quota, no network dependency
   const cppPath = process.env.WHISPER_CPP_PATH
   if (cppPath && fs.existsSync(cppPath)) {
     return 'whisper-cpp'
   }
 
+  if (process.env.OPENAI_API_KEY && OpenAI) {
+    if (!openai) openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+    return 'openai'
+  }
+
   if (!_warnedOnce) {
-    console.warn('[transcriber] No transcription backend configured. Set OPENAI_API_KEY or WHISPER_CPP_PATH.')
+    console.warn('[transcriber] No transcription backend configured. Set WHISPER_CPP_PATH or OPENAI_API_KEY.')
     _warnedOnce = true
   }
   return null
@@ -80,9 +82,9 @@ async function transcribeChunkOpenAI (wavPath) {
       return typeof result === 'string' ? result : (result.text || '')
     } catch (err) {
       const status = err.status || err.statusCode || 0
-      const retryable = status === 429 || status >= 500
+      const retryable = status === 429 || status >= 500 || status === 0
       if (retryable && attempt < MAX_RETRIES - 1) {
-        console.warn('[transcriber] API error %d, retrying in %dms...', status, RETRY_DELAYS[attempt])
+        console.warn('[transcriber] API error %s, retrying in %dms...', status || err.message, RETRY_DELAYS[attempt])
         await sleep(RETRY_DELAYS[attempt])
         continue
       }
@@ -95,14 +97,21 @@ async function transcribeChunkOpenAI (wavPath) {
 function transcribeChunkCpp (wavPath) {
   const cppPath = process.env.WHISPER_CPP_PATH
   const modelPath = process.env.WHISPER_MODEL_PATH || ''
-  const args = ['--no-timestamps', '-f', wavPath]
-  if (modelPath) args.push('-m', modelPath)
+  const threads = String(WHISPER_THREADS)
+
+  const args = [
+    '--no-timestamps',
+    '--threads', threads,
+    '--file', wavPath
+  ]
+  if (modelPath) args.push('--model', modelPath)
 
   const out = execFileSync(cppPath, args, {
-    timeout: 600000,
+    timeout: 1200000, // 20 min — CPU transcription is slower
     maxBuffer: 50 * 1024 * 1024,
     stdio: ['pipe', 'pipe', 'pipe']
   })
+  // whisper-cli outputs to stdout, strip any leading/trailing whitespace
   return out.toString().trim()
 }
 

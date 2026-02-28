@@ -20,6 +20,9 @@ services:
       - MEILI_API_KEY=${MEILI_API_KEY:-}
       - DOMAIN=${DOMAIN:-localhost}
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - WHISPER_CPP_PATH=/usr/local/bin/whisper-cpp
+      - WHISPER_MODEL_PATH=/models/ggml-base.en-q5_1.bin
+      - WHISPER_THREADS=${WHISPER_THREADS:-8}
     depends_on:
       - meilisearch
       - clamav

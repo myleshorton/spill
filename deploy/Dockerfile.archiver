@@ -7,7 +7,23 @@ RUN apt-get update && apt-get install -y \
     ffmpeg \
     tesseract-ocr \
     poppler-utils \
+    git \
+    cmake \
+    wget \
     && rm -rf /var/lib/apt/lists/*
+
+# Build whisper.cpp
+RUN git clone --depth 1 https://github.com/ggerganov/whisper.cpp.git /tmp/whisper.cpp \
+    && cd /tmp/whisper.cpp \
+    && cmake -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF \
+    && cmake --build build --config Release -j$(nproc) \
+    && cp build/bin/whisper-cli /usr/local/bin/whisper-cpp \
+    && rm -rf /tmp/whisper.cpp
+
+# Download Whisper base.en model (quantized Q5, ~57MB — good speed/quality on CPU)
+RUN mkdir -p /models && \
+    wget -q -O /models/ggml-base.en-q5_1.bin \
+    https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.en-q5_1.bin
 
 WORKDIR /app
 
