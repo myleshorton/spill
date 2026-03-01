@@ -170,8 +170,7 @@ class DocumentsDatabase {
   }
 
   _seedCollections () {
-    if (!fs.existsSync(archiveConfigPath)) return
-    const config = JSON.parse(fs.readFileSync(archiveConfigPath, 'utf8'))
+    const config = this.config
     if (!config.dataSets || config.dataSets.length === 0) return
 
     const existing = this.db.prepare('SELECT COUNT(*) as count FROM collections').get()

@@ -7,9 +7,7 @@ const path = require('path')
 const fs = require('fs')
 const { spawn } = require('child_process')
 
-const archiveConfig = JSON.parse(
-  fs.readFileSync(path.join(__dirname, '..', 'archive-config.json'), 'utf8')
-)
+// Archive config is loaded from docsDb.config (which merges base + override)
 
 const MIME_TYPES = {
   '.pdf': 'application/pdf',
@@ -385,7 +383,7 @@ function createDocumentsRouter (docsDb, searchIndex, archiverRef, torrentManager
     const collections = docsDb.listCollections()
     const collectionMap = Object.fromEntries(collections.map(c => [c.id, c]))
 
-    const datasets = archiveConfig.dataSets.map((ds) => {
+    const datasets = (docsDb.config.dataSets || []).map((ds) => {
       const col = collectionMap[ds.id]
       return {
         id: ds.id,
@@ -403,7 +401,7 @@ function createDocumentsRouter (docsDb, searchIndex, archiverRef, torrentManager
   // Single dataset detail
   router.get('/datasets/:id', (req, res) => {
     const dsId = parseInt(req.params.id, 10)
-    const dsConfig = archiveConfig.dataSets.find(d => d.id === dsId)
+    const dsConfig = docsDb.config.dataSets.find(d => d.id === dsId)
     if (!dsConfig) {
       return res.status(404).json({ error: 'Dataset not found' })
     }
@@ -434,7 +432,7 @@ function createDocumentsRouter (docsDb, searchIndex, archiverRef, torrentManager
       return res.status(404).json({ error: 'Torrent not available for this dataset' })
     }
 
-    const dsConfig = archiveConfig.dataSets.find(d => d.id === dsId)
+    const dsConfig = docsDb.config.dataSets.find(d => d.id === dsId)
     const fileName = dsConfig
       ? `${dsConfig.name.replace(/[^a-zA-Z0-9 ]/g, '').replace(/\s+/g, '_')}.torrent`
       : `dataset_${dsId}.torrent`

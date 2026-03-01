@@ -2,13 +2,14 @@ version: '3.8'
 
 services:
   iran-archiver:
+    env_file: .env.iran-war
     build:
       context: ..
       dockerfile: deploy/Dockerfile.archiver
     volumes:
       - iran-archiver-data:/app/archiver/data
       - iran-content-data:/data
-      - ${IRAN_ARCHIVE_CONFIG:-/dev/null}:/app/archiver/archive-config.override.json:ro
+      - ../sites/iran-war/archive-config.json:/app/archiver/archive-config.override.json:ro
     environment:
       - PORT=4000
       - DHT_PORT=49738
@@ -27,6 +28,7 @@ services:
       - shared
 
   iran-frontend:
+    env_file: .env.iran-war
     build:
       context: ..
       dockerfile: deploy/Dockerfile.frontend
@@ -43,6 +45,7 @@ services:
       - shared
 
   iran-meilisearch:
+    env_file: .env.iran-war
     image: getmeili/meilisearch:v1.7
     volumes:
       - iran-meili-data:/meili_data
@@ -55,6 +58,7 @@ services:
       - iran-internal
 
   iran-crawler:
+    env_file: .env.iran-war
     build:
       context: ..
       dockerfile: deploy/Dockerfile.crawler
