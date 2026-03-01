@@ -3,7 +3,7 @@
 import { Suspense, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Search, Menu, X, Database, FileText, Info, Upload } from 'lucide-react'
+import { Search, Menu, X, Database, FileText, Info, Upload, Share2 } from 'lucide-react'
 import { siteConfig } from '@/config/site.config'
 
 function HeaderSearch() {
@@ -79,6 +79,13 @@ export default function Header() {
             Datasets
           </Link>
           <Link
+            href="/analysis/entities"
+            className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm text-spill-text-secondary hover:bg-spill-surface hover:text-spill-text-primary transition-colors"
+          >
+            <Share2 className="h-3.5 w-3.5" />
+            Network
+          </Link>
+          <Link
             href="/upload"
             className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm text-spill-text-secondary hover:bg-spill-surface hover:text-spill-text-primary transition-colors"
           >
@@ -115,6 +122,9 @@ export default function Header() {
           <nav className="flex flex-col gap-2">
             <Link href="/datasets" className="rounded-md px-3 py-2 text-sm text-spill-text-secondary hover:text-spill-text-primary" onClick={() => setMobileMenuOpen(false)}>
               Datasets
+            </Link>
+            <Link href="/analysis/entities" className="rounded-md px-3 py-2 text-sm text-spill-text-secondary hover:text-spill-text-primary" onClick={() => setMobileMenuOpen(false)}>
+              Network
             </Link>
             <Link href="/upload" className="rounded-md px-3 py-2 text-sm text-spill-text-secondary hover:text-spill-text-primary" onClick={() => setMobileMenuOpen(false)}>
               Upload

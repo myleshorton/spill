@@ -34,7 +34,7 @@ function generateDeltaEvents(data: ActivityData): ActivityEvent[] {
     events.push({ id: `tr-${data.ts}`, message: `Transcribed ${d.transcriptsAdded} recording${d.transcriptsAdded > 1 ? 's' : ''}`, icon: 'mic' })
   }
   if (d.entitiesExtracted > 0) {
-    events.push({ id: `ent-${data.ts}`, message: `Extracted ${d.entitiesExtracted} new entit${d.entitiesExtracted > 1 ? 'ies' : 'y'}`, icon: 'brain' })
+    events.push({ id: `ent-${data.ts}`, message: `Extracted ${d.entitiesExtracted} new entit${d.entitiesExtracted > 1 ? 'ies' : 'y'}`, icon: 'brain', url: '/analysis/entities' })
   }
   if (d.financialsScanned > 0) {
     events.push({ id: `fin-${data.ts}`, message: `Scanned ${d.financialsScanned} financial record${d.financialsScanned > 1 ? 's' : ''}`, icon: 'dollar-sign' })
@@ -64,7 +64,7 @@ function generateAmbientEvents(data: ActivityData): ActivityEvent[] {
     { id: 'wit-stone', message: 'No stone unturned. No file unread.', icon: 'shield' },
     { id: 'wit-sunlight', message: 'Sunlight is the best disinfectant.', icon: 'shield' },
     { id: 'wit-paper', message: 'Every page tells a story.', icon: 'file-plus' },
-    { id: 'wit-dots', message: 'Connecting the dots\u2026', icon: 'brain' },
+    { id: 'wit-dots', message: 'Connecting the dots\u2026', icon: 'brain', url: '/analysis/entities' },
     { id: 'wit-fine-print', message: 'Reading the fine print so you don\u2019t have to.', icon: 'search' },
   )
 
@@ -78,7 +78,7 @@ function generateAmbientEvents(data: ActivityData): ActivityEvent[] {
     events.push({ id: 'stat-transcripts', message: `${formatCount(t.transcripts)} recordings transcribed to searchable text`, icon: 'mic' })
   }
   if (t.entities > 0) {
-    events.push({ id: 'stat-entities', message: `${formatCount(t.entities)} names, orgs, and connections mapped`, icon: 'brain' })
+    events.push({ id: 'stat-entities', message: `${formatCount(t.entities)} names, orgs, and connections mapped`, icon: 'brain', url: '/analysis/entities' })
   }
   if (t.geoLocated > 0) {
     events.push({ id: 'stat-geo', message: `${t.geoLocated} documents pinned to locations on the map`, icon: 'map-pin' })

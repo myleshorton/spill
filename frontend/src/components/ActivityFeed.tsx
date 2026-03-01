@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import {
   FilePlus, Mic, Brain, DollarSign, MapPin, Tags,
   Search, Radio, Database, Shield
@@ -49,24 +50,32 @@ export default function ActivityFeed() {
 
   const Icon = ICON_MAP[display.icon]
 
-  // Render message text, turning "Spill P2P" into an inline link when url is set
+  // Render message text, turning key phrases into inline links when url is set
   const msg = display.message
   const url = display.url
+  const isInternal = url?.startsWith('/')
+  const linkClass = "text-spill-accent underline decoration-spill-accent/40 underline-offset-2 hover:decoration-spill-accent transition-colors"
   function renderMessage() {
     if (!url) return msg
-    const parts = msg.split(/(Spill P2P|Spill\s+peer[s]?|Spill\s+node[s]?)/)
+    const linkPattern = isInternal
+      ? /(connect\w*|entit\w+|names|orgs|connections\s+mapped|dots)/i
+      : /(Spill P2P|Spill\s+peer[s]?|Spill\s+node[s]?)/
+    const parts = msg.split(linkPattern)
     if (parts.length === 1) {
-      return (
-        <a href={url} target="_blank" rel="noopener noreferrer" className="text-spill-accent underline decoration-spill-accent/40 underline-offset-2 hover:decoration-spill-accent transition-colors">
-          {msg}
-        </a>
+      // No keyword match — make the whole message a link
+      return isInternal ? (
+        <Link href={url} className={linkClass}>{msg}</Link>
+      ) : (
+        <a href={url} target="_blank" rel="noopener noreferrer" className={linkClass}>{msg}</a>
       )
     }
     return parts.map((part, i) =>
-      /^Spill/.test(part) ? (
-        <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="text-spill-accent underline decoration-spill-accent/40 underline-offset-2 hover:decoration-spill-accent transition-colors">
-          {part}
-        </a>
+      linkPattern.test(part) ? (
+        isInternal ? (
+          <Link key={i} href={url} className={linkClass}>{part}</Link>
+        ) : (
+          <a key={i} href={url} target="_blank" rel="noopener noreferrer" className={linkClass}>{part}</a>
+        )
       ) : (
         <span key={i}>{part}</span>
       )
