@@ -622,7 +622,12 @@ class DocumentsDatabase {
 
   listFeaturedPhotos (options = {}) {
     const { limit = 12, offset = 0 } = options
-    const where = "WHERE content_type = 'image' AND thumb_path IS NOT NULL AND (image_keywords LIKE '%nude%' OR image_keywords LIKE '%nudity%' OR image_keywords LIKE '%naked%' OR image_keywords LIKE '%undress%')"
+    const where = `WHERE content_type = 'image' AND thumb_path IS NOT NULL
+      AND (image_keywords LIKE '%nude%' OR image_keywords LIKE '%nudity%' OR image_keywords LIKE '%naked%' OR image_keywords LIKE '%undress%')
+      AND image_keywords NOT LIKE '%museum%' AND image_keywords NOT LIKE '%artwork%'
+      AND image_keywords NOT LIKE '%painting%' AND image_keywords NOT LIKE '%sculpture%'
+      AND image_keywords NOT LIKE '%gallery%' AND image_keywords NOT LIKE '%art studio%'
+      AND title NOT LIKE '%museum%' AND title NOT LIKE '%artwork%'`
 
     const total = this.db.prepare(`SELECT COUNT(*) as count FROM documents ${where}`).get()
     const rows = this.db.prepare(
