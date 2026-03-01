@@ -144,7 +144,7 @@ class ContentProcessor {
 
     // 9. Generate thumbnail
     let thumbPath = null
-    if (this.thumbnails && (isPdf || isHtml || fileType.contentType === 'image')) {
+    if (this.thumbnails && (isPdf || isHtml || isVideo || fileType.contentType === 'image')) {
       const thumbDest = path.join(this.thumbDir, 'crawled', `${docId}.jpg`)
       try {
         const ok = await this.thumbnails.generateThumbnail(destFile, thumbDest, fileType.contentType)

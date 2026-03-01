@@ -2,6 +2,8 @@ const fs = require('fs')
 const cheerio = require('cheerio')
 const { URL } = require('url')
 
+const VIDEO_EXTENSIONS = /\.(mp4|webm|mov|avi|mkv|wmv|mpg|mpeg|m4v|flv)$/i
+
 class GovernmentAdapter {
   constructor (crawlDb, seeds) {
     this.crawlDb = crawlDb
@@ -73,21 +75,38 @@ class GovernmentAdapter {
 
         if (!absoluteUrl.startsWith('http')) return
 
-        // Prioritize PDF downloads from .gov sites
+        // Prioritize PDF and video downloads from .gov sites
         const isPdf = absoluteUrl.endsWith('.pdf') || href.includes('.pdf')
+        const isVideo = VIDEO_EXTENSIONS.test(absoluteUrl)
         const text = $(el).text().toLowerCase()
         const relevanceKeywords = this.keywords.length > 0
-          ? [...this.keywords, 'foia', 'release', 'document', 'report']
-          : ['foia', 'release', 'document', 'report']
+          ? [...this.keywords, 'foia', 'release', 'document', 'report', 'video', 'footage']
+          : ['foia', 'release', 'document', 'report', 'video', 'footage']
         const isRelevant = relevanceKeywords.some(kw => text.includes(kw))
 
-        if (isPdf || isRelevant) {
+        if (isPdf || isVideo || isRelevant) {
           links.push({
             url: absoluteUrl,
-            priority: isPdf ? 0.9 : 0.7,
+            priority: isPdf ? 0.9 : isVideo ? 0.85 : 0.7,
             source: 'government',
           })
         }
+      })
+
+      // Extract video source URLs from <video> and <source> elements
+      $('video source[src], video[src]').each((_, el) => {
+        const src = $(el).attr('src')
+        if (!src) return
+        try {
+          const absoluteUrl = new URL(src, url).toString()
+          if (absoluteUrl.startsWith('http')) {
+            links.push({
+              url: absoluteUrl,
+              priority: 0.9,
+              source: 'government',
+            })
+          }
+        } catch {}
       })
     } catch {}
 

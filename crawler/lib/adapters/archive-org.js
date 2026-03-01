@@ -8,9 +8,14 @@ const CDX_API = 'https://web.archive.org/cdx/search/cdx'
 const USER_AGENT = 'UnredactBot/1.0 (+https://unredact.org/bot)'
 
 class ArchiveOrgAdapter {
-  constructor (crawlDb) {
+  constructor (crawlDb, seeds) {
     this.crawlDb = crawlDb
     this.name = 'archive-org'
+    this.searchQueries = seeds?.searchQueries || []
+    this.keywords = [
+      ...(seeds?.keywords?.primary || []),
+      ...(seeds?.keywords?.secondary || []),
+    ]
   }
 
   async discover (seeds) {
@@ -25,13 +30,10 @@ class ArchiveOrgAdapter {
       }) ? 1 : 0
     }
 
-    // Search archive.org for Epstein-related collections
-    const queries = [
-      'epstein documents',
-      'epstein court filings',
-      'ghislaine maxwell trial',
-      'epstein flight logs',
-    ]
+    // Search archive.org using seeds-provided search queries, or keywords
+    const queries = this.searchQueries.length > 0
+      ? this.searchQueries.slice(0, 6)
+      : this.keywords.slice(0, 4).map(k => k + ' documents')
 
     for (const query of queries) {
       try {
@@ -51,10 +53,8 @@ class ArchiveOrgAdapter {
     }
 
     // Use Wayback CDX API to find archived versions of key pages
-    const importantUrls = [
-      'justice.gov/usao-sdny/united-states-v-jeffrey-epstein',
-      'justice.gov/usao-sdny/united-states-v-ghislaine-maxwell',
-    ]
+    // (Only for Epstein seeds that have these URLs — other sites skip this)
+    const importantUrls = []
 
     for (const targetUrl of importantUrls) {
       try {
@@ -114,7 +114,7 @@ class ArchiveOrgAdapter {
           $('a[href*="/download/"]').each((_, el) => {
             const href = $(el).attr('href')
             if (!href) return
-            if (/\.(pdf|txt|doc|docx|csv|xls|xlsx|zip|tar|tar\.gz|tgz)$/i.test(href)) {
+            if (/\.(pdf|txt|doc|docx|csv|xls|xlsx|zip|tar|tar\.gz|tgz|mp4|webm|mov|avi|mkv|wmv|mpg|mpeg)$/i.test(href)) {
               try {
                 links.push({
                   url: new URL(href, url).toString(),
@@ -148,9 +148,12 @@ class ArchiveOrgAdapter {
           const href = $(el).attr('href')
           if (!href) return
           const text = $(el).text().toLowerCase()
-          const isRelevant = ['epstein', 'maxwell', 'court', 'filing', 'document', 'indictment']
-            .some(kw => text.includes(kw) || href.toLowerCase().includes(kw))
-          if (isRelevant && href.endsWith('.pdf')) {
+          const waybackKeywords = this.keywords.length > 0
+            ? [...this.keywords.map(k => k.toLowerCase()), 'document', 'report', 'filing']
+            : ['document', 'report', 'filing']
+          const isRelevant = waybackKeywords.some(kw => text.includes(kw) || href.toLowerCase().includes(kw))
+          const isFile = /\.(pdf|mp4|webm|mov|avi|doc|docx|txt)$/i.test(href)
+          if (isRelevant && isFile) {
             try {
               links.push({
                 url: new URL(href, url).toString(),
@@ -168,8 +171,10 @@ class ArchiveOrgAdapter {
 
   async _fetchMetadata (identifier) {
     const DOCUMENT_PATTERN = /\.(pdf|txt|doc|docx|csv|xls|xlsx)$/i
+    const VIDEO_PATTERN = /\.(mp4|webm|mov|avi|mkv|wmv|mpg|mpeg|m4v)$/i
     const ARCHIVE_PATTERN = /\.(zip|tar\.gz|tgz|tar)$/i
     const MAX_ARCHIVE_SIZE = 2 * 1024 * 1024 * 1024 // 2GB
+    const MAX_VIDEO_SIZE = 2 * 1024 * 1024 * 1024 // 2GB
 
     const resp = await fetch(`https://archive.org/metadata/${identifier}`, {
       headers: { 'User-Agent': USER_AGENT },
@@ -184,6 +189,8 @@ class ArchiveOrgAdapter {
       const name = file.name || ''
       const size = parseInt(file.size || '0', 10)
       if (DOCUMENT_PATTERN.test(name)) {
+        results.push({ name, size })
+      } else if (VIDEO_PATTERN.test(name) && size <= MAX_VIDEO_SIZE) {
         results.push({ name, size })
       } else if (ARCHIVE_PATTERN.test(name) && size <= MAX_ARCHIVE_SIZE) {
         results.push({ name, size })

@@ -2,11 +2,18 @@ const fs = require('fs')
 const cheerio = require('cheerio')
 const { URL } = require('url')
 
+const VIDEO_EXTENSIONS = /\.(mp4|webm|mov|avi|mkv|wmv|mpg|mpeg|m4v|flv)$/i
+
 class GenericAdapter {
-  constructor (crawlDb, scorer) {
+  constructor (crawlDb, scorer, seeds) {
     this.crawlDb = crawlDb
     this.scorer = scorer
     this.name = 'generic'
+    // Build keyword list from seeds (primary + secondary), falling back to empty
+    this.keywords = [
+      ...(seeds?.keywords?.primary || []),
+      ...(seeds?.keywords?.secondary || []),
+    ].map(k => k.toLowerCase())
   }
 
   async extractLinks (fetchResult, urlRow) {
@@ -19,6 +26,7 @@ class GenericAdapter {
       const baseUrl = fetchResult.finalUrl || urlRow.url
       const links = []
 
+      // Extract <a href> links with relevance check
       $('a[href]').each((_, el) => {
         const href = $(el).attr('href')
         if (!href) return
@@ -32,6 +40,17 @@ class GenericAdapter {
 
         // Only follow http(s) links
         if (!absoluteUrl.startsWith('http')) return
+
+        // Always queue direct video file links
+        if (VIDEO_EXTENSIONS.test(absoluteUrl)) {
+          links.push({
+            url: absoluteUrl,
+            priority: 0.8,
+            source: 'generic',
+            anchorText: $(el).text().trim(),
+          })
+          return
+        }
 
         // Quick relevance check on anchor text
         const anchorText = $(el).text().trim().toLowerCase()
@@ -48,6 +67,23 @@ class GenericAdapter {
         }
       })
 
+      // Extract video source URLs from <video> and <source> elements
+      $('video source[src], video[src]').each((_, el) => {
+        const src = $(el).attr('src')
+        if (!src) return
+        try {
+          const absoluteUrl = new URL(src, baseUrl).toString()
+          if (absoluteUrl.startsWith('http')) {
+            links.push({
+              url: absoluteUrl,
+              priority: 0.9,
+              source: 'generic',
+              anchorText: 'video-source',
+            })
+          }
+        } catch {}
+      })
+
       return links.slice(0, 50) // Cap discovered links per page
     } catch {
       return []
@@ -56,9 +92,8 @@ class GenericAdapter {
 
   _quickRelevanceCheck (anchorText, surrounding) {
     const combined = anchorText + ' ' + surrounding
-    const keywords = ['epstein', 'maxwell', 'giuffre', 'trafficking', 'court', 'filing', 'document', 'deposition', 'indictment']
     let score = 0
-    for (const kw of keywords) {
+    for (const kw of this.keywords) {
       if (combined.includes(kw)) score += 0.15
     }
     return Math.min(1.0, score)

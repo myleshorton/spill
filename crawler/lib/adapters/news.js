@@ -2,10 +2,18 @@ const fs = require('fs')
 const cheerio = require('cheerio')
 const { URL } = require('url')
 
+const VIDEO_EXTENSIONS = /\.(mp4|webm|mov|avi|mkv|wmv|mpg|mpeg|m4v|flv)$/i
+
 class NewsAdapter {
-  constructor (crawlDb) {
+  constructor (crawlDb, seeds) {
     this.crawlDb = crawlDb
     this.name = 'news'
+    // Build keyword list from seeds, falling back to empty
+    this.keywords = [
+      ...(seeds?.keywords?.primary || []),
+      ...(seeds?.keywords?.secondary || []),
+      ...(seeds?.entities || []),
+    ].map(k => k.toLowerCase())
   }
 
   async discover (seeds) {
@@ -46,6 +54,16 @@ class NewsAdapter {
 
         if (!absoluteUrl.startsWith('http')) return
 
+        // Always queue direct video file links
+        if (VIDEO_EXTENSIONS.test(absoluteUrl)) {
+          links.push({
+            url: absoluteUrl,
+            priority: 0.8,
+            source: 'news',
+          })
+          return
+        }
+
         const anchorText = $(el).text().trim().toLowerCase()
         const isRelevant = this._isRelevantLink(anchorText, absoluteUrl)
 
@@ -56,6 +74,22 @@ class NewsAdapter {
             source: 'news',
           })
         }
+      })
+
+      // Extract video source URLs from <video> and <source> elements
+      $('video source[src], video[src]').each((_, el) => {
+        const src = $(el).attr('src')
+        if (!src) return
+        try {
+          const absoluteUrl = new URL(src, baseUrl).toString()
+          if (absoluteUrl.startsWith('http')) {
+            links.push({
+              url: absoluteUrl,
+              priority: 0.9,
+              source: 'news',
+            })
+          }
+        } catch {}
       })
     } catch {}
 
@@ -133,13 +167,7 @@ class NewsAdapter {
 
   _isRelevantLink (anchorText, url) {
     const combined = (anchorText + ' ' + url).toLowerCase()
-    const keywords = [
-      'epstein', 'maxwell', 'giuffre', 'trafficking',
-      'trial', 'verdict', 'indictment', 'plea', 'sentencing',
-      'flight log', 'little st james', 'wexner', 'brunel',
-      'prince andrew', 'dershowitz', 'acosta',
-    ]
-    return keywords.some(kw => combined.includes(kw))
+    return this.keywords.some(kw => combined.includes(kw))
   }
 }
 

@@ -99,8 +99,8 @@ async function cmdSeed () {
   // Let adapters discover additional URLs
   const adapters = {
     court: new CourtAdapter(crawlDb),
-    'archive-org': new ArchiveOrgAdapter(crawlDb),
-    news: new NewsAdapter(crawlDb),
+    'archive-org': new ArchiveOrgAdapter(crawlDb, seeds),
+    news: new NewsAdapter(crawlDb, seeds),
     government: new GovernmentAdapter(crawlDb, seeds),
     documentcloud: new DocumentCloudAdapter(crawlDb),
   }
@@ -189,10 +189,10 @@ async function cmdRun (opts) {
   })
 
   const adapters = {
-    generic: new GenericAdapter(crawlDb, scorer),
+    generic: new GenericAdapter(crawlDb, scorer, seeds),
     court: new CourtAdapter(crawlDb),
-    'archive-org': new ArchiveOrgAdapter(crawlDb),
-    news: new NewsAdapter(crawlDb),
+    'archive-org': new ArchiveOrgAdapter(crawlDb, seeds),
+    news: new NewsAdapter(crawlDb, seeds),
     government: new GovernmentAdapter(crawlDb, seeds),
     documentcloud: new DocumentCloudAdapter(crawlDb),
     'search-discovery': new SearchDiscoveryAdapter(crawlDb, seeds),

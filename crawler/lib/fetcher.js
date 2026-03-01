@@ -116,7 +116,7 @@ class Fetcher {
       return { url, error: 'robots.txt disallowed', skipped: true }
     }
 
-    const isLikelyFile = /\.(pdf|doc|docx|xls|xlsx|csv|txt|eml|msg|zip|tar|tar\.gz|tgz)$/i.test(url)
+    const isLikelyFile = /\.(pdf|doc|docx|xls|xlsx|csv|txt|eml|msg|zip|tar|tar\.gz|tgz|mp4|webm|mov|avi|mkv|wmv|mpg|mpeg|m4v|flv)$/i.test(url)
     const timeout = isLikelyFile ? this.timeoutFile : this.timeoutHtml
 
     try {
@@ -187,6 +187,15 @@ class Fetcher {
     if (contentType.includes('application/zip')) return '.zip'
     if (contentType.includes('application/gzip') || contentType.includes('application/x-gzip')) return '.gz'
     if (contentType.includes('application/x-tar')) return '.tar'
+    if (contentType.includes('video/mp4')) return '.mp4'
+    if (contentType.includes('video/webm')) return '.webm'
+    if (contentType.includes('video/quicktime')) return '.mov'
+    if (contentType.includes('video/x-msvideo') || contentType.includes('video/avi')) return '.avi'
+    if (contentType.includes('video/x-matroska')) return '.mkv'
+    if (contentType.includes('video/x-ms-wmv')) return '.wmv'
+    if (contentType.includes('video/mpeg')) return '.mpg'
+    if (contentType.includes('video/x-flv')) return '.flv'
+    if (contentType.includes('video/')) return '.mp4'
 
     // Fallback to URL extension
     try {
