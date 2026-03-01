@@ -1,5 +1,6 @@
 const pLimit = require('p-limit')
 const path = require('path')
+const fs = require('fs')
 
 let archiveExtractor = null
 try { archiveExtractor = require('./archive-extractor') } catch {}
@@ -136,6 +137,28 @@ class Scheduler {
       }
     }
 
+    // Handle HLS manifests — extract direct MP4 download URLs
+    if (fetchResult.filePath && this._isHlsManifest(fetchResult)) {
+      try {
+        const videoUrls = this._parseHlsManifest(fetchResult)
+        if (videoUrls.length > 0) {
+          this.crawlDb.addUrlBatch(videoUrls.map(u => ({
+            url: u.url,
+            priority: u.priority || 0.95,
+            depth: row.depth,
+            source: row.source,
+            parentUrl: row.url,
+          })))
+          console.log('[scheduler] HLS manifest %s → queued %d direct video URLs', row.url.slice(0, 80), videoUrls.length)
+        }
+        this.crawlDb.markProcessed(row.id, 0.5)
+        this.processed++
+        return
+      } catch (err) {
+        console.warn('[scheduler] HLS parsing failed for %s: %s', row.url, err.message)
+      }
+    }
+
     // Extract archives and process each contained file
     if (archiveExtractor && fetchResult.filePath && archiveExtractor.isArchiveFile(fetchResult.filePath)) {
       try {
@@ -228,6 +251,66 @@ class Scheduler {
       console.log('[scheduler] Progress — processed: %d, indexed: %d, skipped: %d, failed: %d',
         this.processed, this.indexed, this.skipped, this.failed)
     }
+  }
+
+  _isHlsManifest (fetchResult) {
+    const ct = (fetchResult.contentType || '').toLowerCase()
+    const url = (fetchResult.finalUrl || fetchResult.url || '').toLowerCase()
+    return ct.includes('mpegurl') || ct.includes('x-mpegurl') ||
+           url.endsWith('.m3u8') || url.includes('.m3u8?')
+  }
+
+  _parseHlsManifest (fetchResult) {
+    const content = fs.readFileSync(fetchResult.filePath, 'utf8')
+    const url = fetchResult.finalUrl || fetchResult.url
+    const videoUrls = []
+
+    // DW pattern: derive direct MP4 download URL from HLS manifest URL
+    // HLS:    hlsvod.dw.com/i/dwtv_video/flv/je/je20260301_KHAMENEI11G_,AVC_480x270,...,AVC_1920x1080,.mp4.csmil/master.m3u8
+    // Direct: tvdownloaddw-a.akamaihd.net/dwtv_video/flv/je/je20260301_KHAMENEI11G_AVC_1920x1080.mp4
+    if (url.includes('hlsvod.dw.com') || url.includes('dw.com')) {
+      const baseMatch = url.match(/\/i\/(.+?)_,/)
+      if (baseMatch) {
+        const basePath = baseMatch[1]
+        const resolutions = url.match(/AVC_(\d+x\d+)/g) || []
+        const bestRes = resolutions[resolutions.length - 1] || 'AVC_1920x1080'
+        const directUrl = `https://tvdownloaddw-a.akamaihd.net/${basePath}_${bestRes}.mp4`
+        videoUrls.push({ url: directUrl, priority: 0.95 })
+      }
+    }
+
+    // DVIDS pattern: derive direct MP4 from HLS manifest
+    // HLS master references: d34w7g4gy10iej.cloudfront.net/video/2603/DOD_111549920/DOD_111549920-1920x1080-12514k-hls_1.m3u8
+    // Direct: d34w7g4gy10iej.cloudfront.net/video/2603/DOD_111549920/DOD_111549920.mp4
+    if (url.includes('dvidshub.net') || content.includes('cloudfront.net/video/')) {
+      const lines = content.split('\n')
+      for (const line of lines) {
+        const trimmed = line.trim()
+        if (trimmed.includes('cloudfront.net/video/') && trimmed.includes('-hls_')) {
+          // Extract base path: everything before the resolution suffix
+          const cfMatch = trimmed.match(/(https:\/\/[^/]+\/video\/[^/]+\/([^/]+))\/\2-/)
+          if (cfMatch) {
+            const directUrl = `${cfMatch[1]}/${cfMatch[2]}.mp4`
+            videoUrls.push({ url: directUrl, priority: 0.95 })
+            break // Only need one
+          }
+        }
+      }
+    }
+
+    // Generic: if we couldn't derive a direct URL, try to find any referenced MP4 in the manifest
+    if (videoUrls.length === 0) {
+      const lines = content.split('\n')
+      for (const line of lines) {
+        const trimmed = line.trim()
+        if (trimmed.match(/https?:\/\/.*\.mp4(\?|$)/i)) {
+          videoUrls.push({ url: trimmed.split('?')[0], priority: 0.9 })
+          break
+        }
+      }
+    }
+
+    return videoUrls
   }
 
   _sleep (ms) {

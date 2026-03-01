@@ -72,8 +72,8 @@ class ContentProcessor {
 
     // 4. Transcribe audio/video
     let transcript = ''
-    const isAudio = (contentType || '').includes('audio')
-    const isVideo = (contentType || '').includes('video')
+    const isAudio = (contentType || '').includes('audio') || /\.(mp3|wav|ogg|flac|aac|m4a|wma)$/i.test(filePath)
+    const isVideo = (contentType || '').includes('video') || /\.(mp4|webm|mov|avi|mkv|wmv|mpg|mpeg|m4v|flv)$/i.test(filePath)
     if ((isAudio || isVideo) && this.transcriber) {
       try {
         const avType = isVideo ? 'video' : 'audio'
