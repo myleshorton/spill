@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { FileText, Image, Video, Headphones, Mail, Table, File, ChevronRight } from 'lucide-react'
 import { getSimilarDocuments, thumbnailUrl, formatFileSize, type SimilarDocument } from '@/lib/api'
+import { docHrefWithContext, storeResultList } from '@/lib/result-set'
 
 function ContentTypeIcon({ type, className }: { type: string; className?: string }) {
   const props = { className: className || 'h-4 w-4' }
@@ -37,7 +38,10 @@ export default function SimilarDocuments({ docId }: { docId: string }) {
   useEffect(() => {
     setLoading(true)
     getSimilarDocuments(docId, 8)
-      .then(setDocs)
+      .then((d) => {
+        setDocs(d)
+        storeResultList(`similar-${docId}`, d.map(doc => doc.id))
+      })
       .catch(() => setDocs([]))
       .finally(() => setLoading(false))
   }, [docId])
@@ -61,7 +65,7 @@ export default function SimilarDocuments({ docId }: { docId: string }) {
           </>
         ) : (
           docs.map((doc, i) => (
-            <SimilarCard key={doc.id} doc={doc} index={i} />
+            <SimilarCard key={doc.id} doc={doc} index={i} parentDocId={docId} totalSimilar={docs.length} />
           ))
         )}
       </div>
@@ -69,12 +73,12 @@ export default function SimilarDocuments({ docId }: { docId: string }) {
   )
 }
 
-function SimilarCard({ doc, index }: { doc: SimilarDocument; index: number }) {
+function SimilarCard({ doc, index, parentDocId, totalSimilar }: { doc: SimilarDocument; index: number; parentDocId: string; totalSimilar: number }) {
   const [thumbError, setThumbError] = useState(false)
 
   return (
     <Link
-      href={`/doc/${doc.id}`}
+      href={docHrefWithContext(doc.id, { type: 'similar', pos: index, total: totalSimilar, docId: parentDocId })}
       className="group flex-shrink-0 w-56 rounded-lg border border-spill-divider bg-spill-surface overflow-hidden transition-all hover:border-spill-accent/30 hover:shadow-lg hover:shadow-spill-accent/5 animate-fade-in"
       style={{ animationDelay: `${index * 50}ms` }}
     >

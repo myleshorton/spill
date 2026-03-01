@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { Sparkles } from 'lucide-react'
 import DocumentGrid from '@/components/DocumentGrid'
 import { getRecommendations, type SimilarDocument } from '@/lib/api'
+import { buildResultSetParams, storeResultList } from '@/lib/result-set'
 
 export default function Recommendations() {
   const [docs, setDocs] = useState<SimilarDocument[]>([])
@@ -11,7 +12,10 @@ export default function Recommendations() {
 
   useEffect(() => {
     getRecommendations(12)
-      .then(setDocs)
+      .then((d) => {
+        setDocs(d)
+        storeResultList('recs', d.map(doc => doc.id))
+      })
       .catch(() => setDocs([]))
       .finally(() => setLoading(false))
   }, [])
@@ -48,7 +52,12 @@ export default function Recommendations() {
         <h2 className="font-headline text-xl font-bold text-spill-text-primary">Recommended For You</h2>
       </div>
       <p className="text-sm text-spill-text-secondary mb-6">Based on documents you&apos;ve viewed</p>
-      <DocumentGrid documents={docs} />
+      <DocumentGrid
+        documents={docs}
+        resultSetParams={(_doc, i) =>
+          buildResultSetParams({ type: 'recs', pos: i, total: docs.length })
+        }
+      />
     </section>
   )
 }

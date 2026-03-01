@@ -8,6 +8,7 @@ import FacetSidebar from '@/components/FacetSidebar'
 import DocumentGrid from '@/components/DocumentGrid'
 import Pagination from '@/components/Pagination'
 import { searchDocuments, listDocuments, type Document, type SearchResult, formatNumber } from '@/lib/api'
+import { buildResultSetParams } from '@/lib/result-set'
 import { Loader2 } from 'lucide-react'
 
 function SearchContent() {
@@ -23,6 +24,7 @@ function SearchContent() {
   const [facets, setFacets] = useState<SearchResult['facetDistribution']>()
   const [loading, setLoading] = useState(true)
   const [processingTime, setProcessingTime] = useState(0)
+  const [filterStr, setFilterStr] = useState('')
 
   const limit = 40
 
@@ -41,6 +43,7 @@ function SearchContent() {
     }
     if (category) filters.push(`category = "${category}"`)
     const filterStr = filters.join(' AND ')
+    setFilterStr(filterStr)
 
     if (query) {
       searchDocuments(query, { limit, offset, filter: filterStr })
@@ -104,7 +107,19 @@ function SearchContent() {
             </div>
           ) : (
             <>
-              <DocumentGrid documents={documents} highlightQuery={query} />
+              <DocumentGrid
+                documents={documents}
+                highlightQuery={query}
+                resultSetParams={(_doc, i) =>
+                  buildResultSetParams({
+                    type: 'search',
+                    pos: offset + i,
+                    total: totalHits,
+                    q: query || undefined,
+                    filter: filterStr || undefined,
+                  })
+                }
+              />
 
               <Pagination
                 currentPage={currentPage}

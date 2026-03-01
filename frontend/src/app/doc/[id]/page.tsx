@@ -6,6 +6,7 @@ import Header from '@/components/Header'
 import Footer from '@/components/Footer'
 import DocumentViewer from '@/components/DocumentViewer'
 import SimilarDocuments from '@/components/SimilarDocuments'
+import ResultSetNav from '@/components/ResultSetNav'
 import { getDocument, recordView, type Document } from '@/lib/api'
 import { Loader2, AlertCircle } from 'lucide-react'
 
@@ -45,6 +46,9 @@ export default function DocPage() {
           </div>
         ) : (
           <>
+            <Suspense>
+              <ResultSetNav />
+            </Suspense>
             <DocumentViewer doc={doc} />
             <SimilarDocuments docId={id} />
           </>

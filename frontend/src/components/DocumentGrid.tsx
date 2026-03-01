@@ -14,6 +14,7 @@ const TimelineView = dynamic(() => import('./TimelineView'), { ssr: false })
 interface DocumentGridProps {
   documents: Document[]
   highlightQuery?: string
+  resultSetParams?: (doc: Document, index: number) => string
 }
 
 function ContentTypeIcon({ type, className }: { type: string, className?: string }) {
@@ -29,7 +30,7 @@ function ContentTypeIcon({ type, className }: { type: string, className?: string
   }
 }
 
-export default function DocumentGrid({ documents, highlightQuery }: DocumentGridProps) {
+export default function DocumentGrid({ documents, highlightQuery, resultSetParams }: DocumentGridProps) {
   const [viewMode, setViewMode] = useLocalStorage<'grid' | 'list' | 'map' | 'timeline'>('viewMode', 'list')
 
   const hasGeoDocuments = useMemo(() =>
@@ -109,13 +110,13 @@ export default function DocumentGrid({ documents, highlightQuery }: DocumentGrid
       ) : viewMode === 'grid' ? (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
           {documents.map((doc, i) => (
-            <GridCard key={doc.id} doc={doc} index={i} />
+            <GridCard key={doc.id} doc={doc} index={i} rsParams={resultSetParams?.(doc, i)} />
           ))}
         </div>
       ) : (
         <div className="space-y-1">
           {documents.map((doc, i) => (
-            <ListRow key={doc.id} doc={doc} index={i} />
+            <ListRow key={doc.id} doc={doc} index={i} rsParams={resultSetParams?.(doc, i)} />
           ))}
         </div>
       )}
@@ -123,12 +124,12 @@ export default function DocumentGrid({ documents, highlightQuery }: DocumentGrid
   )
 }
 
-function GridCard({ doc, index }: { doc: Document, index: number }) {
+function GridCard({ doc, index, rsParams }: { doc: Document, index: number, rsParams?: string }) {
   const [thumbError, setThumbError] = useState(false)
 
   return (
     <Link
-      href={`/doc/${doc.id}`}
+      href={rsParams ? `/doc/${doc.id}?${rsParams}` : `/doc/${doc.id}`}
       className="group animate-fade-in overflow-hidden rounded-lg border border-spill-divider bg-spill-surface transition-all hover:border-spill-accent/30 hover:shadow-lg hover:shadow-spill-accent/5"
       style={{ animationDelay: `${index * 30}ms` }}
     >
@@ -170,10 +171,10 @@ function GridCard({ doc, index }: { doc: Document, index: number }) {
   )
 }
 
-function ListRow({ doc, index }: { doc: Document, index: number }) {
+function ListRow({ doc, index, rsParams }: { doc: Document, index: number, rsParams?: string }) {
   return (
     <Link
-      href={`/doc/${doc.id}`}
+      href={rsParams ? `/doc/${doc.id}?${rsParams}` : `/doc/${doc.id}`}
       className="group flex animate-fade-in items-center gap-2 sm:gap-3 rounded-md px-2 sm:px-3 py-2.5 transition-colors hover:bg-spill-surface overflow-hidden"
       style={{ animationDelay: `${index * 15}ms` }}
     >

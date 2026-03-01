@@ -7,6 +7,7 @@ import Footer from '@/components/Footer'
 import DocumentGrid from '@/components/DocumentGrid'
 import TorrentDownload from '@/components/TorrentDownload'
 import { listDocuments, getDataSet, type Document, type DataSetInfo, formatNumber } from '@/lib/api'
+import { buildResultSetParams } from '@/lib/result-set'
 import { siteConfig } from '@/config/site.config'
 import Pagination from '@/components/Pagination'
 import { Loader2, ChevronLeft } from 'lucide-react'
@@ -83,7 +84,17 @@ export default function DataSetDetailPage() {
           </div>
         ) : (
           <>
-            <DocumentGrid documents={documents} />
+            <DocumentGrid
+              documents={documents}
+              resultSetParams={(_doc, i) =>
+                buildResultSetParams({
+                  type: 'dataset',
+                  pos: offset + i,
+                  total,
+                  ds: dsId,
+                })
+              }
+            />
 
             <Pagination
               currentPage={currentPage}

@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
 import { Image, ChevronLeft, ChevronRight } from 'lucide-react'
 import { getFeaturedPhotos, thumbnailUrl, formatFileSize, type Document } from '@/lib/api'
+import { docHrefWithContext } from '@/lib/result-set'
 
 const PAGE_SIZE = 6
 
@@ -81,7 +82,7 @@ export default function FeaturedPhotos() {
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {docs.map((doc, i) => (
-            <PhotoCard key={doc.id} doc={doc} index={i} eager={offset === 0} />
+            <PhotoCard key={doc.id} doc={doc} index={i} eager={offset === 0} offset={offset} total={total} />
           ))}
         </div>
       )}
@@ -89,12 +90,12 @@ export default function FeaturedPhotos() {
   )
 }
 
-function PhotoCard({ doc, index, eager }: { doc: Document; index: number; eager?: boolean }) {
+function PhotoCard({ doc, index, eager, offset, total }: { doc: Document; index: number; eager?: boolean; offset: number; total: number }) {
   const [thumbError, setThumbError] = useState(false)
 
   return (
     <Link
-      href={`/doc/${doc.id}`}
+      href={docHrefWithContext(doc.id, { type: 'featured-photos', pos: offset + index, total })}
       className="group animate-fade-in overflow-hidden rounded-lg border border-spill-divider bg-spill-surface transition-all hover:border-spill-accent/30 hover:shadow-lg hover:shadow-spill-accent/5"
       style={{ animationDelay: `${index * 50}ms` }}
     >
