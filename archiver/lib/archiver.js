@@ -30,6 +30,8 @@ class Archiver extends EventEmitter {
     this._downloadQueue = []
     this._downloading = false
     this._topic = crypto.hash(Buffer.from('samizdat-global-feed'))
+    this._peerLastSeen = new Map() // peerKeyHex -> timestamp of last connection
+    this._PEER_COOLDOWN = 30_000   // ignore reconnects within 30s
   }
 
   async start () {
@@ -64,9 +66,27 @@ class Archiver extends EventEmitter {
 
     this.swarm.on('connection', (socket, peerInfo) => {
       const peerKeyHex = peerInfo.publicKey.toString('hex')
-      console.log('[archiver] Peer connected:', peerKeyHex.slice(0, 8))
+      const shortKey = peerKeyHex.slice(0, 8)
+
+      // Deduplicate rapid reconnects from the same peer
+      const now = Date.now()
+      const lastSeen = this._peerLastSeen.get(peerKeyHex)
+      if (lastSeen && (now - lastSeen) < this._PEER_COOLDOWN) {
+        console.log('[archiver] Ignoring rapid reconnect from', shortKey)
+        socket.on('error', () => {}) // prevent unhandled error on destroy
+        socket.destroy()
+        return
+      }
+      this._peerLastSeen.set(peerKeyHex, now)
+
+      console.log('[archiver] Peer connected:', shortKey)
 
       this.store.replicate(socket)
+
+      socket.on('error', () => {})
+      socket.on('close', () => {
+        console.log('[archiver] Peer disconnected:', shortKey)
+      })
 
       const mux = Protomux.from(socket)
       const channel = mux.createChannel({
@@ -78,7 +98,7 @@ class Archiver extends EventEmitter {
           }
         ],
         onopen: () => {
-          console.log('[archiver] Catalog channel open with', peerKeyHex.slice(0, 8))
+          console.log('[archiver] Catalog channel open with', shortKey)
           channel.messages[0].send(this.catalog.key)
         }
       })
