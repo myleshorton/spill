@@ -9,6 +9,9 @@ RUN apt-get update && \
 
 WORKDIR /app
 
+# Accept optional site-specific seeds file
+ARG SEEDS_FILE=""
+
 # Install archiver deps (for shared modules)
 COPY archiver/package*.json ./archiver/
 RUN cd archiver && npm ci --production
@@ -25,6 +28,9 @@ COPY ingest/ ./ingest/
 # Copy application code
 COPY archiver/ ./archiver/
 COPY crawler/ ./crawler/
+
+# If a site-specific seeds file is provided, overlay it
+RUN if [ -n "$SEEDS_FILE" ] && [ -f "$SEEDS_FILE" ]; then cp "$SEEDS_FILE" ./crawler/seeds.json; fi
 
 WORKDIR /app/crawler
 

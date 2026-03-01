@@ -12,7 +12,22 @@ class DocumentsDatabase {
     }
     this.db = new Database(dbPath)
     this.db.pragma('journal_mode = WAL')
+    this.config = this._loadConfig()
     this._init()
+  }
+
+  _loadConfig () {
+    try {
+      const base = JSON.parse(fs.readFileSync(archiveConfigPath, 'utf8'))
+      const overridePath = archiveConfigPath.replace('.json', '.override.json')
+      if (fs.existsSync(overridePath)) {
+        const override = JSON.parse(fs.readFileSync(overridePath, 'utf8'))
+        Object.assign(base, override)
+      }
+      return base
+    } catch {
+      return {}
+    }
   }
 
   _init () {
@@ -610,8 +625,16 @@ class DocumentsDatabase {
 
   listFeaturedVideos (options = {}) {
     const { limit = 12, offset = 0 } = options
-    const where = "WHERE content_type = 'video' AND thumb_path IS NOT NULL AND transcript IS NOT NULL AND LENGTH(transcript) > 100"
+    const videoCfg = this.config?.featuredContent?.videos
+    const conditions = ["content_type = 'video'", 'thumb_path IS NOT NULL']
 
+    if (videoCfg?.requireTranscript !== false) {
+      conditions.push('transcript IS NOT NULL')
+      const minLen = videoCfg?.minTranscriptLength || 100
+      conditions.push(`LENGTH(transcript) > ${Number(minLen)}`)
+    }
+
+    const where = 'WHERE ' + conditions.join(' AND ')
     const total = this.db.prepare(`SELECT COUNT(*) as count FROM documents ${where}`).get()
     const rows = this.db.prepare(
       `SELECT * FROM documents ${where} ORDER BY created_at DESC LIMIT ? OFFSET ?`
@@ -622,13 +645,26 @@ class DocumentsDatabase {
 
   listFeaturedPhotos (options = {}) {
     const { limit = 12, offset = 0 } = options
-    const where = `WHERE content_type = 'image' AND thumb_path IS NOT NULL
-      AND (image_keywords LIKE '%nude%' OR image_keywords LIKE '%nudity%' OR image_keywords LIKE '%naked%' OR image_keywords LIKE '%undress%')
-      AND image_keywords NOT LIKE '%museum%' AND image_keywords NOT LIKE '%artwork%'
-      AND image_keywords NOT LIKE '%painting%' AND image_keywords NOT LIKE '%sculpture%'
-      AND image_keywords NOT LIKE '%gallery%' AND image_keywords NOT LIKE '%art studio%'
-      AND title NOT LIKE '%museum%' AND title NOT LIKE '%artwork%'`
+    const photoCfg = this.config?.featuredContent?.photos
+    const conditions = ["content_type = 'image'", 'thumb_path IS NOT NULL']
 
+    const includeKw = photoCfg?.includeKeywords || []
+    if (includeKw.length > 0) {
+      const likes = includeKw.map(kw => `image_keywords LIKE '%${kw.replace(/'/g, "''")}%'`)
+      conditions.push('(' + likes.join(' OR ') + ')')
+    }
+
+    const excludeKw = photoCfg?.excludeKeywords || []
+    for (const kw of excludeKw) {
+      conditions.push(`image_keywords NOT LIKE '%${kw.replace(/'/g, "''")}%'`)
+    }
+
+    const excludeTitleKw = photoCfg?.excludeTitleKeywords || []
+    for (const kw of excludeTitleKw) {
+      conditions.push(`title NOT LIKE '%${kw.replace(/'/g, "''")}%'`)
+    }
+
+    const where = 'WHERE ' + conditions.join(' AND ')
     const total = this.db.prepare(`SELECT COUNT(*) as count FROM documents ${where}`).get()
     const rows = this.db.prepare(
       `SELECT * FROM documents ${where} ORDER BY created_at DESC LIMIT ? OFFSET ?`

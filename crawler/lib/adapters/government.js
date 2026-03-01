@@ -3,9 +3,10 @@ const cheerio = require('cheerio')
 const { URL } = require('url')
 
 class GovernmentAdapter {
-  constructor (crawlDb) {
+  constructor (crawlDb, seeds) {
     this.crawlDb = crawlDb
     this.name = 'government'
+    this.keywords = (seeds?.keywords?.primary || []).map(k => k.toLowerCase())
   }
 
   async discover (seeds) {
@@ -15,22 +16,6 @@ class GovernmentAdapter {
     for (const seed of seedUrls) {
       added += this.crawlDb.addUrl(seed.url, {
         priority: seed.priority || 1.0,
-        source: 'government',
-        depth: 0,
-      }) ? 1 : 0
-    }
-
-    // Add known government source URLs
-    const govUrls = [
-      { url: 'https://vault.fbi.gov/jeffrey-epstein', priority: 1.0 },
-      { url: 'https://www.justice.gov/usao-sdny/united-states-v-jeffrey-epstein', priority: 1.0 },
-      { url: 'https://www.justice.gov/usao-sdny/united-states-v-ghislaine-maxwell', priority: 1.0 },
-      { url: 'https://efts.sec.gov/LATEST/search-index?q=%22jeffrey+epstein%22', priority: 0.7 },
-    ]
-
-    for (const item of govUrls) {
-      added += this.crawlDb.addUrl(item.url, {
-        priority: item.priority,
         source: 'government',
         depth: 0,
       }) ? 1 : 0
@@ -91,7 +76,10 @@ class GovernmentAdapter {
         // Prioritize PDF downloads from .gov sites
         const isPdf = absoluteUrl.endsWith('.pdf') || href.includes('.pdf')
         const text = $(el).text().toLowerCase()
-        const isRelevant = ['epstein', 'maxwell', 'foia', 'release', 'document', 'report'].some(kw => text.includes(kw))
+        const relevanceKeywords = this.keywords.length > 0
+          ? [...this.keywords, 'foia', 'release', 'document', 'report']
+          : ['foia', 'release', 'document', 'report']
+        const isRelevant = relevanceKeywords.some(kw => text.includes(kw))
 
         if (isPdf || isRelevant) {
           links.push({

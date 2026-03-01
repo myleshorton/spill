@@ -101,7 +101,7 @@ async function cmdSeed () {
     court: new CourtAdapter(crawlDb),
     'archive-org': new ArchiveOrgAdapter(crawlDb),
     news: new NewsAdapter(crawlDb),
-    government: new GovernmentAdapter(crawlDb),
+    government: new GovernmentAdapter(crawlDb, seeds),
     documentcloud: new DocumentCloudAdapter(crawlDb),
   }
 
@@ -193,7 +193,7 @@ async function cmdRun (opts) {
     court: new CourtAdapter(crawlDb),
     'archive-org': new ArchiveOrgAdapter(crawlDb),
     news: new NewsAdapter(crawlDb),
-    government: new GovernmentAdapter(crawlDb),
+    government: new GovernmentAdapter(crawlDb, seeds),
     documentcloud: new DocumentCloudAdapter(crawlDb),
     'search-discovery': new SearchDiscoveryAdapter(crawlDb, seeds),
   }

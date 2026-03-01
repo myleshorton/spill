@@ -1,0 +1,15 @@
+{
+  "dataSets": [],
+  "categoryRules": {},
+  "featuredContent": {
+    "photos": {
+      "includeKeywords": [],
+      "excludeKeywords": [],
+      "excludeTitleKeywords": []
+    },
+    "videos": {
+      "requireTranscript": false,
+      "minTranscriptLength": 0
+    }
+  }
+}

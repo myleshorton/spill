@@ -3,7 +3,7 @@
 import { Suspense, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Search, Menu, X, Database, FileText, Info, Upload, Share2 } from 'lucide-react'
+import { Search, Menu, X, Database, FileText, Info, Upload, Share2, ExternalLink, ChevronDown } from 'lucide-react'
 import { siteConfig } from '@/config/site.config'
 
 function HeaderSearch() {
@@ -29,6 +29,44 @@ function HeaderSearch() {
         className="w-full rounded-lg border border-spill-divider bg-spill-surface py-2 pl-10 pr-4 font-body text-sm text-spill-text-primary placeholder:text-spill-text-secondary/60 focus:border-spill-accent/50 focus:outline-none focus:ring-1 focus:ring-spill-accent/30 transition-colors"
       />
     </form>
+  )
+}
+
+function SisterSitesDropdown() {
+  const [open, setOpen] = useState(false)
+  const sites = siteConfig.sisterSites ?? []
+  if (sites.length === 0) return null
+
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setOpen(!open)}
+        className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm text-spill-text-secondary hover:bg-spill-surface hover:text-spill-text-primary transition-colors"
+      >
+        <ExternalLink className="h-3.5 w-3.5" />
+        Archives
+        <ChevronDown className={`h-3 w-3 transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+          <div className="absolute right-0 top-full z-50 mt-1 min-w-[180px] rounded-lg border border-spill-divider bg-spill-bg p-1 shadow-lg">
+            {sites.map((site) => (
+              <a
+                key={site.url}
+                href={site.url}
+                target="_blank"
+                rel="noopener"
+                className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-spill-text-secondary hover:bg-spill-surface hover:text-spill-text-primary transition-colors"
+              >
+                <ExternalLink className="h-3.5 w-3.5 shrink-0" />
+                {site.name}
+              </a>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
   )
 }
 
@@ -99,6 +137,7 @@ export default function Header() {
             <Info className="h-3.5 w-3.5" />
             About
           </Link>
+          <SisterSitesDropdown />
           <a
             href={siteConfig.links.github}
             target="_blank"
@@ -132,6 +171,27 @@ export default function Header() {
             <Link href="/about" className="rounded-md px-3 py-2 text-sm text-spill-text-secondary hover:text-spill-text-primary" onClick={() => setMobileMenuOpen(false)}>
               About
             </Link>
+            {(siteConfig.sisterSites ?? []).length > 0 && (
+              <>
+                <div className="my-1 border-t border-spill-divider" />
+                <span className="px-3 py-1 text-xs font-medium uppercase tracking-wider text-spill-text-secondary/60">
+                  Other Archives
+                </span>
+                {siteConfig.sisterSites.map((site) => (
+                  <a
+                    key={site.url}
+                    href={site.url}
+                    target="_blank"
+                    rel="noopener"
+                    className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-spill-text-secondary hover:text-spill-text-primary"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    <ExternalLink className="h-3.5 w-3.5" />
+                    {site.name}
+                  </a>
+                ))}
+              </>
+            )}
           </nav>
         </div>
       )}
