@@ -25,6 +25,15 @@ COPY ingest/package*.json ./ingest/
 RUN cd ingest && npm ci --production
 COPY ingest/ ./ingest/
 
+# Pre-download the local embedding model so the container works offline
+ENV TRANSFORMERS_CACHE=/app/.cache/transformers
+RUN cd ingest && node -e "import('@huggingface/transformers').then(async ({pipeline, env}) => { \
+  env.cacheDir = '/app/.cache/transformers'; \
+  const p = await pipeline('feature-extraction', 'Xenova/bge-small-en-v1.5', {dtype:'q8'}); \
+  const out = await p('test', {pooling:'mean',normalize:true}); \
+  console.log('Model cached, dims:', out.data.length); \
+}).catch(e => console.warn('Model pre-download skipped:', e.message))"
+
 # Copy application code
 COPY archiver/ ./archiver/
 COPY crawler/ ./crawler/

@@ -1,8 +1,10 @@
 version: '3.8'
 
+# NOTE: Run with --env-file .env.iran-war to load secrets, or:
+#   set -a; source .env.iran-war; set +a; docker compose -f docker-compose.iran-war.yml -p iran-war up -d
+
 services:
   iran-archiver:
-    env_file: .env.iran-war
     build:
       context: ..
       dockerfile: deploy/Dockerfile.archiver
@@ -14,8 +16,8 @@ services:
       - PORT=4000
       - DHT_PORT=49738
       - MEILI_HOST=http://iran-meilisearch:7700
-      - MEILI_API_KEY=${IRAN_MEILI_API_KEY:-}
-      - DOMAIN=${IRAN_DOMAIN:-localhost}
+      - MEILI_API_KEY=${IRAN_MEILI_API_KEY}
+      - DOMAIN=iran.unredact.org
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
       - WHISPER_CPP_PATH=/usr/local/bin/whisper-cpp
       - WHISPER_MODEL_PATH=/models/ggml-base.en-q5_1.bin
@@ -28,7 +30,6 @@ services:
       - shared
 
   iran-frontend:
-    env_file: .env.iran-war
     build:
       context: ..
       dockerfile: deploy/Dockerfile.frontend
@@ -45,20 +46,18 @@ services:
       - shared
 
   iran-meilisearch:
-    env_file: .env.iran-war
     image: getmeili/meilisearch:v1.7
     volumes:
       - iran-meili-data:/meili_data
     environment:
       - MEILI_ENV=production
-      - MEILI_MASTER_KEY=${IRAN_MEILI_API_KEY:-changeme}
+      - MEILI_MASTER_KEY=${IRAN_MEILI_API_KEY}
       - MEILI_NO_ANALYTICS=true
     restart: unless-stopped
     networks:
       - iran-internal
 
   iran-crawler:
-    env_file: .env.iran-war
     build:
       context: ..
       dockerfile: deploy/Dockerfile.crawler
@@ -74,9 +73,8 @@ services:
       - CONTENT_DIR=/data/content
       - THUMB_DIR=/data/thumbnails
       - MEILI_HOST=http://iran-meilisearch:7700
-      - MEILI_API_KEY=${IRAN_MEILI_API_KEY:-}
-      - DOMAIN=${IRAN_DOMAIN:-localhost}
-      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - MEILI_API_KEY=${IRAN_MEILI_API_KEY}
+      - DOMAIN=iran.unredact.org
     depends_on:
       - iran-meilisearch
     restart: unless-stopped
