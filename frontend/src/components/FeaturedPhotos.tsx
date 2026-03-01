@@ -8,11 +8,15 @@ import { docHrefWithContext } from '@/lib/result-set'
 
 const PAGE_SIZE = 6
 
-export default function FeaturedPhotos() {
-  const [docs, setDocs] = useState<Document[]>([])
-  const [total, setTotal] = useState(0)
+interface FeaturedPhotosProps {
+  initialData?: { documents: Document[]; total: number }
+}
+
+export default function FeaturedPhotos({ initialData }: FeaturedPhotosProps) {
+  const [docs, setDocs] = useState<Document[]>(initialData?.documents ?? [])
+  const [total, setTotal] = useState(initialData?.total ?? 0)
   const [offset, setOffset] = useState(0)
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(!initialData)
 
   const load = useCallback((newOffset: number) => {
     setLoading(true)
@@ -29,7 +33,7 @@ export default function FeaturedPhotos() {
       .finally(() => setLoading(false))
   }, [])
 
-  useEffect(() => { load(0) }, [load])
+  useEffect(() => { if (!initialData) load(0) }, [load, initialData])
 
   if (!loading && docs.length === 0) return null
 

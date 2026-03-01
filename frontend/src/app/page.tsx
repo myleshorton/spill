@@ -1,5 +1,3 @@
-'use client'
-
 import Link from 'next/link'
 import { ArrowRight, FileText, Image, Video, Mail, DollarSign, Plane } from 'lucide-react'
 import Header from '@/components/Header'
@@ -9,13 +7,28 @@ import StatsBar from '@/components/StatsBar'
 import ActivityFeed from '@/components/ActivityFeed'
 import Recommendations from '@/components/Recommendations'
 import FeaturedPhotos from '@/components/FeaturedPhotos'
+import { type Document } from '@/lib/api'
 import { siteConfig } from '@/config/site.config'
 
 const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
   Plane, DollarSign, Mail, FileText, Image, Video,
 }
 
-export default function HomePage() {
+// Server-side fetch uses internal Docker network URL
+const SERVER_API = process.env.ARCHIVER_URL || 'http://localhost:4000'
+
+async function getInitialPhotos(): Promise<{ documents: Document[]; total: number }> {
+  try {
+    const res = await fetch(`${SERVER_API}/api/featured-photos?limit=6&offset=0`, { next: { revalidate: 60 } })
+    if (res.ok) return res.json()
+  } catch {}
+  return { documents: [], total: 0 }
+}
+
+export const dynamic = 'force-dynamic'
+
+export default async function HomePage() {
+  const initialPhotos = await getInitialPhotos()
   return (
     <div className="flex min-h-screen flex-col">
       <Header />
@@ -71,7 +84,7 @@ export default function HomePage() {
           </div>
         </section>
 
-        <FeaturedPhotos />
+        <FeaturedPhotos initialData={initialPhotos} />
 
         <section className="mx-auto max-w-7xl px-4 pb-12 sm:px-6">
           <StatsBar />
