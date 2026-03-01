@@ -10,10 +10,10 @@ RUN npm install
 
 COPY frontend/ ./
 
-# If a site-specific config is provided, overlay it
-RUN if [ -n "$SITE_CONFIG" ] && [ -f "$SITE_CONFIG" ]; then \
-      cp "$SITE_CONFIG" ./src/config/site.config.ts; \
-    fi
+# If a site-specific config is provided, overlay the default.
+# Path is relative to the build context (repo root).
+# When SITE_CONFIG is empty, this copies the existing default config over itself (no-op).
+COPY ${SITE_CONFIG:-frontend/src/config/site.config.ts} ./src/config/site.config.ts
 
 # Set ARCHIVER_URL at build time so Next.js rewrites use the Docker hostname
 ARG ARCHIVER_URL=http://archiver:4000

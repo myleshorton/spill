@@ -29,8 +29,9 @@ COPY ingest/ ./ingest/
 COPY archiver/ ./archiver/
 COPY crawler/ ./crawler/
 
-# If a site-specific seeds file is provided, overlay it
-RUN if [ -n "$SEEDS_FILE" ] && [ -f "$SEEDS_FILE" ]; then cp "$SEEDS_FILE" ./crawler/seeds.json; fi
+# If a site-specific seeds file is provided, COPY and overlay it.
+# The file path is relative to the build context (repo root).
+COPY ${SEEDS_FILE:-crawler/seeds.json} ./crawler/seeds.json
 
 WORKDIR /app/crawler
 

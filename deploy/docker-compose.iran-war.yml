@@ -33,7 +33,7 @@ services:
       context: ..
       dockerfile: deploy/Dockerfile.frontend
       args:
-        SITE_CONFIG: ${IRAN_SITE_CONFIG:-}
+        SITE_CONFIG: sites/iran-war/site.config.ts
     environment:
       - ARCHIVER_URL=http://iran-archiver:4000
       - NEXT_PUBLIC_API_URL=/api
@@ -63,7 +63,7 @@ services:
       context: ..
       dockerfile: deploy/Dockerfile.crawler
       args:
-        SEEDS_FILE: ${IRAN_SEEDS_FILE:-}
+        SEEDS_FILE: sites/iran-war/seeds.json
     volumes:
       - iran-content-data:/data
       - iran-archiver-data:/app/archiver/data

@@ -55,7 +55,7 @@ export const siteConfig = {
     { label: 'Diplomatic Records', query: 'IAEA negotiation Oman', iconName: 'Globe' as const },
     { label: 'Iran Protests', query: 'protest Tehran December', iconName: 'Users' as const },
     { label: 'Satellite Imagery', query: 'satellite imagery damage assessment', iconName: 'Image' as const },
-  ],
+  ] as { label: string; query?: string; type?: string; ds?: string; iconName: string }[],
 
   categories: {
     military_document: 'Military Documents',

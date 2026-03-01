@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { ArrowRight, FileText, Image, Video, Mail, DollarSign, Plane } from 'lucide-react'
+import { ArrowRight, FileText, Image, Video, Mail, DollarSign, Plane, AlertTriangle, Globe, Users, Search, Shield } from 'lucide-react'
 import Header from '@/components/Header'
 import Footer from '@/components/Footer'
 import SearchBar from '@/components/SearchBar'
@@ -11,7 +11,7 @@ import { type Document } from '@/lib/api'
 import { siteConfig } from '@/config/site.config'
 
 const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
-  Plane, DollarSign, Mail, FileText, Image, Video,
+  Plane, DollarSign, Mail, FileText, Image, Video, AlertTriangle, Globe, Users, Search, Shield,
 }
 
 // Server-side fetch uses internal Docker network URL

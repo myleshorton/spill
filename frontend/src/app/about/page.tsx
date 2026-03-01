@@ -1,10 +1,10 @@
 import Header from '@/components/Header'
 import Footer from '@/components/Footer'
-import { Shield, Database, Search, Globe, FileText, Lock } from 'lucide-react'
+import { Shield, Database, Search, Globe, FileText, Lock, Video } from 'lucide-react'
 import { siteConfig } from '@/config/site.config'
 
 const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
-  Search, Shield, FileText, Globe,
+  Search, Shield, FileText, Globe, Video,
 }
 
 export default function AboutPage() {
