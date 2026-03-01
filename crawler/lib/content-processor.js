@@ -101,12 +101,18 @@ class ContentProcessor {
       anchorText: meta.anchorText,
     })
 
-    if (relevanceScore < this.minRelevance) {
-      return { skipped: true, reason: 'low relevance', score: relevanceScore }
+    // Video/audio files have no extractable text, so keyword scoring is near zero.
+    // If a video was discovered from a relevant page, trust the link context and
+    // apply a minimum relevance floor so it doesn't get silently dropped.
+    const isMedia = isVideo || isAudio
+    const effectiveScore = isMedia ? Math.max(relevanceScore, 0.5) : relevanceScore
+
+    if (effectiveScore < this.minRelevance) {
+      return { skipped: true, reason: 'low relevance', score: effectiveScore }
     }
 
     if (this.dryRun) {
-      return { dryRun: true, score: relevanceScore, title: title || url, url }
+      return { dryRun: true, score: effectiveScore, title: title || url, url }
     }
 
     // 7. Determine file type and category
@@ -173,7 +179,7 @@ class ContentProcessor {
       transcript: transcript || null,
       source_url: url,
       created_at: Date.now(),
-      indexed_at: relevanceScore >= this.autoIndexThreshold ? Date.now() : null,
+      indexed_at: effectiveScore >= this.autoIndexThreshold ? Date.now() : null,
       collection_id: collectionId,
       sha256_hash: sha256,
       image_keywords: null,
@@ -183,7 +189,7 @@ class ContentProcessor {
     this.docsDb.insert(doc)
 
     // 13. Index in Meilisearch if above auto-index threshold
-    if (relevanceScore >= this.autoIndexThreshold && this.searchIndex) {
+    if (effectiveScore >= this.autoIndexThreshold && this.searchIndex) {
       try {
         await this.searchIndex.addDocuments([doc])
       } catch (err) {
@@ -223,7 +229,7 @@ class ContentProcessor {
       indexed: true,
       id: docId,
       title: doc.title,
-      score: relevanceScore,
+      score: effectiveScore,
       url,
       category,
       collection: collectionId,
