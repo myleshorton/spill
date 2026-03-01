@@ -5,6 +5,7 @@
 const express = require('express')
 const path = require('path')
 const fs = require('fs')
+const { spawn } = require('child_process')
 
 const archiveConfig = JSON.parse(
   fs.readFileSync(path.join(__dirname, '..', 'archive-config.json'), 'utf8')
@@ -253,6 +254,49 @@ function createDocumentsRouter (docsDb, searchIndex, archiverRef, torrentManager
     }
 
     res.status(404).json({ error: 'File not available locally or via P2P' })
+  })
+
+  // Transcode non-browser-playable video formats (AVI, WMV, MKV) to MP4 on the fly
+  const BROWSER_PLAYABLE = new Set(['.mp4', '.webm', '.ogg'])
+
+  router.get('/documents/:id/stream', (req, res) => {
+    const doc = docsDb.get(req.params.id)
+    if (!doc || doc.content_type !== 'video') {
+      return res.status(404).json({ error: 'Video not found' })
+    }
+
+    if (!doc.file_path || !fs.existsSync(doc.file_path)) {
+      return res.status(404).json({ error: 'Video file not available' })
+    }
+
+    const ext = path.extname(doc.file_path).toLowerCase()
+    if (BROWSER_PLAYABLE.has(ext)) {
+      // No transcoding needed, redirect to content endpoint
+      return res.redirect(`/api/documents/${doc.id}/content`)
+    }
+
+    res.setHeader('Content-Type', 'video/mp4')
+    res.setHeader('Cache-Control', 'no-store')
+
+    const ffmpeg = spawn('ffmpeg', [
+      '-i', doc.file_path,
+      '-c:v', 'libx264',
+      '-preset', 'ultrafast',
+      '-crf', '28',
+      '-c:a', 'aac',
+      '-b:a', '128k',
+      '-movflags', 'frag_keyframe+empty_moov+faststart',
+      '-f', 'mp4',
+      '-'
+    ])
+
+    ffmpeg.stdout.pipe(res)
+
+    ffmpeg.stderr.on('data', () => {}) // suppress ffmpeg logs
+    ffmpeg.on('error', () => {
+      if (!res.headersSent) res.status(500).json({ error: 'Transcoding failed' })
+    })
+    req.on('close', () => ffmpeg.kill('SIGKILL'))
   })
 
   // Serve thumbnail

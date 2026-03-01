@@ -138,6 +138,10 @@ export function contentUrl(id: string): string {
   return `${API_BASE}/documents/${id}/content`
 }
 
+export function streamUrl(id: string): string {
+  return `${API_BASE}/documents/${id}/stream`
+}
+
 export function thumbnailUrl(id: string): string {
   return `${API_BASE}/documents/${id}/thumbnail`
 }

@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
   type Document, type Entity, type FinancialRecord,
-  contentUrl, previewUrl, getDocumentText, getDocumentTranscript,
+  contentUrl, streamUrl, previewUrl, getDocumentText, getDocumentTranscript,
   getDocumentEntities, getDocumentFinancials, formatFileSize
 } from '@/lib/api'
 import { siteConfig } from '@/config/site.config'
@@ -310,9 +310,12 @@ function ContentRenderer({ doc, url }: { doc: Document, url: string }) {
   }
 
   if (doc.contentType === 'video') {
+    const ext = (doc.fileName || '').split('.').pop()?.toLowerCase()
+    const needsTranscode = ext && !['mp4', 'webm', 'ogg'].includes(ext)
+    const videoSrc = needsTranscode ? streamUrl(doc.id) : url
     return (
       <div className="overflow-hidden rounded-lg border border-spill-divider bg-black">
-        <video src={url} controls className="mx-auto max-h-[75vh] w-full" />
+        <video src={videoSrc} controls className="mx-auto max-h-[75vh] w-full" />
       </div>
     )
   }
