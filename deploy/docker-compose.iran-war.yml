@@ -1,0 +1,92 @@
+version: '3.8'
+
+services:
+  iran-archiver:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.archiver
+    volumes:
+      - iran-archiver-data:/app/archiver/data
+      - iran-content-data:/data
+      - ${IRAN_ARCHIVE_CONFIG:-/dev/null}:/app/archiver/archive-config.override.json:ro
+    environment:
+      - PORT=4000
+      - DHT_PORT=49738
+      - MEILI_HOST=http://iran-meilisearch:7700
+      - MEILI_API_KEY=${IRAN_MEILI_API_KEY:-}
+      - DOMAIN=${IRAN_DOMAIN:-localhost}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - WHISPER_CPP_PATH=/usr/local/bin/whisper-cpp
+      - WHISPER_MODEL_PATH=/models/ggml-base.en-q5_1.bin
+      - WHISPER_THREADS=${WHISPER_THREADS:-8}
+    depends_on:
+      - iran-meilisearch
+    restart: unless-stopped
+    networks:
+      - iran-internal
+      - shared
+
+  iran-frontend:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.frontend
+      args:
+        SITE_CONFIG: ${IRAN_SITE_CONFIG:-}
+    environment:
+      - ARCHIVER_URL=http://iran-archiver:4000
+      - NEXT_PUBLIC_API_URL=/api
+    depends_on:
+      - iran-archiver
+    restart: unless-stopped
+    networks:
+      - iran-internal
+      - shared
+
+  iran-meilisearch:
+    image: getmeili/meilisearch:v1.7
+    volumes:
+      - iran-meili-data:/meili_data
+    environment:
+      - MEILI_ENV=production
+      - MEILI_MASTER_KEY=${IRAN_MEILI_API_KEY:-changeme}
+      - MEILI_NO_ANALYTICS=true
+    restart: unless-stopped
+    networks:
+      - iran-internal
+
+  iran-crawler:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.crawler
+      args:
+        SEEDS_FILE: ${IRAN_SEEDS_FILE:-}
+    volumes:
+      - iran-content-data:/data
+      - iran-archiver-data:/app/archiver/data
+      - iran-crawler-data:/app/crawler/data
+    environment:
+      - DOCS_DB_PATH=/app/archiver/data/documents.db
+      - CRAWL_DB_PATH=/app/crawler/data/crawl.db
+      - CONTENT_DIR=/data/content
+      - THUMB_DIR=/data/thumbnails
+      - MEILI_HOST=http://iran-meilisearch:7700
+      - MEILI_API_KEY=${IRAN_MEILI_API_KEY:-}
+      - DOMAIN=${IRAN_DOMAIN:-localhost}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+    depends_on:
+      - iran-meilisearch
+    restart: unless-stopped
+    networks:
+      - iran-internal
+
+volumes:
+  iran-archiver-data:
+  iran-content-data:
+  iran-meili-data:
+  iran-crawler-data:
+
+networks:
+  iran-internal:
+  shared:
+    external: true
+    name: deploy_internal

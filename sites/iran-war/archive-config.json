@@ -1,0 +1,33 @@
+{
+  "dataSets": [
+    { "id": 1, "name": "CENTCOM Releases", "description": "Official U.S. Central Command releases from Operation Epic Fury" },
+    { "id": 2, "name": "IDF / Israeli Military", "description": "Israeli Defense Forces and Operation Roaring Lion documentation" },
+    { "id": 3, "name": "Diplomatic Records", "description": "Diplomatic cables, UN statements, IAEA reports, Oman negotiation records" },
+    { "id": 4, "name": "Raw Combat Footage", "description": "Verified raw footage from the conflict zone" },
+    { "id": 5, "name": "Iran Protest Documentation", "description": "December 2025 – January 2026 Iranian protest documentation" },
+    { "id": 6, "name": "News Coverage", "description": "Investigative journalism and news reports" },
+    { "id": 7, "name": "Congressional & Legislative", "description": "Congressional statements, hearings, and legislative responses" },
+    { "id": 8, "name": "Pre-War Intelligence", "description": "Pre-war intelligence assessments and policy documents" }
+  ],
+  "categoryRules": {
+    "1": "military_document",
+    "2": "military_document",
+    "3": "diplomatic_record",
+    "4": { "default": null, "matchContentType": { "video": "combat_video", "image": "satellite_imagery" } },
+    "5": { "default": "protest_footage", "matchContentType": { "video": "protest_footage", "image": "protest_footage" } },
+    "6": "news_article",
+    "7": "congressional",
+    "8": "intelligence_report"
+  },
+  "featuredContent": {
+    "photos": {
+      "includeKeywords": ["strike", "explosion", "damage", "destruction", "military", "satellite", "crater", "missile"],
+      "excludeKeywords": [],
+      "excludeTitleKeywords": []
+    },
+    "videos": {
+      "requireTranscript": false,
+      "minTranscriptLength": 0
+    }
+  }
+}

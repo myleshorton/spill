@@ -24,7 +24,9 @@ export const siteConfig = {
     placeholderLarge: 'Search 1.4M+ files \u2014 names, places, dates, keywords...',
   },
 
-  sisterSites: [] as { name: string; url: string }[],
+  sisterSites: [
+    { name: 'Iran War Archive', url: 'https://iran.spill.network' },
+  ] as { name: string; url: string }[],
 
   dataSets: [
     { id: 1, name: 'FBI Interview Summaries (Part 1)', shortName: 'FBI Interview Summaries (Part 1)', description: 'FBI interview summaries from the Palm Beach investigation (2005-2008). Witness statements and investigative notes.', size: '~2.5GB' },
