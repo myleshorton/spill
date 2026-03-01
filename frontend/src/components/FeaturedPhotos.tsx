@@ -81,7 +81,7 @@ export default function FeaturedPhotos() {
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {docs.map((doc, i) => (
-            <PhotoCard key={doc.id} doc={doc} index={i} />
+            <PhotoCard key={doc.id} doc={doc} index={i} eager={offset === 0} />
           ))}
         </div>
       )}
@@ -89,7 +89,7 @@ export default function FeaturedPhotos() {
   )
 }
 
-function PhotoCard({ doc, index }: { doc: Document; index: number }) {
+function PhotoCard({ doc, index, eager }: { doc: Document; index: number; eager?: boolean }) {
   const [thumbError, setThumbError] = useState(false)
 
   return (
@@ -105,7 +105,7 @@ function PhotoCard({ doc, index }: { doc: Document; index: number }) {
             alt=""
             className="h-full w-full object-cover transition-transform group-hover:scale-105"
             onError={() => setThumbError(true)}
-            loading="lazy"
+            loading={eager ? 'eager' : 'lazy'}
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center">

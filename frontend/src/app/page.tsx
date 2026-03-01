@@ -27,7 +27,7 @@ export default function HomePage() {
             backgroundImage: 'radial-gradient(circle at 50% 0%, rgba(0, 191, 166, 0.08) 0%, transparent 50%)',
           }} />
 
-          <div className="relative mx-auto max-w-4xl px-4 pb-16 pt-20 sm:px-6 sm:pb-20 sm:pt-28">
+          <div className="relative mx-auto max-w-4xl px-4 pb-10 pt-12 sm:px-6 sm:pb-12 sm:pt-16">
             <div className="animate-fade-in text-center">
               <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-spill-divider bg-spill-surface px-3 py-1">
                 <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-spill-accent" />
@@ -71,11 +71,11 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section className="mx-auto max-w-7xl px-4 pb-16 sm:px-6">
+        <FeaturedPhotos />
+
+        <section className="mx-auto max-w-7xl px-4 pb-12 sm:px-6">
           <StatsBar />
         </section>
-
-        <FeaturedPhotos />
 
         <Recommendations />
 
