@@ -3,11 +3,27 @@
     { "url": "https://www.centcom.mil/MEDIA/PRESS-RELEASES/", "adapter": "government", "priority": 1.0 },
     { "url": "https://www.centcom.mil/MEDIA/STATEMENTS/", "adapter": "government", "priority": 1.0 },
     { "url": "https://www.centcom.mil/MEDIA/VIDEO-AND-IMAGERY/VIDEOS/", "adapter": "government", "priority": 1.0 },
+    { "url": "https://www.centcom.mil/MEDIA/", "adapter": "government", "priority": 0.95 },
+    { "url": "https://www.centcom.mil/CENTCOM-AOR/Iran/", "adapter": "government", "priority": 0.95 },
     { "url": "https://www.centcom.mil/MEDIA/PRESS-RELEASES/Press-Release-View/Article/4418396/us-forces-launch-operation-epic-fury/", "adapter": "government", "priority": 1.0 },
     { "url": "https://www.centcom.mil/MEDIA/STATEMENTS/Statements-View/Article/4418506/operation-epic-fury-update/", "adapter": "government", "priority": 1.0 },
 
     { "url": "https://www.defense.gov/News/", "adapter": "government", "priority": 0.9 },
     { "url": "https://www.state.gov/press-releases/", "adapter": "government", "priority": 0.8 },
+
+    { "url": "https://www.dvidshub.net/feature/operationepicfury", "adapter": "government", "priority": 1.0 },
+    { "url": "https://www.dvidshub.net/video/997733/us-forces-launch-operation-epic-fury", "adapter": "government", "priority": 1.0 },
+    { "url": "https://www.dvidshub.net/video/997765/us-forces-launch-operation-epic-fury", "adapter": "government", "priority": 1.0 },
+    { "url": "https://www.dvidshub.net/video/997753/uss-thomas-hudner-supports-operation-epic-fury", "adapter": "government", "priority": 1.0 },
+    { "url": "https://www.dvidshub.net/video/997750/frank-e-petersen-jr-participates-operation-epic-fury", "adapter": "government", "priority": 1.0 },
+    { "url": "https://www.dvidshub.net/video/997749/us-forces-launch-operation-epic-fury", "adapter": "government", "priority": 1.0 },
+    { "url": "https://www.dvidshub.net/search/2.0?q=operation+epic+fury&type=video", "adapter": "government", "priority": 0.95 },
+    { "url": "https://www.dvidshub.net/search/2.0?q=iran+strikes+2026&type=video", "adapter": "government", "priority": 0.95 },
+    { "url": "https://www.dvidshub.net/search/2.0?q=CENTCOM+Iran&type=video", "adapter": "government", "priority": 0.9 },
+    { "url": "https://www.dvidshub.net/unit/CENTCOM", "adapter": "government", "priority": 0.9 },
+    { "url": "https://www.dvidshub.net/webcast/37582", "adapter": "government", "priority": 0.95 },
+    { "url": "https://www.dvidshub.net/video/947973/centcom-conducts-airstrikes-against-iran-backed-houthi-missile-storage-and-command-control-facilities-yemen", "adapter": "government", "priority": 0.85 },
+    { "url": "https://www.dvidshub.net/video/955566/centcom-forces-launch-large-scale-operation-against-iran-backed-houthis-yemen", "adapter": "government", "priority": 0.85 },
 
     { "url": "https://www.iaea.org/newscenter/focus/iran/iaea-and-iran-iaea-board-reports", "adapter": "government", "priority": 1.0 },
     { "url": "https://www.iaea.org/sites/default/files/25/06/gov2025-24.pdf", "adapter": "government", "priority": 0.95 },
@@ -24,6 +40,14 @@
     { "url": "https://en.wikipedia.org/wiki/2025%E2%80%932026_Iranian_protests", "adapter": "news", "priority": 0.7 },
     { "url": "https://en.wikipedia.org/wiki/2026_Iran%E2%80%93United_States_crisis", "adapter": "news", "priority": 0.7 },
 
+    { "url": "https://commons.wikimedia.org/wiki/Category:2026_Israeli%E2%80%93United_States_strikes_on_Iran", "adapter": "news", "priority": 0.95 },
+    { "url": "https://commons.wikimedia.org/wiki/Category:June_22,_2025_American_strikes_on_Iranian_nuclear_sites", "adapter": "news", "priority": 0.95 },
+    { "url": "https://commons.wikimedia.org/wiki/Category:June_2025_Israeli_strikes_in_Iran", "adapter": "news", "priority": 0.9 },
+    { "url": "https://commons.wikimedia.org/wiki/Category:June_2025_Iranian_strikes_against_Israel", "adapter": "news", "priority": 0.9 },
+    { "url": "https://commons.wikimedia.org/wiki/Category:Iran%E2%80%93Israel_War", "adapter": "news", "priority": 0.85 },
+    { "url": "https://commons.wikimedia.org/wiki/Category:2025%E2%80%932026_Iranian_protests", "adapter": "news", "priority": 0.85 },
+    { "url": "https://commons.wikimedia.org/wiki/File:U.S._Forces_Launch_Operation_Epic_Fury.webm", "adapter": "news", "priority": 1.0 },
+
     { "url": "https://www.aljazeera.com/tag/iran/", "adapter": "news", "priority": 0.9 },
     { "url": "https://www.aljazeera.com/news/liveblog/2026/2/28/live-israel-launches-attacks-on-iran-multiple-explosions-heard-in-tehran", "adapter": "news", "priority": 1.0 },
     { "url": "https://www.aljazeera.com/video/newsfeed/2026/2/28/scenes-of-destruction-in-iran-after-us-israeli-strikes", "adapter": "news", "priority": 1.0 },
@@ -32,6 +56,7 @@
     { "url": "https://www.nbcnews.com/world/iran/", "adapter": "news", "priority": 0.8 },
     { "url": "https://www.bbc.com/news/topics/cjnwl8q4qqwt", "adapter": "news", "priority": 0.8 },
     { "url": "https://www.reuters.com/world/middle-east/", "adapter": "news", "priority": 0.8 },
+    { "url": "https://www.dw.com/en/iran/t-17291972", "adapter": "news", "priority": 0.85 },
 
     { "url": "https://www.livenowfox.com/news/iran-attack-video-operation-epic-fury-photos", "adapter": "news", "priority": 0.95 },
 
@@ -40,6 +65,11 @@
     { "url": "https://archive.org/search?query=iran+strikes+2026", "adapter": "archive-org", "priority": 0.9 },
     { "url": "https://archive.org/search?query=operation+epic+fury", "adapter": "archive-org", "priority": 0.9 },
     { "url": "https://archive.org/search?query=iran+protests+2025+2026", "adapter": "archive-org", "priority": 0.85 },
+    { "url": "https://archive.org/search?query=iran+strikes+2026&and%5B%5D=mediatype%3A%22movies%22", "adapter": "archive-org", "priority": 0.95 },
+    { "url": "https://archive.org/search?query=operation+epic+fury&and%5B%5D=mediatype%3A%22movies%22", "adapter": "archive-org", "priority": 0.95 },
+    { "url": "https://archive.org/search?query=iran+war+2026&and%5B%5D=mediatype%3A%22movies%22", "adapter": "archive-org", "priority": 0.9 },
+    { "url": "https://archive.org/search?query=CENTCOM+Iran&and%5B%5D=mediatype%3A%22movies%22", "adapter": "archive-org", "priority": 0.9 },
+    { "url": "https://archive.org/details/TV-DW", "adapter": "archive-org", "priority": 0.8 },
 
     { "url": "https://www.documentcloud.org/app/search/Project:%22iran%22", "adapter": "documentcloud", "priority": 0.85 },
 
@@ -66,7 +96,10 @@
     "Parchin military complex damage",
     "Kharg Island oil terminal strikes",
     "Iran IRGC facilities destroyed",
-    "US service members killed Iran Operation Epic Fury"
+    "US service members killed Iran Operation Epic Fury",
+    "DVIDS Operation Epic Fury video",
+    "Iran strike footage site:dvidshub.net",
+    "Wikimedia Commons Iran war video"
   ],
   "keywords": {
     "primary": ["iran", "operation epic fury", "operation roaring lion", "iran strikes", "iran war"],
