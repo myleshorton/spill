@@ -281,6 +281,29 @@ export async function getFeaturedVideos(options: {
   return fallback.json()
 }
 
+// --- Featured Photos ---
+
+export async function getFeaturedPhotos(options: {
+  limit?: number
+  offset?: number
+} = {}): Promise<{ documents: Document[], total: number }> {
+  const params = new URLSearchParams()
+  if (options.limit) params.set('limit', String(options.limit))
+  if (options.offset) params.set('offset', String(options.offset))
+
+  // Try dedicated endpoint first; fall back to Meilisearch nudity query if archiver hasn't restarted yet
+  const res = await fetch(`${API_BASE}/featured-photos?${params}`)
+  if (res.ok) return res.json()
+
+  // Fallback: search for nudity keywords via Meilisearch
+  const limit = options.limit || 12
+  const offset = options.offset || 0
+  const fallback = await fetch(`${API_BASE}/documents/search?q=nudity&filter=contentType%20%3D%20image&limit=${limit}&offset=${offset}`)
+  if (!fallback.ok) return { documents: [], total: 0 }
+  const data = await fallback.json()
+  return { documents: data.hits || [], total: data.estimatedTotalHits || 0 }
+}
+
 // --- Activity Feed ---
 
 export interface ActivityData {

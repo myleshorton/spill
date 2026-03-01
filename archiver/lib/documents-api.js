@@ -132,6 +132,18 @@ function createDocumentsRouter (docsDb, searchIndex, archiverRef, torrentManager
     })
   })
 
+  // Featured photos — images tagged with nudity-related keywords
+  router.get('/featured-photos', (req, res) => {
+    const limit = Math.min(parseInt(req.query.limit) || 12, 50)
+    const offset = parseInt(req.query.offset) || 0
+
+    const result = docsDb.listFeaturedPhotos({ limit, offset })
+    res.json({
+      documents: result.documents.map(rowToDoc),
+      total: result.total
+    })
+  })
+
   // Full-text search via Meilisearch
   router.get('/documents/search', async (req, res) => {
     const q = req.query.q

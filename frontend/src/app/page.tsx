@@ -8,7 +8,7 @@ import SearchBar from '@/components/SearchBar'
 import StatsBar from '@/components/StatsBar'
 import ActivityFeed from '@/components/ActivityFeed'
 import Recommendations from '@/components/Recommendations'
-import FeaturedVideos from '@/components/FeaturedVideos'
+import FeaturedPhotos from '@/components/FeaturedPhotos'
 import { siteConfig } from '@/config/site.config'
 
 const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -75,7 +75,7 @@ export default function HomePage() {
           <StatsBar />
         </section>
 
-        <FeaturedVideos />
+        <FeaturedPhotos />
 
         <Recommendations />
 
