@@ -21,8 +21,10 @@ class DocumentsDatabase {
       const base = JSON.parse(fs.readFileSync(archiveConfigPath, 'utf8'))
       const overridePath = archiveConfigPath.replace('.json', '.override.json')
       if (fs.existsSync(overridePath)) {
-        const override = JSON.parse(fs.readFileSync(overridePath, 'utf8'))
-        Object.assign(base, override)
+        const raw = fs.readFileSync(overridePath, 'utf8').trim()
+        if (raw.length > 0) {
+          Object.assign(base, JSON.parse(raw))
+        }
       }
       return base
     } catch {
