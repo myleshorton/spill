@@ -25,7 +25,7 @@ export const siteConfig = {
   },
 
   sisterSites: [
-    { name: 'Iran War Archive', url: 'https://iran.spill.network' },
+    { name: 'Iran Uncensored', url: 'https://iran.spill.network' },
   ] as { name: string; url: string }[],
 
   dataSets: [

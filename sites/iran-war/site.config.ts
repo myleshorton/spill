@@ -1,20 +1,20 @@
 export const siteConfig = {
-  name: 'Iran War Archive',
+  name: 'Iran Uncensored',
   subtitle: 'Public Record',
   badge: 'LIVE',
 
   meta: {
-    title: 'Iran War Archive — Operation Epic Fury Document & Footage Repository',
+    title: 'Iran Uncensored — Operation Epic Fury Document & Footage Repository',
     description:
       'Searchable archive of raw footage, military documents, and diplomatic records from the 2026 US-Israeli strikes on Iran. CENTCOM releases, news footage, IAEA reports, and protest documentation — indexed and freely accessible.',
-    ogTitle: 'Iran War Archive',
+    ogTitle: 'Iran Uncensored',
     ogDescription:
       'Searchable public archive of the 2026 Iran conflict. Raw footage, strike documentation, diplomatic records, and protest evidence.',
   },
 
   hero: {
-    heading: 'Iran War',
-    headingAccent: 'Archive',
+    heading: 'Iran',
+    headingAccent: 'Uncensored',
     description:
       'Searchable archive of the 2026 US-Israeli military operations against Iran. Raw combat footage, CENTCOM releases, diplomatic cables, IAEA reports, protest documentation, and news coverage — all indexed, transcribed, and freely accessible. Our crawler continuously discovers and archives new material as the conflict unfolds.',
   },
