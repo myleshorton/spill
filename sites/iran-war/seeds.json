@@ -115,6 +115,12 @@
     "USS Abraham Lincoln", "USS Gerald R. Ford",
     "Operation Epic Fury", "Operation Roaring Lion"
   ],
+  "socialPosting": {
+    "enabled": true,
+    "siteUrl": "https://iran.unredact.org",
+    "relevanceFloor": 0.7,
+    "rateLimitPerHour": 10
+  },
   "collections": [
     { "id": 2001, "name": "Web Archive", "description": "Archived web pages from the Internet Archive" },
     { "id": 2002, "name": "Search Discoveries", "description": "Content discovered via automated web search" }

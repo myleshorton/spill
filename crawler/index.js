@@ -8,6 +8,7 @@ const Fetcher = require('./lib/fetcher')
 const RelevanceScorer = require('./lib/relevance')
 const ContentProcessor = require('./lib/content-processor')
 const Scheduler = require('./lib/scheduler')
+const SocialPoster = require('./lib/social-poster')
 
 // Adapters
 const GenericAdapter = require('./lib/adapters/generic')
@@ -198,11 +199,17 @@ async function cmdRun (opts) {
     'search-discovery': new SearchDiscoveryAdapter(crawlDb, seeds),
   }
 
+  const socialPoster = new SocialPoster({
+    crawlDb,
+    config: seeds.socialPosting,
+  })
+
   const scheduler = new Scheduler({
     crawlDb,
     fetcher,
     processor,
     adapters,
+    socialPoster,
     options: {
       concurrency: opts.concurrency,
       maxDepth: opts.depth,

@@ -48,6 +48,12 @@ class CrawlDatabase {
       CREATE INDEX IF NOT EXISTS idx_urls_status_priority ON urls(status, priority DESC);
       CREATE INDEX IF NOT EXISTS idx_urls_domain ON urls(domain);
       CREATE INDEX IF NOT EXISTS idx_urls_normalized ON urls(normalized_url);
+
+      CREATE TABLE IF NOT EXISTS social_posts (
+        doc_id TEXT PRIMARY KEY,
+        posted_at INTEGER,
+        platforms TEXT
+      );
     `)
   }
 
@@ -252,6 +258,17 @@ class CrawlDatabase {
       topDomains,
       averageRelevance: avgRelevance.avg ? avgRelevance.avg.toFixed(3) : 'N/A'
     }
+  }
+
+  hasPosted (docId) {
+    return !!this.db.prepare('SELECT 1 FROM social_posts WHERE doc_id = ?').get(docId)
+  }
+
+  recordPost (docId, platforms) {
+    this.db.prepare(`
+      INSERT OR REPLACE INTO social_posts (doc_id, posted_at, platforms)
+      VALUES (?, ?, ?)
+    `).run(docId, Math.floor(Date.now() / 1000), platforms)
   }
 
   reset () {

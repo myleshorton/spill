@@ -6,11 +6,12 @@ let archiveExtractor = null
 try { archiveExtractor = require('./archive-extractor') } catch {}
 
 class Scheduler {
-  constructor ({ crawlDb, fetcher, processor, adapters, options = {} }) {
+  constructor ({ crawlDb, fetcher, processor, adapters, socialPoster, options = {} }) {
     this.crawlDb = crawlDb
     this.fetcher = fetcher
     this.processor = processor
     this.adapters = adapters
+    this.socialPoster = socialPoster || null
     this.concurrency = options.concurrency || 5
     this.maxDepth = options.maxDepth || 3
     this.batchSize = options.batchSize || 20
@@ -218,6 +219,13 @@ class Scheduler {
         this.crawlDb.bumpDomainRelevance(row.domain)
         this.indexed++
         console.log('[indexed] ' + result.score.toFixed(2) + ' [' + result.category + '] ' + result.title.slice(0, 60))
+
+        // Fire-and-forget social posting for high-relevance docs
+        if (this.socialPoster) {
+          this.socialPoster.post(result).catch(err => {
+            console.warn('[social] Post error: %s', err.message)
+          })
+        }
       }
       this.processed++
     } catch (err) {

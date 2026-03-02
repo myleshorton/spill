@@ -116,6 +116,12 @@
     "Courtney Wild", "Annie Farmer", "Juan Alessi", "Denise George",
     "Steve Scully", "Adriana Ross", "Emmy Taylor", "Haley Robson"
   ],
+  "socialPosting": {
+    "enabled": true,
+    "siteUrl": "https://unredact.org",
+    "relevanceFloor": 0.7,
+    "rateLimitPerHour": 10
+  },
   "collections": [
     { "id": 2001, "name": "Court Filings", "description": "Federal and state court documents from CourtListener/RECAP" },
     { "id": 2002, "name": "News Coverage", "description": "Investigative journalism and news articles" },
