@@ -4,6 +4,11 @@ const { URL } = require('url')
 
 const VIDEO_EXTENSIONS = /\.(mp4|webm|mov|avi|mkv|wmv|mpg|mpeg|m4v|flv)$/i
 
+// Wikimedia Commons serves the original at /commons/X/XX/File.webm and then
+// 5-6 transcoded lower-res copies at /commons/transcoded/X/XX/File.webm/File.webm.RESp.codec.
+// We only want the original.
+const WIKIMEDIA_TRANSCODED_RE = /upload\.wikimedia\.org\/wikipedia\/commons\/transcoded\//
+
 class GenericAdapter {
   constructor (crawlDb, scorer, seeds) {
     this.crawlDb = crawlDb
@@ -41,14 +46,16 @@ class GenericAdapter {
         // Only follow http(s) links
         if (!absoluteUrl.startsWith('http')) return
 
-        // Always queue direct video file links
+        // Always queue direct video file links (skip Wikimedia transcoded variants)
         if (VIDEO_EXTENSIONS.test(absoluteUrl)) {
-          links.push({
-            url: absoluteUrl,
-            priority: 0.8,
-            source: 'generic',
-            anchorText: $(el).text().trim(),
-          })
+          if (!WIKIMEDIA_TRANSCODED_RE.test(absoluteUrl)) {
+            links.push({
+              url: absoluteUrl,
+              priority: 0.8,
+              source: 'generic',
+              anchorText: $(el).text().trim(),
+            })
+          }
           return
         }
 
@@ -73,7 +80,7 @@ class GenericAdapter {
         if (!src) return
         try {
           const absoluteUrl = new URL(src, baseUrl).toString()
-          if (absoluteUrl.startsWith('http')) {
+          if (absoluteUrl.startsWith('http') && !WIKIMEDIA_TRANSCODED_RE.test(absoluteUrl)) {
             links.push({
               url: absoluteUrl,
               priority: 0.9,

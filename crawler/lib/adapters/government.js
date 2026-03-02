@@ -3,6 +3,7 @@ const cheerio = require('cheerio')
 const { URL } = require('url')
 
 const VIDEO_EXTENSIONS = /\.(mp4|webm|mov|avi|mkv|wmv|mpg|mpeg|m4v|flv)$/i
+const WIKIMEDIA_TRANSCODED_RE = /upload\.wikimedia\.org\/wikipedia\/commons\/transcoded\//
 
 class GovernmentAdapter {
   constructor (crawlDb, seeds) {
@@ -77,7 +78,7 @@ class GovernmentAdapter {
 
         // Prioritize PDF and video downloads from .gov sites
         const isPdf = absoluteUrl.endsWith('.pdf') || href.includes('.pdf')
-        const isVideo = VIDEO_EXTENSIONS.test(absoluteUrl)
+        const isVideo = VIDEO_EXTENSIONS.test(absoluteUrl) && !WIKIMEDIA_TRANSCODED_RE.test(absoluteUrl)
         const text = $(el).text().toLowerCase()
         const relevanceKeywords = this.keywords.length > 0
           ? [...this.keywords, 'foia', 'release', 'document', 'report', 'video', 'footage']
@@ -99,7 +100,7 @@ class GovernmentAdapter {
         if (!src) return
         try {
           const absoluteUrl = new URL(src, url).toString()
-          if (absoluteUrl.startsWith('http')) {
+          if (absoluteUrl.startsWith('http') && !WIKIMEDIA_TRANSCODED_RE.test(absoluteUrl)) {
             links.push({
               url: absoluteUrl,
               priority: 0.9,
