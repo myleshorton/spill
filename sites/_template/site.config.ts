@@ -2,6 +2,7 @@ export const siteConfig = {
   name: 'My Archive',
   subtitle: 'Public Archive',
   badge: 'ARCHIVE',
+  siteUrl: 'https://example.com',
 
   meta: {
     title: 'My Archive — Public Document Repository',

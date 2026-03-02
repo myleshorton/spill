@@ -1,61 +1,94 @@
-'use client'
+import type { Metadata } from 'next'
+import { notFound } from 'next/navigation'
+import { getDocumentServer } from '@/lib/server-api'
+import { siteConfig } from '@/config/site.config'
+import { formatFileSize } from '@/lib/api'
+import DocPageClient from './DocPageClient'
 
-import { useEffect, useState, Suspense } from 'react'
-import { useParams } from 'next/navigation'
-import Header from '@/components/Header'
-import Footer from '@/components/Footer'
-import DocumentViewer from '@/components/DocumentViewer'
-import SimilarDocuments from '@/components/SimilarDocuments'
-import ResultSetNav from '@/components/ResultSetNav'
-import { getDocument, recordView, type Document } from '@/lib/api'
-import { Loader2, AlertCircle } from 'lucide-react'
+interface Props {
+  params: Promise<{ id: string }>
+}
 
-export default function DocPage() {
-  const params = useParams()
-  const id = params.id as string
-  const [doc, setDoc] = useState<Document | null>(null)
-  const [error, setError] = useState(false)
-  const [loading, setLoading] = useState(true)
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { id } = await params
+  const doc = await getDocumentServer(id)
+  if (!doc) return { title: 'Document Not Found' }
 
-  useEffect(() => {
-    getDocument(id)
-      .then((d) => {
-        setDoc(d)
-        recordView(id)
-      })
-      .catch(() => setError(true))
-      .finally(() => setLoading(false))
-  }, [id])
+  const dsConfig = siteConfig.dataSets.find((d) => d.id === doc.dataSet)
+  const parts = [doc.title]
+  if (doc.category) parts.push(siteConfig.categories?.[doc.category] || doc.category)
+  if (dsConfig) parts.push(dsConfig.shortName)
+  if (doc.pageCount) parts.push(`${doc.pageCount} pages`)
+  const description = parts.join(' — ')
+
+  const thumbnailUrl = doc.hasThumbnail
+    ? `${siteConfig.siteUrl}/api/documents/${id}/thumbnail`
+    : undefined
+
+  return {
+    title: doc.title,
+    description,
+    openGraph: {
+      title: doc.title,
+      description,
+      type: 'article',
+      url: `/doc/${id}`,
+      ...(thumbnailUrl && { images: [{ url: thumbnailUrl }] }),
+    },
+    twitter: {
+      card: thumbnailUrl ? 'summary_large_image' : 'summary',
+      title: doc.title,
+      description,
+      ...(thumbnailUrl && { images: [thumbnailUrl] }),
+    },
+    alternates: { canonical: `/doc/${id}` },
+  }
+}
+
+function getSchemaType(contentType: string): string {
+  switch (contentType) {
+    case 'image': return 'ImageObject'
+    case 'video': return 'VideoObject'
+    case 'audio': return 'AudioObject'
+    default: return 'DigitalDocument'
+  }
+}
+
+export default async function DocPage({ params }: Props) {
+  const { id } = await params
+  const doc = await getDocumentServer(id)
+  if (!doc) notFound()
+
+  const dsConfig = siteConfig.dataSets.find((d) => d.id === doc.dataSet)
+  const docUrl = `${siteConfig.siteUrl}/doc/${id}`
+  const thumbnailUrl = doc.hasThumbnail
+    ? `${siteConfig.siteUrl}/api/documents/${id}/thumbnail`
+    : undefined
+
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': getSchemaType(doc.contentType),
+    name: doc.title,
+    url: docUrl,
+    ...(thumbnailUrl && { thumbnailUrl }),
+    ...(doc.fileSize && { contentSize: formatFileSize(doc.fileSize) }),
+    ...(doc.pageCount && { numberOfPages: doc.pageCount }),
+    ...(doc.indexedAt && { datePublished: new Date(doc.indexedAt * 1000).toISOString() }),
+    ...(dsConfig && {
+      isPartOf: {
+        '@type': 'Collection',
+        name: dsConfig.name,
+      },
+    }),
+  }
 
   return (
-    <div className="flex min-h-screen flex-col">
-      <Header />
-
-      <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-8 sm:px-6">
-        {loading ? (
-          <div className="flex items-center justify-center py-24">
-            <Loader2 className="h-8 w-8 animate-spin text-spill-accent" />
-          </div>
-        ) : error || !doc ? (
-          <div className="flex flex-col items-center justify-center py-24 text-center">
-            <AlertCircle className="mb-4 h-12 w-12 text-spill-error" />
-            <h1 className="font-headline text-xl font-bold text-spill-text-primary">Document Not Found</h1>
-            <p className="mt-2 text-sm text-spill-text-secondary">
-              This document may not be indexed yet, or the ID is invalid.
-            </p>
-          </div>
-        ) : (
-          <>
-            <Suspense>
-              <ResultSetNav />
-            </Suspense>
-            <DocumentViewer doc={doc} />
-            <SimilarDocuments docId={id} />
-          </>
-        )}
-      </main>
-
-      <Footer />
-    </div>
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      <DocPageClient doc={doc} />
+    </>
   )
 }

@@ -3,13 +3,25 @@ import { siteConfig } from '@/config/site.config'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: siteConfig.meta.title,
+  metadataBase: new URL(siteConfig.siteUrl),
+  title: {
+    default: siteConfig.meta.title,
+    template: `%s | ${siteConfig.name}`,
+  },
   description: siteConfig.meta.description,
   openGraph: {
     title: siteConfig.meta.ogTitle,
     description: siteConfig.meta.ogDescription,
     type: 'website',
+    siteName: siteConfig.name,
   },
+  twitter: {
+    card: 'summary_large_image',
+    title: siteConfig.meta.ogTitle,
+    description: siteConfig.meta.ogDescription,
+  },
+  robots: { index: true, follow: true },
+  alternates: { canonical: '/' },
 }
 
 export default function RootLayout({

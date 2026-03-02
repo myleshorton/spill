@@ -2,6 +2,7 @@ export const siteConfig = {
   name: 'Iran Uncensored',
   subtitle: 'Public Record',
   badge: 'LIVE',
+  siteUrl: 'https://iran.unredact.org',
 
   meta: {
     title: 'Iran Uncensored — Operation Epic Fury Document & Footage Repository',

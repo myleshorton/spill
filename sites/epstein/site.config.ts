@@ -2,6 +2,7 @@ export const siteConfig = {
   name: 'Epstein Files',
   subtitle: 'Public Archive',
   badge: 'ARCHIVE',
+  siteUrl: 'https://unredact.org',
 
   meta: {
     title: 'Epstein Files Archive — Public DOJ Document Repository',
