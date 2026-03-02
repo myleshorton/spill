@@ -63,7 +63,7 @@ export const siteConfig = {
     { label: 'FBI Interviews', query: 'FBI interview summary', iconName: 'FileText' as const },
     { label: 'Photographs', query: 'photograph image seized', iconName: 'Image' as const },
     { label: 'Video Evidence', query: 'video recording', iconName: 'Video' as const },
-  ],
+  ] as { label: string; query?: string; type?: string; ds?: string; iconName: string }[],
 
   categories: {
     court_record: 'Court Records',
