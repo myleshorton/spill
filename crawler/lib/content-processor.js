@@ -91,6 +91,8 @@ class ContentProcessor {
       const htmlMeta = this._extractHtmlMeta(filePath)
       title = htmlMeta.title
       meta = htmlMeta
+    } else if (isVideo || isAudio) {
+      title = this._titleFromUrl(fetchResult.finalUrl || urlRow.url)
     }
 
     // 6. Score relevance
@@ -162,6 +164,12 @@ class ContentProcessor {
 
     // 10. Determine collection
     const collectionId = this._getCollectionId(urlRow.source)
+
+    // For media files with no extracted text, derive searchable text from the URL
+    // and title so they appear in keyword searches.
+    if ((isVideo || isAudio) && !text && title) {
+      text = title
+    }
 
     // 11. Build document
     const doc = {
@@ -287,6 +295,30 @@ class ContentProcessor {
     if (source === 'news') return 'news_article'
     if ((contentType || '').includes('pdf')) return 'court_filing'
     return 'web_page'
+  }
+
+  _titleFromUrl (urlStr) {
+    try {
+      const u = new URL(urlStr)
+      // Use the last meaningful path segment as the title base
+      const segments = u.pathname.split('/').filter(Boolean)
+      let raw = segments[segments.length - 1] || ''
+      // Strip file extension
+      raw = raw.replace(/\.[^.]+$/, '')
+      // Decode URI components
+      raw = decodeURIComponent(raw)
+      // Replace underscores, hyphens, camelCase boundaries with spaces
+      raw = raw.replace(/[_-]+/g, ' ').replace(/([a-z])([A-Z])/g, '$1 $2')
+      // Strip resolution/codec suffixes (e.g. "AVC_1920x1080", "512kb", "hq")
+      raw = raw.replace(/\b(AVC|avc)\s*\d+x\d+\b/g, '').replace(/\b\d+kb?\b/gi, '').replace(/\b(hq|lq|sd|hd)\b/gi, '')
+      // Collapse whitespace
+      raw = raw.replace(/\s+/g, ' ').trim()
+      if (raw.length < 3) return ''
+      // Capitalize first letter
+      return raw.charAt(0).toUpperCase() + raw.slice(1)
+    } catch {
+      return ''
+    }
   }
 
   _getCollectionId (source) {

@@ -39,6 +39,9 @@ export const siteConfig = {
     { id: 8, name: 'Pre-War Intelligence', shortName: 'Intelligence', description: 'Pre-war intelligence assessments, State of the Union transcript, nuclear program analyses, and policy documents.', size: 'Ongoing' },
     { id: 2001, name: 'Web Archive', shortName: 'Web Archive', description: 'Archived web pages and documents from the Internet Archive and Wayback Machine.', size: 'Ongoing' },
     { id: 2002, name: 'Search Discoveries', shortName: 'Search Discoveries', description: 'Additional content discovered via automated web search and crawling.', size: 'Ongoing' },
+    { id: 2003, name: 'Government Records', shortName: 'Gov Records', description: 'Government documents, CENTCOM releases, and official reports discovered by the crawler.', size: 'Ongoing' },
+    { id: 2004, name: 'Archive.org', shortName: 'Archive.org', description: 'Documents and media from the Internet Archive collections.', size: 'Ongoing' },
+    { id: 2005, name: 'Crawled Content', shortName: 'Crawled', description: 'Additional content discovered and indexed by the web crawler.', size: 'Ongoing' },
   ],
 
   dataSetsIntro: {

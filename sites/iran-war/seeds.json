@@ -123,6 +123,9 @@
   },
   "collections": [
     { "id": 2001, "name": "Web Archive", "description": "Archived web pages from the Internet Archive" },
-    { "id": 2002, "name": "Search Discoveries", "description": "Content discovered via automated web search" }
+    { "id": 2002, "name": "Search Discoveries", "description": "Content discovered via automated web search" },
+    { "id": 2003, "name": "Government Records", "description": "Government documents, CENTCOM releases, and official reports" },
+    { "id": 2004, "name": "Archive.org", "description": "Documents and media from Internet Archive collections" },
+    { "id": 2005, "name": "Crawled Content", "description": "Additional content discovered by the web crawler" }
   ]
 }
