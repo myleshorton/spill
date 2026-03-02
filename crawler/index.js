@@ -98,11 +98,11 @@ async function cmdSeed () {
 
   // Let adapters discover additional URLs
   const adapters = {
-    court: new CourtAdapter(crawlDb),
+    court: new CourtAdapter(crawlDb, seeds),
     'archive-org': new ArchiveOrgAdapter(crawlDb, seeds),
     news: new NewsAdapter(crawlDb, seeds),
     government: new GovernmentAdapter(crawlDb, seeds),
-    documentcloud: new DocumentCloudAdapter(crawlDb),
+    documentcloud: new DocumentCloudAdapter(crawlDb, seeds),
   }
 
   for (const [name, adapter] of Object.entries(adapters)) {
@@ -190,11 +190,11 @@ async function cmdRun (opts) {
 
   const adapters = {
     generic: new GenericAdapter(crawlDb, scorer, seeds),
-    court: new CourtAdapter(crawlDb),
+    court: new CourtAdapter(crawlDb, seeds),
     'archive-org': new ArchiveOrgAdapter(crawlDb, seeds),
     news: new NewsAdapter(crawlDb, seeds),
     government: new GovernmentAdapter(crawlDb, seeds),
-    documentcloud: new DocumentCloudAdapter(crawlDb),
+    documentcloud: new DocumentCloudAdapter(crawlDb, seeds),
     'search-discovery': new SearchDiscoveryAdapter(crawlDb, seeds),
   }
 
@@ -255,7 +255,7 @@ function seedCollections (docsDb, seeds) {
 
 function showHelp () {
   console.log(`
-Spill Web Crawler — discover, fetch, and index Epstein-related documents
+Spill Web Crawler — discover, fetch, and index documents from seeds.json
 
 Usage: node crawler/index.js <command> [options]
 

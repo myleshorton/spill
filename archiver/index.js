@@ -3,7 +3,7 @@
  *
  * Entry point: creates Corestore, starts the P2P archiver and HTTP server.
  * Wires archiver events to the SQLite database.
- * Also serves the Epstein document archive API via Meilisearch.
+ * Also serves the document archive API via Meilisearch.
  */
 const express = require('express')
 const cors = require('cors')

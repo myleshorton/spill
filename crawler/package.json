@@ -1,7 +1,7 @@
 {
   "name": "spill-crawler",
   "version": "1.0.0",
-  "description": "Web crawler for discovering and indexing Epstein-related documents",
+  "description": "Web crawler for discovering and indexing documents from seed-driven sources",
   "main": "index.js",
   "scripts": {
     "start": "node index.js run",

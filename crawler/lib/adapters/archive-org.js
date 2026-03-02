@@ -53,7 +53,7 @@ class ArchiveOrgAdapter {
     }
 
     // Use Wayback CDX API to find archived versions of key pages
-    // (Only for Epstein seeds that have these URLs — other sites skip this)
+    // (Only for seeds that specify importantUrls — other sites skip this)
     const importantUrls = []
 
     for (const targetUrl of importantUrls) {

@@ -7,9 +7,14 @@ const CL_API = 'https://www.courtlistener.com/api/rest/v4'
 const USER_AGENT = 'UnredactBot/1.0 (+https://unredact.org/bot)'
 
 class CourtAdapter {
-  constructor (crawlDb) {
+  constructor (crawlDb, seeds) {
     this.crawlDb = crawlDb
     this.name = 'court'
+    this.keywords = [
+      ...(seeds?.keywords?.primary || []),
+      ...(seeds?.keywords?.secondary || []),
+    ].map(k => k.toLowerCase())
+    this.entities = (seeds?.entities || []).map(e => e.toLowerCase())
   }
 
   async discover (seeds) {
@@ -24,14 +29,10 @@ class CourtAdapter {
       }) ? 1 : 0
     }
 
-    // Search CourtListener API for Epstein-related dockets
+    // Search CourtListener API for dockets matching seed keywords
     try {
-      const searches = [
-        'epstein',
-        'ghislaine maxwell',
-        'giuffre v maxwell',
-        'united states v epstein',
-      ]
+      const searches = this.keywords.slice(0, 6)
+      if (searches.length === 0) return added
 
       for (const query of searches) {
         const dockets = await this._searchDockets(query)
@@ -142,7 +143,7 @@ class CourtAdapter {
         const href = $(el).attr('href')
         if (!href) return
         const text = $(el).text().toLowerCase()
-        if (text.includes('epstein') || text.includes('maxwell') || text.includes('giuffre')) {
+        if (this.keywords.some(kw => text.includes(kw)) || this.entities.some(e => text.includes(e))) {
           try {
             links.push({
               url: new URL(href, baseUrl).toString(),

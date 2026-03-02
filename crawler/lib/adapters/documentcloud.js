@@ -7,9 +7,13 @@ const API_BASE = 'https://api.www.documentcloud.org/api'
 const USER_AGENT = 'UnredactBot/1.0 (+https://unredact.org/bot)'
 
 class DocumentCloudAdapter {
-  constructor (crawlDb) {
+  constructor (crawlDb, seeds) {
     this.crawlDb = crawlDb
     this.name = 'documentcloud'
+    this.keywords = [
+      ...(seeds?.keywords?.primary || []),
+      ...(seeds?.keywords?.secondary || []),
+    ].map(k => k.toLowerCase())
   }
 
   async discover (seeds) {
@@ -24,14 +28,9 @@ class DocumentCloudAdapter {
       }) ? 1 : 0
     }
 
-    // Search DocumentCloud API for Epstein-related documents
-    const queries = [
-      'epstein',
-      'ghislaine maxwell',
-      'giuffre v maxwell',
-      'epstein flight logs',
-      'epstein black book',
-    ]
+    // Search DocumentCloud API for documents matching seed keywords
+    const queries = this.keywords.slice(0, 6)
+    if (queries.length === 0) return added
 
     for (const query of queries) {
       try {

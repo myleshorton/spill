@@ -1,5 +1,5 @@
 /**
- * Meilisearch integration for full-text search over Epstein archive documents.
+ * Meilisearch integration for full-text search over archive documents.
  */
 const { MeiliSearch } = require('meilisearch')
 

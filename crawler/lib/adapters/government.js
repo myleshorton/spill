@@ -41,8 +41,8 @@ class GovernmentAdapter {
         return this._extractFbiVaultLinks($, url)
       }
 
-      if (url.includes('justice.gov/epstein')) {
-        return this._extractDojEpsteinLibrary($, url)
+      if (url.includes('justice.gov') && this.keywords.some(kw => url.toLowerCase().includes(kw))) {
+        return this._extractDojDocumentLibrary($, url)
       }
 
       if (url.includes('justice.gov')) {
@@ -184,8 +184,10 @@ class GovernmentAdapter {
     return links.slice(0, 100)
   }
 
-  _extractDojEpsteinLibrary ($, baseUrl) {
+  _extractDojDocumentLibrary ($, baseUrl) {
     const links = []
+    // Derive the base path from the URL for matching sub-pages
+    const basePath = new URL(baseUrl).pathname.replace(/\/$/, '')
 
     $('a[href]').each((_, el) => {
       const href = $(el).attr('href')
@@ -194,7 +196,7 @@ class GovernmentAdapter {
       try {
         const absoluteUrl = new URL(href, baseUrl).toString()
 
-        // Direct PDF files from the Epstein library
+        // Direct PDF files
         if (absoluteUrl.endsWith('.pdf')) {
           links.push({
             url: absoluteUrl,
@@ -203,20 +205,12 @@ class GovernmentAdapter {
           })
         }
 
-        // Data set index pages
-        if (absoluteUrl.includes('/epstein/') && (absoluteUrl.includes('data-set') || absoluteUrl.includes('court-records'))) {
+        // Data set index pages and sub-pages within this library
+        const urlPath = new URL(absoluteUrl).pathname
+        if (urlPath.startsWith(basePath + '/') && (urlPath.includes('data-set') || urlPath.includes('court-records') || urlPath.includes('files/'))) {
           links.push({
             url: absoluteUrl,
-            priority: 0.9,
-            source: 'government',
-          })
-        }
-
-        // Individual file links (EFTA pattern)
-        if (absoluteUrl.includes('/epstein/files/')) {
-          links.push({
-            url: absoluteUrl,
-            priority: 0.95,
+            priority: urlPath.includes('files/') ? 0.95 : 0.9,
             source: 'government',
           })
         }
@@ -247,7 +241,7 @@ class GovernmentAdapter {
 
         // Related release pages
         const text = $(el).text().toLowerCase()
-        if (absoluteUrl.includes('oversight.house.gov') && (text.includes('epstein') || text.includes('release'))) {
+        if (absoluteUrl.includes('oversight.house.gov') && (text.includes('release') || this.keywords.some(kw => text.includes(kw)))) {
           links.push({
             url: absoluteUrl,
             priority: 0.85,
