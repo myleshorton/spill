@@ -675,6 +675,12 @@ class DocumentsDatabase {
   }
 
   activitySnapshot () {
+    // Cache for 30 seconds — this method runs ~16 full-table COUNT(*) queries
+    // on 1.4M+ rows and was being polled every 8s, pegging the CPU at 100%.
+    if (this._activityCache && Date.now() - this._activityCache.ts < 30000) {
+      return this._activityCache.data
+    }
+
     const now = Date.now()
     const fiveMinAgo = now - 5 * 60 * 1000
 
@@ -714,7 +720,7 @@ class DocumentsDatabase {
     const torrents = this.db.prepare("SELECT COUNT(*) as c FROM collections WHERE torrent_hash IS NOT NULL AND torrent_hash != ''").get().c
     const totalBytes = this.db.prepare('SELECT COALESCE(SUM(file_size), 0) as s FROM documents').get().s
 
-    return {
+    const result = {
       ts: now,
       totals: { documents, transcripts, entities, financials, geoLocated, withKeywords, indexed, totalBytes, collections, torrents },
       pending: {
@@ -728,6 +734,9 @@ class DocumentsDatabase {
       recent: { count: recentDocs, byType: Object.fromEntries(recentByType.map(r => [r.content_type, r.c])) },
       latestDoc: latestDoc ? { title: latestDoc.title, contentType: latestDoc.content_type } : null
     }
+
+    this._activityCache = { ts: now, data: result }
+    return result
   }
 
   close () {
