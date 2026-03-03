@@ -815,7 +815,7 @@ class DocumentsDatabase {
     return this.db.prepare(`
       SELECT id, title, extracted_text, transcript FROM documents
       WHERE financial_scan_attempted = 0 AND data_set = ?
-      AND category = 'Financial'
+      AND LOWER(category) = 'financial'
       AND (extracted_text IS NOT NULL OR transcript IS NOT NULL)
       LIMIT ?
     `).all(dataSet, limit)
