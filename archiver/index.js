@@ -21,6 +21,7 @@ const createUploadRouter = require('./lib/upload-api')
 const UsersDatabase = require('./lib/users-db')
 const createUsersRouter = require('./lib/users-api')
 const createChatRouter = require('./lib/chat-api')
+const TranscriptionWorker = require('./lib/transcription-worker')
 
 const DATA_DIR = path.join(__dirname, 'data')
 const CONTENT_DIR = path.join(DATA_DIR, 'content')
@@ -96,6 +97,10 @@ async function main () {
     }
   })
 
+  // Background transcription worker
+  const transcriptionWorker = new TranscriptionWorker(docsDb, searchIndex)
+  transcriptionWorker.start()
+
   const server = app.listen(PORT, () => {
     console.log(`[main] HTTP server listening on http://localhost:${PORT}`)
   })
@@ -148,6 +153,7 @@ async function main () {
   // Graceful shutdown
   process.on('SIGINT', async () => {
     console.log('\n[main] Shutting down...')
+    transcriptionWorker.stop()
     p2pWorker.kill('SIGINT')
     db.close()
     docsDb.close()

@@ -494,6 +494,15 @@ class DocumentsDatabase {
     `).all(dataSet, limit)
   }
 
+  getAllUntranscribedMedia (limit = 10) {
+    return this.db.prepare(`
+      SELECT id, file_path, content_type, data_set FROM documents
+      WHERE content_type IN ('audio','video')
+      AND (transcript IS NULL OR transcript = '')
+      LIMIT ?
+    `).all(limit)
+  }
+
   // --- Date extraction methods (Feature 2) ---
 
   setDocumentDate (id, dateStr, source) {
