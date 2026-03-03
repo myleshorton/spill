@@ -271,6 +271,14 @@ class CrawlDatabase {
     `).run(docId, Math.floor(Date.now() / 1000), platforms)
   }
 
+  requeueFailed () {
+    const result = this.db.prepare(`
+      UPDATE urls SET status = 'pending', error = NULL
+      WHERE status = 'failed'
+    `).run()
+    return result.changes
+  }
+
   reset () {
     this.db.exec("DELETE FROM urls")
     this.db.exec("UPDATE domains SET total_fetched = 0, total_relevant = 0, last_fetched_at = 0")

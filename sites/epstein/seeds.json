@@ -94,6 +94,19 @@
     { "url": "https://www.documentcloud.org/documents/24254004-epstein-2nd-batch/", "adapter": "documentcloud", "priority": 0.95 },
 
     { "url": "https://media.ca11.uscourts.gov/opinions/pub/files/201913843.pdf", "adapter": "court", "priority": 0.9 },
+
+    { "url": "https://epsteinfilesarchive.com/", "adapter": "generic", "priority": 0.9 },
+    { "url": "https://epsteinfilesarchive.com/updates.html", "adapter": "generic", "priority": 0.85 },
+    { "url": "https://epstein-files.org/", "adapter": "generic", "priority": 0.85 },
+    { "url": "https://epsteinsecrets.com/", "adapter": "generic", "priority": 0.8 },
+    { "url": "https://searchthefiles.com/", "adapter": "generic", "priority": 0.85 },
+    { "url": "https://epstein-docs.github.io/", "adapter": "generic", "priority": 0.85 },
+    { "url": "https://www.judicialwatch.org/?s=epstein", "adapter": "government", "priority": 0.8 },
+    { "url": "https://www.govinfo.gov/search?query=epstein&offset=0", "adapter": "government", "priority": 0.85 },
+    { "url": "https://publicintelligence.net/?s=epstein", "adapter": "generic", "priority": 0.75 },
+    { "url": "https://lawandcrime.com/?s=epstein", "adapter": "news", "priority": 0.7 },
+    { "url": "https://www.scribd.com/search?query=jeffrey+epstein+court+documents", "adapter": "generic", "priority": 0.7 },
+
     { "url": "https://www.miamiherald.com/topics/jeffrey-epstein", "adapter": "news", "priority": 0.8 },
     { "url": "https://www.thedailybeast.com/tag/jeffrey-epstein", "adapter": "news", "priority": 0.7 },
     { "url": "https://www.courthousenews.com/?s=epstein", "adapter": "news", "priority": 0.75 },
@@ -126,7 +139,15 @@
     "Epstein estate probate Virgin Islands",
     "JPMorgan Epstein unsealed documents",
     "Epstein financial transactions Deutsche Bank",
-    "House Oversight Epstein bank subpoena records"
+    "House Oversight Epstein bank subpoena records",
+    "Epstein Files Transparency Act DOJ release 2025",
+    "Epstein estate documents probate USVI 2024",
+    "Leon Black Apollo Epstein settlement",
+    "Les Wexner Epstein connection documents",
+    "Jean-Luc Brunel Epstein trafficking France",
+    "Epstein Palm Beach police report original",
+    "CBP travel records Epstein private jet",
+    "Epstein victim compensation fund claims"
   ],
   "keywords": {
     "primary": ["epstein", "ghislaine maxwell", "jeffrey epstein"],

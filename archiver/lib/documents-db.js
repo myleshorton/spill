@@ -146,6 +146,46 @@ class DocumentsDatabase {
       CREATE INDEX IF NOT EXISTS idx_doc_entities_ent ON document_entities(entity_id);
     `)
 
+    // Entity metadata columns
+    const entityCols = this.db.prepare("PRAGMA table_info('entities')").all()
+    const entityColNames = new Set(entityCols.map(c => c.name))
+    if (!entityColNames.has('description')) {
+      this.db.exec('ALTER TABLE entities ADD COLUMN description TEXT')
+    }
+    if (!entityColNames.has('aliases')) {
+      this.db.exec("ALTER TABLE entities ADD COLUMN aliases TEXT DEFAULT '[]'")
+    }
+    if (!entityColNames.has('photo_url')) {
+      this.db.exec('ALTER TABLE entities ADD COLUMN photo_url TEXT')
+    }
+    if (!entityColNames.has('external_urls')) {
+      this.db.exec("ALTER TABLE entities ADD COLUMN external_urls TEXT DEFAULT '{}'")
+    }
+    if (!entityColNames.has('enrichment_attempted')) {
+      this.db.exec('ALTER TABLE entities ADD COLUMN enrichment_attempted INTEGER DEFAULT 0')
+    }
+
+    // Typed relationships between entities
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS entity_relationships (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        source_entity_id INTEGER NOT NULL,
+        target_entity_id INTEGER NOT NULL,
+        relationship_type TEXT NOT NULL,
+        description TEXT,
+        source_document_id TEXT,
+        created_at INTEGER,
+        FOREIGN KEY (source_entity_id) REFERENCES entities(id),
+        FOREIGN KEY (target_entity_id) REFERENCES entities(id),
+        FOREIGN KEY (source_document_id) REFERENCES documents(id),
+        UNIQUE(source_entity_id, target_entity_id, relationship_type)
+      );
+      CREATE INDEX IF NOT EXISTS idx_er_source ON entity_relationships(source_entity_id);
+      CREATE INDEX IF NOT EXISTS idx_er_target ON entity_relationships(target_entity_id);
+      CREATE INDEX IF NOT EXISTS idx_er_type ON entity_relationships(relationship_type);
+      CREATE INDEX IF NOT EXISTS idx_er_doc ON entity_relationships(source_document_id);
+    `)
+
     // Financial records table
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS financial_records (
@@ -498,7 +538,7 @@ class DocumentsDatabase {
 
   getEntityDocuments (entityId, limit = 50, offset = 0) {
     const rows = this.db.prepare(`
-      SELECT d.id, d.title, d.file_name, d.data_set, d.content_type, d.category, de.mention_count
+      SELECT d.*, de.mention_count
       FROM document_entities de
       JOIN documents d ON d.id = de.document_id
       WHERE de.entity_id = ?
@@ -534,6 +574,154 @@ class DocumentsDatabase {
     sql += ' GROUP BY e.id ORDER BY document_count DESC LIMIT ?'
     params.push(limit)
     return this.db.prepare(sql).all(...params)
+  }
+
+  getEntity (id) {
+    return this.db.prepare(`
+      SELECT e.id, e.name, e.type, e.normalized_name,
+             e.description, e.aliases, e.photo_url, e.external_urls,
+             COUNT(de.document_id) as document_count
+      FROM entities e LEFT JOIN document_entities de ON de.entity_id = e.id
+      WHERE e.id = ? GROUP BY e.id
+    `).get(id)
+  }
+
+  getRelatedEntities (entityId, limit = 20) {
+    return this.db.prepare(`
+      SELECT e.id, e.name, e.type, COUNT(DISTINCT de2.document_id) as shared_documents
+      FROM document_entities de1
+      JOIN document_entities de2 ON de1.document_id = de2.document_id AND de2.entity_id != de1.entity_id
+      JOIN entities e ON e.id = de2.entity_id
+      WHERE de1.entity_id = ?
+      GROUP BY e.id ORDER BY shared_documents DESC LIMIT ?
+    `).all(entityId, limit)
+  }
+
+  searchEntities (query, type, limit = 50, offset = 0) {
+    const conditions = []
+    const params = []
+
+    if (query) {
+      conditions.push('e.name LIKE ?')
+      params.push(`%${query}%`)
+    }
+    if (type) {
+      conditions.push('e.type = ?')
+      params.push(type)
+    }
+
+    const where = conditions.length > 0 ? 'WHERE ' + conditions.join(' AND ') : ''
+
+    const total = this.db.prepare(`
+      SELECT COUNT(*) as count FROM entities e
+      JOIN document_entities de ON de.entity_id = e.id
+      ${where}
+    `).get(...params).count
+
+    const rows = this.db.prepare(`
+      SELECT e.id, e.name, e.type, e.normalized_name, e.description,
+             COUNT(de.document_id) as document_count
+      FROM entities e
+      JOIN document_entities de ON de.entity_id = e.id
+      ${where}
+      GROUP BY e.id ORDER BY document_count DESC LIMIT ? OFFSET ?
+    `).all(...params, limit, offset)
+
+    return { entities: rows, total }
+  }
+
+  // --- Entity enrichment methods ---
+
+  updateEntityMetadata (id, { description, aliases, photoUrl, externalUrls }) {
+    this.db.prepare(`
+      UPDATE entities SET description = ?, aliases = ?, photo_url = ?, external_urls = ?
+      WHERE id = ?
+    `).run(
+      description || null,
+      JSON.stringify(aliases || []),
+      photoUrl || null,
+      JSON.stringify(externalUrls || {}),
+      id
+    )
+  }
+
+  markEntityEnriched (id) {
+    this.db.prepare('UPDATE entities SET enrichment_attempted = 1 WHERE id = ?').run(id)
+  }
+
+  getUnenrichedEntities (limit = 50) {
+    return this.db.prepare(`
+      SELECT e.id, e.name, e.type, e.normalized_name, COUNT(de.document_id) as document_count
+      FROM entities e
+      JOIN document_entities de ON de.entity_id = e.id
+      WHERE e.enrichment_attempted = 0
+      GROUP BY e.id ORDER BY document_count DESC LIMIT ?
+    `).all(limit)
+  }
+
+  upsertEntityRelationship (sourceId, targetId, type, description, docId) {
+    this.db.prepare(`
+      INSERT INTO entity_relationships (source_entity_id, target_entity_id, relationship_type, description, source_document_id, created_at)
+      VALUES (?, ?, ?, ?, ?, ?)
+      ON CONFLICT(source_entity_id, target_entity_id, relationship_type) DO UPDATE SET
+        description = excluded.description,
+        source_document_id = excluded.source_document_id
+    `).run(sourceId, targetId, type, description || null, docId || null, Date.now())
+  }
+
+  getEntityRelationships (entityId, limit = 50) {
+    return this.db.prepare(`
+      SELECT r.id, r.relationship_type, r.description, r.source_document_id,
+             r.source_entity_id, r.target_entity_id,
+             CASE WHEN r.source_entity_id = ? THEN 'outgoing' ELSE 'incoming' END as direction,
+             CASE WHEN r.source_entity_id = ? THEN t.id ELSE s.id END as other_id,
+             CASE WHEN r.source_entity_id = ? THEN t.name ELSE s.name END as other_name,
+             CASE WHEN r.source_entity_id = ? THEN t.type ELSE s.type END as other_type
+      FROM entity_relationships r
+      JOIN entities s ON s.id = r.source_entity_id
+      JOIN entities t ON t.id = r.target_entity_id
+      WHERE r.source_entity_id = ? OR r.target_entity_id = ?
+      ORDER BY r.relationship_type ASC
+      LIMIT ?
+    `).all(entityId, entityId, entityId, entityId, entityId, entityId, limit)
+  }
+
+  getRelationshipTypes () {
+    return this.db.prepare(`
+      SELECT relationship_type, COUNT(*) as count
+      FROM entity_relationships
+      GROUP BY relationship_type ORDER BY count DESC
+    `).all()
+  }
+
+  getEntityDocumentTexts (entityId, limit = 5, maxChars = 3000) {
+    const rows = this.db.prepare(`
+      SELECT d.id, d.title, d.extracted_text, d.transcript
+      FROM document_entities de
+      JOIN documents d ON d.id = de.document_id
+      WHERE de.entity_id = ?
+      AND (d.extracted_text IS NOT NULL OR d.transcript IS NOT NULL)
+      ORDER BY de.mention_count DESC
+      LIMIT ?
+    `).all(entityId, limit)
+    return rows.map(r => ({
+      id: r.id,
+      title: r.title,
+      text: (r.extracted_text || r.transcript || '').slice(0, maxChars)
+    }))
+  }
+
+  getCooccurringEntities (entityId, limit = 10) {
+    return this.db.prepare(`
+      SELECT e.id, e.name, e.type,
+             COUNT(DISTINCT de2.document_id) as shared_documents,
+             GROUP_CONCAT(DISTINCT de2.document_id) as shared_doc_ids
+      FROM document_entities de1
+      JOIN document_entities de2 ON de1.document_id = de2.document_id AND de2.entity_id != de1.entity_id
+      JOIN entities e ON e.id = de2.entity_id
+      WHERE de1.entity_id = ?
+      GROUP BY e.id ORDER BY shared_documents DESC LIMIT ?
+    `).all(entityId, limit)
   }
 
   markEntityScanned (id) {
@@ -665,11 +853,17 @@ class DocumentsDatabase {
       conditions.push(`title NOT LIKE '%${kw.replace(/'/g, "''")}%'`)
     }
 
+    const excludeIds = photoCfg?.excludeIds || []
+    if (excludeIds.length > 0) {
+      const placeholders = excludeIds.map(() => '?').join(', ')
+      conditions.push(`id NOT IN (${placeholders})`)
+    }
+
     const where = 'WHERE ' + conditions.join(' AND ')
-    const total = this.db.prepare(`SELECT COUNT(*) as count FROM documents ${where}`).get()
+    const total = this.db.prepare(`SELECT COUNT(*) as count FROM documents ${where}`).get(...excludeIds)
     const rows = this.db.prepare(
       `SELECT * FROM documents ${where} ORDER BY created_at DESC LIMIT ? OFFSET ?`
-    ).all(limit, offset)
+    ).all(...excludeIds, limit, offset)
 
     return { documents: rows, total: total.count }
   }

@@ -1,7 +1,7 @@
 export const siteConfig = {
   name: 'Epstein Files',
   subtitle: 'Public Archive',
-  badge: 'ARCHIVE',
+  badge: 'UNREDACTED',
   siteUrl: 'https://unredact.org',
 
   meta: {
@@ -14,8 +14,8 @@ export const siteConfig = {
   },
 
   hero: {
-    heading: 'Epstein Files',
-    headingAccent: 'Public Archive',
+    heading: 'THEY BURIED THE EVIDENCE.',
+    headingAccent: 'WE DUG IT UP.',
     description:
       "Searchable, censorship-resistant archive of the DOJ's Jeffrey Epstein document releases. Court records, FBI reports, emails, financial documents, and seized media \u2014 all indexed and freely accessible. Our crawler continuously discovers and indexes new Epstein-related documents from court filings, government sites, and public archives.",
   },

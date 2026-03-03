@@ -31,7 +31,8 @@
     "photos": {
       "includeKeywords": ["nude", "nudity", "naked", "undress"],
       "excludeKeywords": ["museum", "artwork", "painting", "sculpture", "gallery", "art studio"],
-      "excludeTitleKeywords": ["museum", "artwork"]
+      "excludeTitleKeywords": ["museum", "artwork"],
+      "excludeIds": ["4f0c29ca1a8b935d"]
     },
     "videos": {
       "requireTranscript": true,

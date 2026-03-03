@@ -185,6 +185,128 @@ function createUsersRouter (docsDb, usersDb) {
     res.json({ documents })
   })
 
+  // Toggle star on a document
+  router.post('/documents/:id/star', identify, (req, res) => {
+    const docId = req.params.id
+    const doc = docsDb.get(docId)
+    if (!doc) {
+      return res.status(404).json({ error: 'Document not found' })
+    }
+    const result = usersDb.toggleFavorite(req.userId, docId)
+    res.json(result)
+  })
+
+  // Get star status for a document
+  router.get('/documents/:id/star', identify, (req, res) => {
+    const docId = req.params.id
+    const starred = usersDb.isFavorited(req.userId, docId)
+    const count = usersDb.getFavoriteCount(docId)
+    res.json({ starred, count })
+  })
+
+  // Get comments for a document (public)
+  router.get('/documents/:id/comments', (req, res) => {
+    const docId = req.params.id
+    const limit = Math.min(parseInt(req.query.limit) || 50, 100)
+    const offset = parseInt(req.query.offset) || 0
+    const userId = req.headers['x-user-id'] || null
+    const { comments, total } = usersDb.getComments(docId, limit, offset)
+    const mapped = comments.map(c => ({
+      id: c.id,
+      documentId: c.document_id,
+      displayName: c.display_name,
+      body: c.body,
+      createdAt: c.created_at,
+      updatedAt: c.updated_at,
+      isOwn: userId ? c.user_id === userId : false
+    }))
+    res.json({ comments: mapped, total })
+  })
+
+  // Add a comment (requires email-verified user)
+  router.post('/documents/:id/comments', express.json(), identify, (req, res) => {
+    const docId = req.params.id
+    const doc = docsDb.get(docId)
+    if (!doc) {
+      return res.status(404).json({ error: 'Document not found' })
+    }
+
+    const user = usersDb.db.prepare('SELECT * FROM users WHERE id = ?').get(req.userId)
+    if (!user || !user.email) {
+      return res.status(403).json({ error: 'Email verification required to comment' })
+    }
+
+    const { body, displayName } = req.body || {}
+    if (!body || typeof body !== 'string' || body.trim().length === 0) {
+      return res.status(400).json({ error: 'Comment body is required' })
+    }
+    if (!displayName || typeof displayName !== 'string' || displayName.trim().length === 0) {
+      return res.status(400).json({ error: 'Display name is required' })
+    }
+
+    const comment = usersDb.addComment(docId, req.userId, displayName.trim(), body.trim())
+    res.json({
+      id: comment.id,
+      documentId: comment.document_id,
+      displayName: comment.display_name,
+      body: comment.body,
+      createdAt: comment.created_at,
+      updatedAt: comment.updated_at,
+      isOwn: true
+    })
+  })
+
+  // Edit own comment
+  router.put('/comments/:id', express.json(), identify, (req, res) => {
+    const commentId = parseInt(req.params.id)
+    if (isNaN(commentId)) {
+      return res.status(400).json({ error: 'Invalid comment ID' })
+    }
+    const { body } = req.body || {}
+    if (!body || typeof body !== 'string' || body.trim().length === 0) {
+      return res.status(400).json({ error: 'Comment body is required' })
+    }
+    const updated = usersDb.updateComment(commentId, req.userId, body.trim())
+    if (!updated) {
+      return res.status(404).json({ error: 'Comment not found or not owned by you' })
+    }
+    res.json({
+      id: updated.id,
+      documentId: updated.document_id,
+      displayName: updated.display_name,
+      body: updated.body,
+      createdAt: updated.created_at,
+      updatedAt: updated.updated_at,
+      isOwn: true
+    })
+  })
+
+  // Delete own comment
+  router.delete('/comments/:id', identify, (req, res) => {
+    const commentId = parseInt(req.params.id)
+    if (isNaN(commentId)) {
+      return res.status(400).json({ error: 'Invalid comment ID' })
+    }
+    const deleted = usersDb.deleteComment(commentId, req.userId)
+    if (!deleted) {
+      return res.status(404).json({ error: 'Comment not found or not owned by you' })
+    }
+    res.json({ ok: true })
+  })
+
+  // Get user's starred document IDs
+  router.get('/stars', identify, (req, res) => {
+    const limit = Math.min(parseInt(req.query.limit) || 50, 100)
+    const offset = parseInt(req.query.offset) || 0
+    const docIds = usersDb.getUserFavorites(req.userId, limit, offset)
+    const documents = docIds.map(id => {
+      const row = docsDb.get(id)
+      if (!row) return null
+      return rowToDoc(row)
+    }).filter(Boolean)
+    res.json({ documents })
+  })
+
   // Request magic link
   router.post('/auth/magic-link', express.json(), identify, async (req, res) => {
     const { email } = req.body || {}

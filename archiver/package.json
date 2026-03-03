@@ -19,6 +19,7 @@
     "meilisearch": "^0.41.0",
     "multer": "^1.4.5-lts.1",
     "parse-torrent": "^9.1.5",
-    "protomux": "^3.0.0"
+    "protomux": "^3.0.0",
+    "@anthropic-ai/sdk": "^0.78.0"
   }
 }

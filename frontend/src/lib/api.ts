@@ -207,6 +207,21 @@ export async function listCollections(): Promise<Collection[]> {
   return res.json()
 }
 
+export interface Comment {
+  id: number
+  documentId: string
+  displayName: string
+  body: string
+  createdAt: number
+  updatedAt: number | null
+  isOwn: boolean
+}
+
+export interface StarStatus {
+  starred: boolean
+  count: number
+}
+
 export interface SimilarDocument extends Document {
   similarityScore: number
 }
@@ -405,7 +420,64 @@ export async function getTopEntities(type?: string, limit?: number): Promise<Ent
   return data.entities || []
 }
 
-export async function getEntityDocuments(entityId: number, limit = 50, offset = 0): Promise<{ documents: { id: string; title: string; fileName: string; dataSet: number; contentType: string; category: string | null; mentionCount: number }[]; total: number }> {
+export interface EntityDetail {
+  id: number
+  name: string
+  type: string
+  normalizedName: string
+  documentCount: number
+  description: string | null
+  aliases: string[]
+  photoUrl: string | null
+  externalUrls: Record<string, string>
+}
+
+export interface EntityRelationship {
+  id: number
+  relationshipType: string
+  description: string | null
+  sourceDocumentId: string | null
+  direction: 'outgoing' | 'incoming'
+  otherEntity: { id: number; name: string; type: string }
+}
+
+export interface RelatedEntity {
+  id: number
+  name: string
+  type: string
+  sharedDocuments: number
+}
+
+export async function getEntity(id: number): Promise<EntityDetail | null> {
+  const res = await fetch(`${API_BASE}/entities/${id}`)
+  if (!res.ok) return null
+  return res.json()
+}
+
+export async function getRelatedEntities(entityId: number, limit = 20): Promise<RelatedEntity[]> {
+  const res = await fetch(`${API_BASE}/entities/${entityId}/related?limit=${limit}`)
+  if (!res.ok) return []
+  const data = await res.json()
+  return data.entities || []
+}
+
+export async function searchEntities(params: {
+  q?: string
+  type?: string
+  limit?: number
+  offset?: number
+} = {}): Promise<{ entities: EntityDetail[]; total: number }> {
+  const searchParams = new URLSearchParams()
+  if (params.q) searchParams.set('q', params.q)
+  if (params.type) searchParams.set('type', params.type)
+  if (params.limit) searchParams.set('limit', String(params.limit))
+  if (params.offset) searchParams.set('offset', String(params.offset))
+  const res = await fetch(`${API_BASE}/entities/search?${searchParams}`)
+  if (!res.ok) return { entities: [], total: 0 }
+  return res.json()
+}
+
+export async function getEntityDocuments(entityId: number, limit = 50, offset = 0): Promise<{ documents: (Document & { mentionCount: number })[]; total: number }> {
   const res = await fetch(`${API_BASE}/entities/${entityId}/documents?limit=${limit}&offset=${offset}`)
   if (!res.ok) return { documents: [], total: 0 }
   return res.json()
@@ -415,6 +487,20 @@ export async function getEntityGraph(minShared = 2, limit = 100): Promise<Entity
   const res = await fetch(`${API_BASE}/entities/graph?minShared=${minShared}&limit=${limit}`)
   if (!res.ok) return { nodes: [], edges: [] }
   return res.json()
+}
+
+export async function getEntityRelationships(entityId: number, limit = 50): Promise<EntityRelationship[]> {
+  const res = await fetch(`${API_BASE}/entities/${entityId}/relationships?limit=${limit}`)
+  if (!res.ok) return []
+  const data = await res.json()
+  return data.relationships || []
+}
+
+export async function getRelationshipTypes(): Promise<{ type: string; count: number }[]> {
+  const res = await fetch(`${API_BASE}/entities/relationship-types`)
+  if (!res.ok) return []
+  const data = await res.json()
+  return data.types || []
 }
 
 // --- Feature 4: Financial ---
@@ -468,4 +554,160 @@ export async function getFinancialRecords(params: {
   const res = await fetch(`${API_BASE}/analysis/financial/records?${searchParams}`)
   if (!res.ok) return { records: [], total: 0 }
   return res.json()
+}
+
+// --- Stars & Comments ---
+
+export async function toggleStar(docId: string): Promise<StarStatus> {
+  const res = await fetchWithUser(`${API_BASE}/documents/${docId}/star`, { method: 'POST' })
+  if (!res.ok) throw new Error(`Star toggle failed: ${res.status}`)
+  return res.json()
+}
+
+export async function getStarStatus(docId: string): Promise<StarStatus> {
+  const res = await fetchWithUser(`${API_BASE}/documents/${docId}/star`)
+  if (!res.ok) return { starred: false, count: 0 }
+  return res.json()
+}
+
+export async function getComments(docId: string, limit = 50, offset = 0): Promise<{ comments: Comment[]; total: number }> {
+  const res = await fetchWithUser(`${API_BASE}/documents/${docId}/comments?limit=${limit}&offset=${offset}`)
+  if (!res.ok) return { comments: [], total: 0 }
+  return res.json()
+}
+
+export async function addComment(docId: string, body: string, displayName: string): Promise<Comment> {
+  const res = await fetchWithUser(`${API_BASE}/documents/${docId}/comments`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ body, displayName }),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: 'Failed' }))
+    throw new Error(err.error || `Comment failed: ${res.status}`)
+  }
+  return res.json()
+}
+
+export async function updateComment(commentId: number, body: string): Promise<Comment> {
+  const res = await fetchWithUser(`${API_BASE}/comments/${commentId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ body }),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: 'Failed' }))
+    throw new Error(err.error || `Update failed: ${res.status}`)
+  }
+  return res.json()
+}
+
+export async function deleteComment(commentId: number): Promise<void> {
+  const res = await fetchWithUser(`${API_BASE}/comments/${commentId}`, { method: 'DELETE' })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: 'Failed' }))
+    throw new Error(err.error || `Delete failed: ${res.status}`)
+  }
+}
+
+export async function getStarredDocuments(limit = 50, offset = 0): Promise<{ documents: Document[] }> {
+  const res = await fetchWithUser(`${API_BASE}/stars?limit=${limit}&offset=${offset}`)
+  if (!res.ok) return { documents: [] }
+  return res.json()
+}
+
+// --- Chat / RAG ---
+
+export interface ChatSource {
+  id: string
+  title: string
+  contentType: string
+  category: string | null
+}
+
+export interface ChatMessage {
+  role: 'user' | 'assistant'
+  content: string
+  sources?: ChatSource[]
+}
+
+export async function streamChat(
+  query: string,
+  history: ChatMessage[],
+  onSources: (sources: ChatSource[]) => void,
+  onDelta: (text: string) => void,
+  onDone: (usage: Record<string, number>) => void,
+  onError: (error: string) => void,
+  signal?: AbortSignal
+): Promise<void> {
+  const res = await fetch(`${API_BASE}/chat`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      query,
+      history: history.map(m => ({ role: m.role, content: m.content }))
+    }),
+    signal
+  })
+
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({ error: 'Request failed' }))
+    onError(data.error || `Request failed: ${res.status}`)
+    return
+  }
+
+  // If response is JSON (no-docs case), handle it
+  const contentType = res.headers.get('content-type') || ''
+  if (contentType.includes('application/json')) {
+    const data = await res.json()
+    if (data.type === 'error') {
+      onError(data.error)
+    }
+    return
+  }
+
+  // Parse SSE stream
+  const reader = res.body?.getReader()
+  if (!reader) {
+    onError('No response body')
+    return
+  }
+
+  const decoder = new TextDecoder()
+  let buffer = ''
+
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done) break
+
+    buffer += decoder.decode(value, { stream: true })
+    const lines = buffer.split('\n')
+    buffer = lines.pop() || ''
+
+    for (const line of lines) {
+      if (!line.startsWith('data: ')) continue
+      const jsonStr = line.slice(6)
+      if (!jsonStr) continue
+
+      try {
+        const event = JSON.parse(jsonStr)
+        switch (event.type) {
+          case 'sources':
+            onSources(event.sources)
+            break
+          case 'delta':
+            onDelta(event.text)
+            break
+          case 'done':
+            onDone(event.usage || {})
+            break
+          case 'error':
+            onError(event.error)
+            break
+        }
+      } catch {
+        // skip malformed JSON
+      }
+    }
+  }
 }

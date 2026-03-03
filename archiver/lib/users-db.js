@@ -40,9 +40,29 @@ class UsersDatabase {
         used INTEGER DEFAULT 0
       );
 
+      CREATE TABLE IF NOT EXISTS favorites (
+        user_id TEXT NOT NULL,
+        document_id TEXT NOT NULL,
+        created_at INTEGER,
+        PRIMARY KEY (user_id, document_id)
+      );
+
+      CREATE TABLE IF NOT EXISTS comments (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        document_id TEXT NOT NULL,
+        user_id TEXT NOT NULL,
+        display_name TEXT NOT NULL,
+        body TEXT NOT NULL,
+        created_at INTEGER,
+        updated_at INTEGER
+      );
+
       CREATE INDEX IF NOT EXISTS idx_views_user ON view_history(user_id);
       CREATE INDEX IF NOT EXISTS idx_views_doc ON view_history(document_id);
       CREATE INDEX IF NOT EXISTS idx_views_time ON view_history(viewed_at);
+      CREATE INDEX IF NOT EXISTS idx_fav_doc ON favorites(document_id);
+      CREATE INDEX IF NOT EXISTS idx_comments_doc ON comments(document_id);
+      CREATE INDEX IF NOT EXISTS idx_comments_user ON comments(user_id);
     `)
   }
 
@@ -96,6 +116,82 @@ class UsersDatabase {
     if (Date.now() > link.expires_at) return null
     this.db.prepare('UPDATE magic_links SET used = 1 WHERE token = ?').run(token)
     return link
+  }
+
+  toggleFavorite (userId, docId) {
+    const existing = this.db.prepare(
+      'SELECT 1 FROM favorites WHERE user_id = ? AND document_id = ?'
+    ).get(userId, docId)
+    if (existing) {
+      this.db.prepare('DELETE FROM favorites WHERE user_id = ? AND document_id = ?').run(userId, docId)
+    } else {
+      this.db.prepare(
+        'INSERT INTO favorites (user_id, document_id, created_at) VALUES (?, ?, ?)'
+      ).run(userId, docId, Date.now())
+    }
+    const starred = !existing
+    const count = this.getFavoriteCount(docId)
+    return { starred, count }
+  }
+
+  isFavorited (userId, docId) {
+    return !!this.db.prepare(
+      'SELECT 1 FROM favorites WHERE user_id = ? AND document_id = ?'
+    ).get(userId, docId)
+  }
+
+  getFavoriteCount (docId) {
+    const row = this.db.prepare(
+      'SELECT COUNT(*) as cnt FROM favorites WHERE document_id = ?'
+    ).get(docId)
+    return row.cnt
+  }
+
+  getUserFavorites (userId, limit = 50, offset = 0) {
+    return this.db.prepare(
+      'SELECT document_id FROM favorites WHERE user_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?'
+    ).all(userId, limit, offset).map(r => r.document_id)
+  }
+
+  addComment (docId, userId, displayName, body) {
+    const now = Date.now()
+    const info = this.db.prepare(
+      'INSERT INTO comments (document_id, user_id, display_name, body, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)'
+    ).run(docId, userId, displayName, body, now, null)
+    return this.db.prepare('SELECT * FROM comments WHERE id = ?').get(info.lastInsertRowid)
+  }
+
+  getComments (docId, limit = 50, offset = 0) {
+    const comments = this.db.prepare(
+      'SELECT * FROM comments WHERE document_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?'
+    ).all(docId, limit, offset)
+    const total = this.db.prepare(
+      'SELECT COUNT(*) as cnt FROM comments WHERE document_id = ?'
+    ).get(docId).cnt
+    return { comments, total }
+  }
+
+  updateComment (commentId, userId, body) {
+    const comment = this.db.prepare('SELECT * FROM comments WHERE id = ?').get(commentId)
+    if (!comment) return null
+    if (comment.user_id !== userId) return null
+    this.db.prepare('UPDATE comments SET body = ?, updated_at = ? WHERE id = ?').run(body, Date.now(), commentId)
+    return this.db.prepare('SELECT * FROM comments WHERE id = ?').get(commentId)
+  }
+
+  deleteComment (commentId, userId) {
+    const comment = this.db.prepare('SELECT * FROM comments WHERE id = ?').get(commentId)
+    if (!comment) return false
+    if (comment.user_id !== userId) return false
+    this.db.prepare('DELETE FROM comments WHERE id = ?').run(commentId)
+    return true
+  }
+
+  getCommentCount (docId) {
+    const row = this.db.prepare(
+      'SELECT COUNT(*) as cnt FROM comments WHERE document_id = ?'
+    ).get(docId)
+    return row.cnt
   }
 
   close () {

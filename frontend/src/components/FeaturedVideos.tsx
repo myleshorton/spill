@@ -2,8 +2,8 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
-import { Video, Play, ChevronLeft, ChevronRight } from 'lucide-react'
-import { getFeaturedVideos, thumbnailUrl, formatFileSize, type Document } from '@/lib/api'
+import { ChevronLeft, ChevronRight, Image } from 'lucide-react'
+import { getFeaturedPhotos, thumbnailUrl, formatFileSize, type Document } from '@/lib/api'
 import { docHrefWithContext } from '@/lib/result-set'
 
 const PAGE_SIZE = 6
@@ -16,7 +16,7 @@ export default function FeaturedVideos() {
 
   const load = useCallback((newOffset: number) => {
     setLoading(true)
-    getFeaturedVideos({ limit: PAGE_SIZE, offset: newOffset })
+    getFeaturedPhotos({ limit: PAGE_SIZE, offset: newOffset })
       .then((data) => {
         setDocs(data.documents)
         setTotal(data.total)
@@ -37,35 +37,36 @@ export default function FeaturedVideos() {
   const hasNext = offset + PAGE_SIZE < total
 
   return (
-    <section className="mx-auto max-w-7xl px-4 pb-12 sm:px-6">
-      <div className="flex items-center justify-between mb-1">
-        <div className="flex items-center gap-2">
-          <Video className="h-4 w-4 text-spill-accent" />
-          <h2 className="font-headline text-xl font-bold text-spill-text-primary">Featured Videos</h2>
-          {total > 0 && (
-            <span className="text-xs text-spill-text-secondary">({total})</span>
+    <section className="relative border-y border-spill-divider bg-[#0D0D0D] py-10">
+      <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'6\' height=\'6\' viewBox=\'0 0 6 6\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'%23ffffff\' fill-opacity=\'1\'%3E%3Ccircle cx=\'1\' cy=\'1\' r=\'0.6\'/%3E%3C/g%3E%3C/svg%3E")', backgroundSize: '6px 6px' }} />
+      <div className="relative mx-auto max-w-7xl px-4 sm:px-6">
+        <div className="flex items-end justify-between mb-1">
+          <div>
+            <h2 className="font-serif text-2xl italic text-spill-text-primary">Featured Photos</h2>
+            {total > 0 && (
+              <span className="text-xs text-spill-text-secondary">{total} images from the archive</span>
+            )}
+          </div>
+          {total > PAGE_SIZE && (
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => load(Math.max(0, offset - PAGE_SIZE))}
+                disabled={!hasPrev || loading}
+                className="rounded p-1.5 text-spill-text-secondary transition-colors hover:text-spill-accent disabled:opacity-30 disabled:cursor-not-allowed"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => load(offset + PAGE_SIZE)}
+                disabled={!hasNext || loading}
+                className="rounded p-1.5 text-spill-text-secondary transition-colors hover:text-spill-accent disabled:opacity-30 disabled:cursor-not-allowed"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
           )}
         </div>
-        {total > PAGE_SIZE && (
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => load(Math.max(0, offset - PAGE_SIZE))}
-              disabled={!hasPrev || loading}
-              className="rounded p-1.5 text-spill-text-secondary transition-colors hover:text-spill-accent disabled:opacity-30 disabled:cursor-not-allowed"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </button>
-            <button
-              onClick={() => load(offset + PAGE_SIZE)}
-              disabled={!hasNext || loading}
-              className="rounded p-1.5 text-spill-text-secondary transition-colors hover:text-spill-accent disabled:opacity-30 disabled:cursor-not-allowed"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </button>
-          </div>
-        )}
-      </div>
-      <p className="text-sm text-spill-text-secondary mb-6">Depositions, interviews, and news clips from the archive</p>
+        <div className="mb-6 h-px bg-gradient-to-r from-spill-accent/40 via-spill-divider to-transparent" />
 
       {loading ? (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -82,20 +83,21 @@ export default function FeaturedVideos() {
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {docs.map((doc, i) => (
-            <VideoCard key={doc.id} doc={doc} index={i} offset={offset} total={total} />
+            <PhotoCard key={doc.id} doc={doc} index={i} offset={offset} total={total} />
           ))}
         </div>
       )}
+      </div>
     </section>
   )
 }
 
-function VideoCard({ doc, index, offset, total }: { doc: Document; index: number; offset: number; total: number }) {
+function PhotoCard({ doc, index, offset, total }: { doc: Document; index: number; offset: number; total: number }) {
   const [thumbError, setThumbError] = useState(false)
 
   return (
     <Link
-      href={docHrefWithContext(doc.id, { type: 'featured-videos', pos: offset + index, total })}
+      href={docHrefWithContext(doc.id, { type: 'featured-photos', pos: offset + index, total })}
       className="group animate-fade-in overflow-hidden rounded-lg border border-spill-divider bg-spill-surface transition-all hover:border-spill-accent/30 hover:shadow-lg hover:shadow-spill-accent/5"
       style={{ animationDelay: `${index * 50}ms` }}
     >
@@ -110,22 +112,17 @@ function VideoCard({ doc, index, offset, total }: { doc: Document; index: number
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center">
-            <Video className="h-10 w-10 text-spill-text-secondary/30" />
+            <Image className="h-10 w-10 text-spill-text-secondary/30" />
           </div>
         )}
-        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/20">
-          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-black/60 backdrop-blur-sm">
-            <Play className="h-5 w-5 text-white ml-0.5" />
-          </div>
-        </div>
         <div className="absolute bottom-2 left-2">
           <span className="rounded bg-black/70 px-1.5 py-0.5 font-mono text-[10px] uppercase text-spill-accent backdrop-blur-sm">
-            video
+            photo
           </span>
         </div>
       </div>
       <div className="p-3">
-        <p className="line-clamp-2 text-sm font-medium text-spill-text-primary group-hover:text-spill-accent transition-colors">
+        <p className="line-clamp-2 font-serif text-sm text-spill-text-primary group-hover:text-spill-accent transition-colors">
           {doc.title}
         </p>
         <div className="mt-1.5 flex items-center gap-2 text-xs text-spill-text-secondary">

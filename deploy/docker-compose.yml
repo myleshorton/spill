@@ -20,6 +20,7 @@ services:
       - MEILI_API_KEY=${MEILI_API_KEY:-}
       - DOMAIN=${DOMAIN:-localhost}
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
       - WHISPER_CPP_PATH=/usr/local/bin/whisper-cpp
       - WHISPER_MODEL_PATH=/models/ggml-base.en-q5_1.bin
       - WHISPER_THREADS=${WHISPER_THREADS:-8}
@@ -89,6 +90,8 @@ services:
     build:
       context: ..
       dockerfile: deploy/Dockerfile.crawler
+      args:
+        SEEDS_FILE: ${SEEDS_FILE:-sites/epstein/seeds.json}
     volumes:
       - content-data:/data
       - archiver-data:/app/archiver/data
@@ -102,6 +105,8 @@ services:
       - MEILI_API_KEY=${MEILI_API_KEY:-}
       - DOMAIN=${DOMAIN:-localhost}
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - COURTLISTENER_TOKEN=${COURTLISTENER_TOKEN:-}
+      - BRAVE_SEARCH_API_KEY=${BRAVE_SEARCH_API_KEY:-}
     depends_on:
       - meilisearch
     restart: unless-stopped

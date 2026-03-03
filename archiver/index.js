@@ -20,6 +20,7 @@ const UploadProcessor = require('./lib/upload-processor')
 const createUploadRouter = require('./lib/upload-api')
 const UsersDatabase = require('./lib/users-db')
 const createUsersRouter = require('./lib/users-api')
+const createChatRouter = require('./lib/chat-api')
 
 const DATA_DIR = path.join(__dirname, 'data')
 const CONTENT_DIR = path.join(DATA_DIR, 'content')
@@ -79,6 +80,9 @@ async function main () {
 
   // Users & recommendations API
   app.use('/api', createUsersRouter(docsDb, usersDb))
+
+  // Chat / RAG API
+  app.use('/api', createChatRouter(docsDb, searchIndex))
 
   // Serve Flutter web app (static files)
   app.use(express.static(WEB_DIR))

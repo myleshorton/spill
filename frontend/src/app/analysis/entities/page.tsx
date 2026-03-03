@@ -42,7 +42,7 @@ export default function EntitiesPage() {
               {topPeople.map(e => (
                 <Link
                   key={e.id}
-                  href={`/search?q=${encodeURIComponent(e.name)}`}
+                  href={`/entity/${e.id}`}
                   className="shrink-0 rounded-full bg-blue-500/15 px-2.5 py-1 text-xs font-medium text-blue-400 hover:bg-blue-500/25 transition-colors"
                 >
                   {e.name} <span className="text-blue-400/50">({e.documentCount})</span>
@@ -58,7 +58,7 @@ export default function EntitiesPage() {
               {topOrgs.map(e => (
                 <Link
                   key={e.id}
-                  href={`/search?q=${encodeURIComponent(e.name)}`}
+                  href={`/entity/${e.id}`}
                   className="shrink-0 rounded-full bg-emerald-500/15 px-2.5 py-1 text-xs font-medium text-emerald-400 hover:bg-emerald-500/25 transition-colors"
                 >
                   {e.name} <span className="text-emerald-400/50">({e.documentCount})</span>
@@ -74,7 +74,7 @@ export default function EntitiesPage() {
               {topLocations.map(e => (
                 <Link
                   key={e.id}
-                  href={`/search?q=${encodeURIComponent(e.name)}`}
+                  href={`/entity/${e.id}`}
                   className="shrink-0 rounded-full bg-orange-500/15 px-2.5 py-1 text-xs font-medium text-orange-400 hover:bg-orange-500/25 transition-colors"
                 >
                   {e.name} <span className="text-orange-400/50">({e.documentCount})</span>

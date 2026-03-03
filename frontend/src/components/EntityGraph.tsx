@@ -120,13 +120,13 @@ export default function EntityGraph({ minShared = 2, limit = 100 }: EntityGraphP
             selector: 'node:selected',
             style: {
               'border-width': 3,
-              'border-color': '#00BFA6',
+              'border-color': '#B71C1C',
             }
           },
           {
             selector: '.highlighted',
             style: {
-              'line-color': '#00BFA6',
+              'line-color': '#B71C1C',
               'opacity': 0.8,
             }
           }

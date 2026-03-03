@@ -484,29 +484,6 @@ function createDocumentsRouter (docsDb, searchIndex, archiverRef, torrentManager
     }
   })
 
-  router.get('/entities/:id/documents', (req, res) => {
-    try {
-      const limit = Math.min(parseInt(req.query.limit) || 50, 200)
-      const offset = parseInt(req.query.offset) || 0
-      const result = docsDb.getEntityDocuments(parseInt(req.params.id), limit, offset)
-      res.json({
-        documents: result.documents.map(r => ({
-          id: r.id,
-          title: r.title,
-          fileName: r.file_name,
-          dataSet: r.data_set,
-          contentType: r.content_type,
-          category: r.category,
-          mentionCount: r.mention_count
-        })),
-        total: result.total
-      })
-    } catch (err) {
-      console.error('[docs-api] Entity documents error:', err.message)
-      res.status(500).json({ error: 'Failed to fetch entity documents' })
-    }
-  })
-
   router.get('/entities/graph', (req, res) => {
     try {
       const minShared = parseInt(req.query.minShared) || 2
@@ -536,6 +513,111 @@ function createDocumentsRouter (docsDb, searchIndex, archiverRef, torrentManager
     } catch (err) {
       console.error('[docs-api] Entity graph error:', err.message)
       res.status(500).json({ error: 'Failed to build entity graph' })
+    }
+  })
+
+  router.get('/entities/search', (req, res) => {
+    try {
+      const q = req.query.q || ''
+      const type = req.query.type || undefined
+      const limit = Math.min(parseInt(req.query.limit) || 50, 200)
+      const offset = parseInt(req.query.offset) || 0
+      const result = docsDb.searchEntities(q, type, limit, offset)
+      res.json({
+        entities: result.entities.map(e => ({
+          id: e.id, name: e.name, type: e.type, normalizedName: e.normalized_name,
+          documentCount: e.document_count, description: e.description || null
+        })),
+        total: result.total
+      })
+    } catch (err) {
+      console.error('[docs-api] Entity search error:', err.message)
+      res.status(500).json({ error: 'Failed to search entities' })
+    }
+  })
+
+  router.get('/entities/relationship-types', (req, res) => {
+    try {
+      const types = docsDb.getRelationshipTypes()
+      res.json({ types: types.map(t => ({ type: t.relationship_type, count: t.count })) })
+    } catch (err) {
+      console.error('[docs-api] Relationship types error:', err.message)
+      res.status(500).json({ error: 'Failed to fetch relationship types' })
+    }
+  })
+
+  router.get('/entities/:id', (req, res) => {
+    try {
+      const entity = docsDb.getEntity(parseInt(req.params.id))
+      if (!entity) return res.status(404).json({ error: 'Entity not found' })
+      let aliases = []
+      let externalUrls = {}
+      try { aliases = JSON.parse(entity.aliases || '[]') } catch {}
+      try { externalUrls = JSON.parse(entity.external_urls || '{}') } catch {}
+      res.json({
+        id: entity.id, name: entity.name, type: entity.type,
+        normalizedName: entity.normalized_name, documentCount: entity.document_count,
+        description: entity.description || null,
+        aliases,
+        photoUrl: entity.photo_url || null,
+        externalUrls
+      })
+    } catch (err) {
+      console.error('[docs-api] Entity detail error:', err.message)
+      res.status(500).json({ error: 'Failed to fetch entity' })
+    }
+  })
+
+  router.get('/entities/:id/relationships', (req, res) => {
+    try {
+      const limit = Math.min(parseInt(req.query.limit) || 50, 200)
+      const rows = docsDb.getEntityRelationships(parseInt(req.params.id), limit)
+      res.json({
+        relationships: rows.map(r => ({
+          id: r.id,
+          relationshipType: r.relationship_type,
+          description: r.description || null,
+          sourceDocumentId: r.source_document_id || null,
+          direction: r.direction,
+          otherEntity: { id: r.other_id, name: r.other_name, type: r.other_type }
+        }))
+      })
+    } catch (err) {
+      console.error('[docs-api] Entity relationships error:', err.message)
+      res.status(500).json({ error: 'Failed to fetch relationships' })
+    }
+  })
+
+  router.get('/entities/:id/related', (req, res) => {
+    try {
+      const limit = Math.min(parseInt(req.query.limit) || 20, 100)
+      const related = docsDb.getRelatedEntities(parseInt(req.params.id), limit)
+      res.json({
+        entities: related.map(e => ({
+          id: e.id, name: e.name, type: e.type, sharedDocuments: e.shared_documents
+        }))
+      })
+    } catch (err) {
+      console.error('[docs-api] Related entities error:', err.message)
+      res.status(500).json({ error: 'Failed to fetch related entities' })
+    }
+  })
+
+  router.get('/entities/:id/documents', (req, res) => {
+    try {
+      const limit = Math.min(parseInt(req.query.limit) || 50, 200)
+      const offset = parseInt(req.query.offset) || 0
+      const result = docsDb.getEntityDocuments(parseInt(req.params.id), limit, offset)
+      res.json({
+        documents: result.documents.map(r => ({
+          ...rowToDoc(r),
+          mentionCount: r.mention_count
+        })),
+        total: result.total
+      })
+    } catch (err) {
+      console.error('[docs-api] Entity documents error:', err.message)
+      res.status(500).json({ error: 'Failed to fetch entity documents' })
     }
   })
 

@@ -2,12 +2,11 @@ import Link from 'next/link'
 import { ArrowRight, FileText, Image, Video, Mail, DollarSign, Plane, AlertTriangle, Globe, Users, Search, Shield } from 'lucide-react'
 import Header from '@/components/Header'
 import Footer from '@/components/Footer'
-import SearchBar from '@/components/SearchBar'
+import HeroChat from '@/components/HeroChat'
 import StatsBar from '@/components/StatsBar'
 import ActivityFeed from '@/components/ActivityFeed'
 import Recommendations from '@/components/Recommendations'
-import FeaturedPhotos from '@/components/FeaturedPhotos'
-import { type Document } from '@/lib/api'
+import FeaturedVideos from '@/components/FeaturedVideos'
 import { siteConfig } from '@/config/site.config'
 
 const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -17,19 +16,10 @@ const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
 // Server-side fetch uses internal Docker network URL
 const SERVER_API = process.env.ARCHIVER_URL || 'http://localhost:4000'
 
-async function getInitialPhotos(): Promise<{ documents: Document[]; total: number }> {
-  try {
-    const res = await fetch(`${SERVER_API}/api/featured-photos?limit=6&offset=0`, { next: { revalidate: 60 } })
-    if (res.ok) return res.json()
-  } catch {}
-  return { documents: [], total: 0 }
-}
 
 export const dynamic = 'force-dynamic'
 
 export default async function HomePage() {
-  const initialPhotos = await getInitialPhotos()
-
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'WebSite',
@@ -56,22 +46,23 @@ export default async function HomePage() {
 
       <main className="flex-1">
         <section className="relative z-10">
-          <div className="absolute inset-0 bg-gradient-to-b from-spill-accent/[0.03] via-transparent to-transparent" />
-          <div className="absolute inset-0" style={{
-            backgroundImage: 'radial-gradient(circle at 50% 0%, rgba(0, 191, 166, 0.08) 0%, transparent 50%)',
-          }} />
-
           <div className="relative mx-auto max-w-4xl px-4 pb-10 pt-12 sm:px-6 sm:pb-12 sm:pt-16">
             <div className="animate-fade-in text-center">
-              <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-spill-divider bg-spill-surface px-3 py-1">
-                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-spill-accent" />
-                <span className="font-mono text-xs text-spill-text-secondary">LIVE P2P ARCHIVE — CONTINUOUSLY CRAWLING</span>
+              <div className="mb-6 inline-flex items-center">
+                <span className="border border-spill-accent text-spill-accent bg-transparent px-3 py-1 font-headline text-xs font-extrabold uppercase tracking-widest">
+                  {siteConfig.badge}
+                </span>
               </div>
 
-              <h1 className="font-headline text-4xl font-bold leading-tight tracking-tight text-spill-text-primary sm:text-5xl lg:text-6xl">
+              <h1 className="font-headline text-4xl font-extrabold uppercase leading-[0.95] tracking-tight text-spill-text-primary sm:text-5xl lg:text-6xl">
                 {siteConfig.hero.heading}
-                <span className="block text-spill-accent">{siteConfig.hero.headingAccent}</span>
               </h1>
+
+              <div className="mx-auto mt-4 inline-block bg-spill-accent/90 px-3 py-1 sm:px-4 sm:py-2">
+                <span className="font-headline text-2xl font-extrabold uppercase leading-none tracking-tight text-white sm:text-3xl lg:text-4xl">
+                  {siteConfig.hero.headingAccent}
+                </span>
+              </div>
 
               <div className="mx-auto mt-5 max-w-2xl">
                 <ActivityFeed />
@@ -79,7 +70,7 @@ export default async function HomePage() {
             </div>
 
             <div className="relative z-10 mt-10 animate-slide-up" style={{ animationDelay: '150ms' }}>
-              <SearchBar large autoFocus />
+              <HeroChat />
             </div>
 
             <div className="mt-6 flex flex-wrap items-center justify-center gap-2 animate-slide-up" style={{ animationDelay: '250ms' }}>
@@ -94,7 +85,7 @@ export default async function HomePage() {
                   <Link
                     key={item.label}
                     href={href}
-                    className="flex items-center gap-1.5 rounded-full border border-spill-divider bg-spill-surface px-3 py-1.5 text-sm text-spill-text-secondary hover:border-spill-accent/30 hover:text-spill-accent transition-all"
+                    className="flex items-center gap-1.5 rounded-sm border border-spill-divider bg-spill-surface px-3 py-1.5 text-sm text-spill-text-secondary hover:border-spill-accent/50 hover:text-spill-accent transition-all"
                   >
                     {Icon && <Icon className="h-3 w-3" />}
                     {item.label}
@@ -105,7 +96,7 @@ export default async function HomePage() {
           </div>
         </section>
 
-        <FeaturedPhotos initialData={initialPhotos} />
+        <FeaturedVideos />
 
         <section className="mx-auto max-w-7xl px-4 pb-12 sm:px-6">
           <StatsBar />

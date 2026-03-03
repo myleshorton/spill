@@ -167,6 +167,30 @@ async function cmdRun (opts) {
   // Ensure crawler collections exist in the documents DB
   seedCollections(docsDb, seeds)
 
+  // Auto-seed: add any new URLs from seeds.json that aren't already in the queue
+  let newSeeds = 0
+  for (const seed of seeds.seedUrls) {
+    const normalized = CrawlDatabase.normalizeUrl(seed.url)
+    const existing = crawlDb.db.prepare('SELECT id FROM urls WHERE normalized_url = ?').get(normalized)
+    if (!existing) {
+      crawlDb.addUrl(seed.url, {
+        priority: seed.priority || 0.5,
+        source: seed.adapter || 'generic',
+        depth: 0,
+      })
+      newSeeds++
+    }
+  }
+  if (newSeeds > 0) {
+    console.log('[crawler] Auto-seeded %d new URLs from seeds.json', newSeeds)
+  }
+
+  // Requeue previously failed URLs for retry
+  const requeued = crawlDb.requeueFailed()
+  if (requeued > 0) {
+    console.log('[crawler] Requeued %d previously failed URLs for retry', requeued)
+  }
+
   const fetcher = new Fetcher(crawlDb, {
     cacheDir: path.join(path.dirname(CRAWL_DB_PATH), 'crawl-cache'),
   })
