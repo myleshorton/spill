@@ -13,6 +13,17 @@
     { "url": "https://www.courtlistener.com/docket/4581676/jane-doe-43-v-epstein/", "adapter": "court", "priority": 0.9 },
     { "url": "https://www.courtlistener.com/docket/4357335/doe-v-trump/", "adapter": "court", "priority": 0.85 },
 
+    { "url": "https://www.courtlistener.com/docket/66683865/government-of-the-united-states-virgin-islands-v-jpmorgan-chase-bank-na/", "adapter": "court", "priority": 1.0 },
+    { "url": "https://www.courtlistener.com/docket/65893857/doe-1-v-deutsche-bank-aktiengesellschaft/", "adapter": "court", "priority": 0.95 },
+    { "url": "https://www.courtlistener.com/docket/5574054/doe-ii-v-epstein/", "adapter": "court", "priority": 0.9 },
+    { "url": "https://www.courtlistener.com/docket/4232458/doe-no-102-v-epstein/", "adapter": "court", "priority": 0.9 },
+    { "url": "https://www.courtlistener.com/docket/6962478/united-states-v-epstein/", "adapter": "court", "priority": 0.85 },
+    { "url": "https://www.courtlistener.com/docket/69219513/rapaport-v-epstein/", "adapter": "court", "priority": 0.85 },
+    { "url": "https://www.courtlistener.com/docket/10516885/united-states-v-epstein/", "adapter": "court", "priority": 0.8 },
+    { "url": "https://www.courtlistener.com/docket/4233330/j-v-epstein/", "adapter": "court", "priority": 0.8 },
+    { "url": "https://www.courtlistener.com/docket/17354158/karimi-v-deutsche-bank-aktiengesellschaft/", "adapter": "court", "priority": 0.8 },
+    { "url": "https://www.courtlistener.com/docket/66802439/united-states-v-epstein/", "adapter": "court", "priority": 0.8 },
+
     { "url": "https://vault.fbi.gov/jeffrey-epstein", "adapter": "government", "priority": 1.0 },
     { "url": "https://vault.fbi.gov/jeffrey-epstein/Jeffrey%20Epstein%20Part%2001/at_download/file", "adapter": "government", "priority": 1.0 },
     { "url": "https://vault.fbi.gov/jeffrey-epstein/Jeffrey%20Epstein%20Part%2002/at_download/file", "adapter": "government", "priority": 1.0 },
@@ -48,6 +59,11 @@
     { "url": "https://oversight.house.gov/release/oversight-committee-releases-epstein-records-provided-by-the-department-of-justice/", "adapter": "government", "priority": 0.95 },
     { "url": "https://oversight.house.gov/release/oversight-committee-releases-additional-epstein-estate-documents/", "adapter": "government", "priority": 0.95 },
     { "url": "https://oversight.house.gov/release/oversight-committee-releases-records-provided-by-the-epstein-estate-chairman-comer-provides-statement/", "adapter": "government", "priority": 0.95 },
+    { "url": "https://oversight.house.gov/release/chairman-comer-subpoenas-banks-for-epstein-records-seeks-information-from-usvi-attorney-general/", "adapter": "government", "priority": 0.9 },
+
+    { "url": "https://usvidoj.com/u-s-virgin-islands-attorney-general-settles-sex-trafficking-case-against-estate-of-jeffrey-epstein-and-co-defendants-for-over-105-million/", "adapter": "government", "priority": 0.9 },
+    { "url": "https://www.congress.gov/bill/119th-congress/house-bill/4405", "adapter": "government", "priority": 0.85 },
+    { "url": "https://www.congress.gov/bill/119th-congress/house-bill/4405/text", "adapter": "government", "priority": 0.85 },
 
     { "url": "https://www.muckrock.com/project/jeffrey-epstein-files-507/", "adapter": "government", "priority": 0.85 },
     { "url": "https://www.muckrock.com/foi/palm-beach-10288/epstein-child-sex-records-palm-beach-pd-25844/", "adapter": "government", "priority": 0.9 },
@@ -79,7 +95,10 @@
 
     { "url": "https://media.ca11.uscourts.gov/opinions/pub/files/201913843.pdf", "adapter": "court", "priority": 0.9 },
     { "url": "https://www.miamiherald.com/topics/jeffrey-epstein", "adapter": "news", "priority": 0.8 },
-    { "url": "https://www.thedailybeast.com/tag/jeffrey-epstein", "adapter": "news", "priority": 0.7 }
+    { "url": "https://www.thedailybeast.com/tag/jeffrey-epstein", "adapter": "news", "priority": 0.7 },
+    { "url": "https://www.courthousenews.com/?s=epstein", "adapter": "news", "priority": 0.75 },
+    { "url": "https://www.npr.org/tags/738888180/jeffrey-epstein", "adapter": "news", "priority": 0.7 },
+    { "url": "https://abcnews.go.com/alerts/jeffrey-epstein", "adapter": "news", "priority": 0.7 }
   ],
   "searchQueries": [
     "Jeffrey Epstein court documents",
@@ -101,7 +120,13 @@
     "Epstein NPA non-prosecution agreement Palm Beach",
     "Giuffre v Maxwell unsealed documents 2024",
     "Jeffrey Epstein financial records SEC",
-    "Epstein victim impact statements sentencing"
+    "Epstein victim impact statements sentencing",
+    "USVI v JPMorgan Chase Epstein settlement",
+    "Deutsche Bank Epstein victims settlement",
+    "Epstein estate probate Virgin Islands",
+    "JPMorgan Epstein unsealed documents",
+    "Epstein financial transactions Deutsche Bank",
+    "House Oversight Epstein bank subpoena records"
   ],
   "keywords": {
     "primary": ["epstein", "ghislaine maxwell", "jeffrey epstein"],
@@ -114,7 +139,9 @@
     "Sarah Kellen", "Nadia Marcinkova", "Bill Clinton", "Leon Black",
     "Lesley Groff", "Alfredo Rodriguez", "Julie Brown", "Brad Edwards",
     "Courtney Wild", "Annie Farmer", "Juan Alessi", "Denise George",
-    "Steve Scully", "Adriana Ross", "Emmy Taylor", "Haley Robson"
+    "Steve Scully", "Adriana Ross", "Emmy Taylor", "Haley Robson",
+    "Jes Staley", "Todd Blanche", "Gordon Rhea", "James Comer",
+    "JPMorgan Chase", "Deutsche Bank"
   ],
   "socialPosting": {
     "enabled": true,
