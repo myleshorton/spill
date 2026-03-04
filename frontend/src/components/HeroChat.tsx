@@ -50,7 +50,7 @@ export default function HeroChat() {
         onKeyDown={(e) => {
           if (e.key === 'Tab' && !query) {
             e.preventDefault()
-            router.push(`/chat?q=${encodeURIComponent(PROMPTS[promptIndex])}`)
+            setQuery(PROMPTS[promptIndex])
           }
         }}
         autoFocus
