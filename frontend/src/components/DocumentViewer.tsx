@@ -19,8 +19,6 @@ interface DocumentViewerProps {
 export default function DocumentViewer({ doc }: DocumentViewerProps) {
   const [extractedText, setExtractedText] = useState<string | null>(null)
   const [showText, setShowText] = useState(false)
-  const [transcript, setTranscript] = useState<string | null>(null)
-  const [showTranscript, setShowTranscript] = useState(false)
   const [entities, setEntities] = useState<Entity[]>([])
   const [financials, setFinancials] = useState<FinancialRecord[]>([])
   const [copied, setCopied] = useState(false)
@@ -138,15 +136,13 @@ export default function DocumentViewer({ doc }: DocumentViewerProps) {
 
   useEffect(() => {
     if (showText && extractedText === null) {
-      getDocumentText(doc.id).then(setExtractedText).catch(() => setExtractedText(''))
+      // For media files, load transcript as the extracted text
+      const loader = isMedia
+        ? getDocumentTranscript(doc.id)
+        : getDocumentText(doc.id)
+      loader.then(setExtractedText).catch(() => setExtractedText(''))
     }
-  }, [showText, doc.id, extractedText])
-
-  useEffect(() => {
-    if (showTranscript && transcript === null) {
-      getDocumentTranscript(doc.id).then(setTranscript).catch(() => setTranscript(''))
-    }
-  }, [showTranscript, doc.id, transcript])
+  }, [showText, doc.id, extractedText, isMedia])
 
   useEffect(() => {
     getDocumentEntities(doc.id).then(setEntities).catch(() => {})
@@ -244,26 +240,6 @@ export default function DocumentViewer({ doc }: DocumentViewerProps) {
               </div>
             )}
           </div>
-
-          {/* Transcript toggle (audio/video only) */}
-          {isMedia && (
-            <div className="mt-4">
-              <button
-                onClick={() => setShowTranscript(!showTranscript)}
-                className="rounded-md border border-spill-divider bg-spill-surface px-3 py-1.5 text-sm text-spill-text-secondary hover:text-spill-text-primary transition-colors"
-              >
-                {showTranscript ? 'Hide' : 'Show'} Transcript
-              </button>
-
-              {showTranscript && (
-                <div className="mt-3 max-h-[600px] overflow-auto rounded-lg border border-spill-divider bg-spill-bg p-4">
-                  <pre className="whitespace-pre-wrap font-body text-sm leading-relaxed text-spill-text-secondary">
-                    {transcript === null ? 'Loading...' : transcript || 'No transcript available'}
-                  </pre>
-                </div>
-              )}
-            </div>
-          )}
 
           {/* Comments section */}
           <div className="mt-8 border-t border-spill-divider pt-6">
