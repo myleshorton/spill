@@ -164,7 +164,19 @@ export default function ResultSetNav() {
     return () => window.removeEventListener('keydown', onKey)
   }, [ctx, navigate])
 
-  if (!ctx) return null
+  if (!ctx) {
+    return (
+      <div className="mb-4">
+        <button
+          onClick={() => router.back()}
+          className="flex items-center gap-1 rounded-md px-2 py-1 text-sm text-spill-text-secondary hover:bg-spill-surface-light hover:text-spill-text-primary transition-colors"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" />
+          Back
+        </button>
+      </div>
+    )
+  }
 
   const isCached = ctx.type === 'recs' || ctx.type === 'similar'
   const total = isCached && ids ? ids.length : ctx.total
