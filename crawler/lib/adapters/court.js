@@ -153,109 +153,51 @@ class CourtAdapter {
   // --- API methods ---
 
   async _fetchDocketDocuments (docketId) {
+    // Use search API to find available RECAP documents for this docket.
+    // The docket-entries and recap-documents endpoints require premium access,
+    // but the search API works with a free token.
     const documents = []
-    let nextUrl = `${CL_API}/docket-entries/?docket=${docketId}&page_size=100`
+    let cursor = null
+    let pages = 0
 
-    while (nextUrl) {
-      const resp = await fetch(nextUrl, {
+    while (pages < 20) { // Safety limit
+      let url = `${CL_API}/search/?type=r&docket_id=${docketId}&order_by=entry_date_filed+asc&page_size=20`
+      if (cursor) url = cursor
+
+      const resp = await fetch(url, {
         headers: this._headers(),
         timeout: 30000,
       })
 
       if (!resp.ok) {
         if (resp.status === 401 || resp.status === 403) {
-          console.warn('[court] API auth required for docket-entries. Set COURTLISTENER_TOKEN env var.')
-          // Fallback: try RECAP query by docket
-          return this._fetchRecapDocuments(docketId)
+          console.warn('[court] Search API auth failed for docket %s (status %d)', docketId, resp.status)
         }
-        console.warn('[court] Docket entries API returned %d for docket %s', resp.status, docketId)
         break
       }
 
       const data = await resp.json()
 
-      for (const entry of (data.results || [])) {
-        // Each docket entry can have multiple documents
-        const recapDocs = entry.recap_documents || []
+      for (const result of (data.results || [])) {
+        // Each search result has recap_documents embedded
+        const recapDocs = result.recap_documents || []
         for (const doc of recapDocs) {
           if (doc.filepath_local && doc.is_available) {
             documents.push({
               url: `${CL_STORAGE}/${doc.filepath_local}`,
               priority: 0.95,
-              description: entry.description || '',
-              entryNumber: entry.entry_number,
+              description: doc.short_description || result.caseName || '',
               pageCount: doc.page_count,
             })
           }
         }
       }
 
-      nextUrl = data.next || null
-      if (nextUrl) await sleep(500) // Rate limit pagination
+      cursor = data.next || null
+      pages++
+      if (!cursor) break
+      await sleep(500) // Rate limit pagination
     }
-
-    return documents
-  }
-
-  async _fetchRecapDocuments (docketId) {
-    // Alternative: query RECAP documents directly
-    const documents = []
-    let nextUrl = `${CL_API}/recap-documents/?docket_entry__docket=${docketId}&is_available=true&page_size=100`
-
-    while (nextUrl) {
-      const resp = await fetch(nextUrl, {
-        headers: this._headers(),
-        timeout: 30000,
-      })
-
-      if (!resp.ok) {
-        // If RECAP endpoint also fails, try the search API as last resort
-        if (resp.status === 401 || resp.status === 403) {
-          return this._searchRecapByDocket(docketId)
-        }
-        break
-      }
-
-      const data = await resp.json()
-
-      for (const doc of (data.results || [])) {
-        if (doc.filepath_local && doc.is_available) {
-          documents.push({
-            url: `${CL_STORAGE}/${doc.filepath_local}`,
-            priority: 0.95,
-            pageCount: doc.page_count,
-          })
-        }
-      }
-
-      nextUrl = data.next || null
-      if (nextUrl) await sleep(500)
-    }
-
-    return documents
-  }
-
-  async _searchRecapByDocket (docketId) {
-    // Last resort: use the search API to find documents for this docket
-    const documents = []
-    try {
-      const resp = await fetch(`${CL_API}/search/?type=r&docket_id=${docketId}&order_by=entry_date_filed+asc`, {
-        headers: this._headers(),
-        timeout: 30000,
-      })
-
-      if (!resp.ok) return documents
-      const data = await resp.json()
-
-      for (const result of (data.results || [])) {
-        if (result.filepath_local) {
-          documents.push({
-            url: `${CL_STORAGE}/${result.filepath_local}`,
-            priority: 0.9,
-          })
-        }
-      }
-    } catch {}
 
     return documents
   }

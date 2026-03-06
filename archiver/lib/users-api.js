@@ -1,4 +1,5 @@
 const express = require('express')
+const { notifyComment } = require('./slack-notify')
 
 let embedder = null
 try {
@@ -245,6 +246,8 @@ function createUsersRouter (docsDb, usersDb) {
     }
 
     const comment = usersDb.addComment(docId, req.userId, displayName.trim(), body.trim())
+    const siteUrl = `https://${process.env.DOMAIN || 'localhost'}`
+    notifyComment(doc.title || doc.file_name || docId, displayName.trim(), body.trim(), docId, siteUrl)
     res.json({
       id: comment.id,
       documentId: comment.document_id,
@@ -292,6 +295,28 @@ function createUsersRouter (docsDb, usersDb) {
       return res.status(404).json({ error: 'Comment not found or not owned by you' })
     }
     res.json({ ok: true })
+  })
+
+  // Vote on a document (upvote / downvote)
+  router.post('/documents/:id/vote', express.json(), identify, (req, res) => {
+    const docId = req.params.id
+    const doc = docsDb.get(docId)
+    if (!doc) return res.status(404).json({ error: 'Document not found' })
+
+    const { value } = req.body || {}
+    if (value !== 1 && value !== -1 && value !== 0) {
+      return res.status(400).json({ error: 'Value must be 1, -1, or 0' })
+    }
+
+    const result = usersDb.vote(req.userId, docId, value)
+    res.json(result)
+  })
+
+  // Get vote status for a document
+  router.get('/documents/:id/vote', identify, (req, res) => {
+    const docId = req.params.id
+    const result = usersDb.getVoteStatus(req.userId, docId)
+    res.json(result)
   })
 
   // Get user's starred document IDs

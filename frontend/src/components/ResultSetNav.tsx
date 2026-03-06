@@ -88,18 +88,69 @@ export default function ResultSetNav() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ctx?.type, ctx?.pos, ctx?.q, ctx?.filter, ctx?.ds, ctx?.docId])
 
-  const navigate = useCallback((newPos: number) => {
-    if (!ctx || !ids) return
+  const navigate = useCallback(async (newPos: number) => {
+    if (!ctx || loading) return
+    const total = (ctx.type === 'recs' || ctx.type === 'similar') && ids ? ids.length : ctx.total
+    if (newPos < 0 || newPos >= total) return
 
     const isCached = ctx.type === 'recs' || ctx.type === 'similar'
-    const localIdx = isCached ? newPos : newPos - windowOffset
+    let currentIds = ids
+    let currentOffset = windowOffset
 
-    if (localIdx >= 0 && localIdx < ids.length) {
-      const newCtx = { ...ctx, pos: newPos }
-      router.push(docHrefWithContext(ids[localIdx], newCtx))
+    // For API-backed sets, fetch a new window if pos is outside the current one
+    if (!isCached) {
+      const localIdx = newPos - windowOffset
+      if (!currentIds || localIdx < 0 || localIdx >= currentIds.length) {
+        const wStart = Math.floor(newPos / WINDOW) * WINDOW
+        setLoading(true)
+        try {
+          let docs: Document[] = []
+          switch (ctx.type) {
+            case 'search': {
+              if (ctx.q) {
+                const res = await searchDocuments(ctx.q, { limit: WINDOW, offset: wStart, filter: ctx.filter })
+                docs = res.hits
+              } else {
+                const res = await listDocuments({ limit: WINDOW, offset: wStart })
+                docs = res.documents
+              }
+              break
+            }
+            case 'dataset': {
+              const res = await listDocuments({ limit: WINDOW, offset: wStart, dataSet: ctx.ds })
+              docs = res.documents
+              break
+            }
+            case 'featured-photos': {
+              const res = await getFeaturedPhotos({ limit: WINDOW, offset: wStart })
+              docs = res.documents
+              break
+            }
+            case 'featured-videos': {
+              const res = await getFeaturedVideos({ limit: WINDOW, offset: wStart })
+              docs = res.documents
+              break
+            }
+          }
+          currentIds = docs.map(d => d.id)
+          currentOffset = wStart
+          setIds(currentIds)
+          setWindowOffset(wStart)
+        } catch {
+          return
+        } finally {
+          setLoading(false)
+        }
+      }
     }
-    // If out of window for API-backed, the useEffect will refetch on pos change
-  }, [ctx, ids, windowOffset, router])
+
+    if (!currentIds) return
+    const localIdx = isCached ? newPos : newPos - currentOffset
+    if (localIdx >= 0 && localIdx < currentIds.length) {
+      const newCtx = { ...ctx, pos: newPos }
+      router.push(docHrefWithContext(currentIds[localIdx], newCtx))
+    }
+  }, [ctx, ids, windowOffset, loading, router])
 
   // Keyboard navigation
   useEffect(() => {

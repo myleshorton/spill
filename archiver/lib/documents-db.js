@@ -622,7 +622,7 @@ class DocumentsDatabase {
     const where = conditions.length > 0 ? 'WHERE ' + conditions.join(' AND ') : ''
 
     const total = this.db.prepare(`
-      SELECT COUNT(*) as count FROM entities e
+      SELECT COUNT(DISTINCT e.id) as count FROM entities e
       JOIN document_entities de ON de.entity_id = e.id
       ${where}
     `).get(...params).count

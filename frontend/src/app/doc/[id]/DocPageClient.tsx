@@ -8,7 +8,7 @@ import SimilarDocuments from '@/components/SimilarDocuments'
 import ResultSetNav from '@/components/ResultSetNav'
 import { recordView, type Document } from '@/lib/api'
 
-export default function DocPageClient({ doc }: { doc: Document }) {
+export default function DocPageClient({ doc, serverTextSnippet }: { doc: Document; serverTextSnippet?: string }) {
   useEffect(() => {
     recordView(doc.id)
   }, [doc.id])
@@ -22,6 +22,15 @@ export default function DocPageClient({ doc }: { doc: Document }) {
           <ResultSetNav />
         </Suspense>
         <DocumentViewer doc={doc} />
+
+        {/* Server-rendered text snippet for SEO — visible to crawlers, hidden visually */}
+        {serverTextSnippet && (
+          <div className="sr-only" aria-hidden="true">
+            <h2>Document Text</h2>
+            <p>{serverTextSnippet}</p>
+          </div>
+        )}
+
         <SimilarDocuments docId={doc.id} />
       </main>
 

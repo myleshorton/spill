@@ -35,7 +35,7 @@ export default function HeroChat() {
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (query.trim()) {
-      router.push(`/chat?q=${encodeURIComponent(query.trim())}`)
+      router.push(`/search?q=${encodeURIComponent(query.trim())}`)
     }
   }
 

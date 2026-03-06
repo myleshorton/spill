@@ -556,6 +556,31 @@ export async function getFinancialRecords(params: {
   return res.json()
 }
 
+// --- Votes ---
+
+export interface VoteStatus {
+  userVote: number  // 1, -1, or 0
+  upvotes: number
+  downvotes: number
+  score: number
+}
+
+export async function vote(docId: string, value: 1 | -1 | 0): Promise<VoteStatus> {
+  const res = await fetchWithUser(`${API_BASE}/documents/${docId}/vote`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ value }),
+  })
+  if (!res.ok) return { userVote: 0, upvotes: 0, downvotes: 0, score: 0 }
+  return res.json()
+}
+
+export async function getVoteStatus(docId: string): Promise<VoteStatus> {
+  const res = await fetchWithUser(`${API_BASE}/documents/${docId}/vote`)
+  if (!res.ok) return { userVote: 0, upvotes: 0, downvotes: 0, score: 0 }
+  return res.json()
+}
+
 // --- Stars & Comments ---
 
 export async function toggleStar(docId: string): Promise<StarStatus> {

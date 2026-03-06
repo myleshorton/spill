@@ -19,7 +19,7 @@ export default function UploadForm() {
   const [dragOver, setDragOver] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [progress, setProgress] = useState(0)
-  const [job, setJob] = useState<UploadJob | null>(null)
+  const [jobs, setJobs] = useState<UploadJob[]>([])
   const [error, setError] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -27,34 +27,39 @@ export default function UploadForm() {
   const maxSize = (siteConfig as any).upload?.maxSizeMB || 500
   const allowedTypes = (siteConfig as any).upload?.allowedTypes || []
 
-  const handleFile = useCallback(async (file: File) => {
+  const handleFiles = useCallback(async (files: File[]) => {
     setError(null)
-    setJob(null)
+    setJobs([])
 
     // Client-side validation
-    const ext = '.' + file.name.split('.').pop()?.toLowerCase()
-    if (allowedTypes.length > 0 && !allowedTypes.includes(ext)) {
-      setError(`File type ${ext} is not allowed.`)
-      return
-    }
-    if (file.size > maxSize * 1024 * 1024) {
-      setError(`File too large. Maximum size is ${maxSize}MB.`)
-      return
+    const valid: File[] = []
+    for (const file of files) {
+      const ext = '.' + file.name.split('.').pop()?.toLowerCase()
+      if (allowedTypes.length > 0 && !allowedTypes.includes(ext)) {
+        setError(`File type ${ext} is not allowed.`)
+        return
+      }
+      if (file.size > maxSize * 1024 * 1024) {
+        setError(`File too large: ${file.name}. Maximum size is ${maxSize}MB.`)
+        return
+      }
+      valid.push(file)
     }
 
     setUploading(true)
     setProgress(0)
 
-    try {
-      // Use XHR for progress tracking
-      const result = await new Promise<UploadJob>((resolve, reject) => {
+    const uploadOne = (file: File, idx: number): Promise<UploadJob> =>
+      new Promise((resolve, reject) => {
         const xhr = new XMLHttpRequest()
         const form = new FormData()
         form.append('file', file)
 
         xhr.upload.addEventListener('progress', (e) => {
           if (e.lengthComputable) {
-            setProgress(Math.round((e.loaded / e.total) * 100))
+            const fileProgress = Math.round((e.loaded / e.total) * 100)
+            const overall = Math.round(((idx + fileProgress / 100) / valid.length) * 100)
+            setProgress(overall)
           }
         })
 
@@ -71,21 +76,30 @@ export default function UploadForm() {
           }
         })
 
-        xhr.addEventListener('error', () => reject(new Error('Upload failed — network error')))
+        xhr.addEventListener('error', () => reject(new Error(`Upload failed — network error (${file.name})`)))
         xhr.open('POST', '/api/upload')
         xhr.send(form)
       })
 
-      setJob(result)
+    try {
+      const results: UploadJob[] = []
+      for (let i = 0; i < valid.length; i++) {
+        const result = await uploadOne(valid[i], i)
+        results.push(result)
+        setJobs([...results])
+      }
+
       setUploading(false)
 
-      // Poll for status
+      // Poll for status of all jobs
       if (pollRef.current) clearInterval(pollRef.current)
       pollRef.current = setInterval(async () => {
         try {
-          const status = await getUploadStatus(result.jobId)
-          setJob(status)
-          if (status.status === 'complete' || status.status === 'failed') {
+          const updated = await Promise.all(
+            results.map(r => getUploadStatus(r.jobId).catch(() => r))
+          )
+          setJobs(updated)
+          if (updated.every(j => j.status === 'complete' || j.status === 'failed')) {
             if (pollRef.current) clearInterval(pollRef.current)
           }
         } catch {}
@@ -99,16 +113,14 @@ export default function UploadForm() {
   function handleDrop(e: React.DragEvent) {
     e.preventDefault()
     setDragOver(false)
-    const file = e.dataTransfer.files[0]
-    if (file) handleFile(file)
+    const files = Array.from(e.dataTransfer.files)
+    if (files.length > 0) handleFiles(files)
   }
 
   function handleInputChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (file) handleFile(file)
+    const files = Array.from(e.target.files || [])
+    if (files.length > 0) handleFiles(files)
   }
-
-  const statusInfo = job ? STATUS_LABELS[job.status] || STATUS_LABELS.pending : null
 
   return (
     <div className="space-y-6">
@@ -131,6 +143,7 @@ export default function UploadForm() {
         <input
           ref={fileRef}
           type="file"
+          multiple
           onChange={handleInputChange}
           className="hidden"
           accept={allowedTypes.join(',')}
@@ -164,7 +177,7 @@ export default function UploadForm() {
             <>
               <div>
                 <p className="font-headline text-sm font-medium text-spill-text-primary">
-                  Drop a file here or click to browse
+                  Drop files here or click to browse
                 </p>
                 <p className="mt-1 text-xs text-spill-text-secondary">
                   PDF, images, videos, audio, documents — up to {maxSize}MB
@@ -186,51 +199,53 @@ export default function UploadForm() {
       )}
 
       {/* Job status */}
-      {job && statusInfo && (
-        <div className="rounded-lg border border-spill-divider bg-spill-surface/50 px-5 py-4">
-          <div className="flex items-center gap-3">
-            <statusInfo.icon className={`h-5 w-5 ${statusInfo.color} ${
-              job.status !== 'complete' && job.status !== 'failed' ? 'animate-spin' : ''
-            }`} />
-            <div className="min-w-0 flex-1">
-              <p className={`text-sm font-medium ${statusInfo.color}`}>
-                {statusInfo.label}
-              </p>
-              {job.status === 'failed' && job.error && (
-                <p className="mt-0.5 text-xs text-red-300/70">{job.error}</p>
-              )}
-              {job.status === 'complete' && job.documentId && (
-                <Link
-                  href={`/doc/${job.documentId}`}
-                  className="mt-1 inline-block text-xs text-spill-accent hover:underline"
-                >
-                  View document →
-                </Link>
-              )}
+      {jobs.map((job) => {
+        const statusInfo = STATUS_LABELS[job.status] || STATUS_LABELS.pending
+        return (
+          <div key={job.jobId} className="rounded-lg border border-spill-divider bg-spill-surface/50 px-5 py-4">
+            <div className="flex items-center gap-3">
+              <statusInfo.icon className={`h-5 w-5 ${statusInfo.color} ${
+                job.status !== 'complete' && job.status !== 'failed' ? 'animate-spin' : ''
+              }`} />
+              <div className="min-w-0 flex-1">
+                <p className={`text-sm font-medium ${statusInfo.color}`}>
+                  {statusInfo.label}
+                </p>
+                {job.status === 'failed' && job.error && (
+                  <p className="mt-0.5 text-xs text-red-300/70">{job.error}</p>
+                )}
+                {job.status === 'complete' && job.documentId && (
+                  <Link
+                    href={`/doc/${job.documentId}`}
+                    className="mt-1 inline-block text-xs text-spill-accent hover:underline"
+                  >
+                    View document →
+                  </Link>
+                )}
+              </div>
             </div>
-          </div>
 
-          {/* Status pipeline */}
-          {job.status !== 'failed' && (
-            <div className="mt-4 flex items-center gap-1">
-              {['scanning', 'extracting', 'indexing', 'complete'].map((step, i) => {
-                const steps = ['scanning', 'extracting', 'indexing', 'complete']
-                const currentIdx = steps.indexOf(job.status)
-                const stepIdx = i
-                const done = stepIdx <= currentIdx
-                return (
-                  <div
-                    key={step}
-                    className={`h-1 flex-1 rounded-full transition-colors ${
-                      done ? 'bg-spill-accent' : 'bg-spill-surface'
-                    }`}
-                  />
-                )
-              })}
-            </div>
-          )}
-        </div>
-      )}
+            {/* Status pipeline */}
+            {job.status !== 'failed' && (
+              <div className="mt-4 flex items-center gap-1">
+                {['scanning', 'extracting', 'indexing', 'complete'].map((step, i) => {
+                  const steps = ['scanning', 'extracting', 'indexing', 'complete']
+                  const currentIdx = steps.indexOf(job.status)
+                  const done = i <= currentIdx
+                  return (
+                    <div
+                      key={step}
+                      className={`h-1 flex-1 rounded-full transition-colors ${
+                        done ? 'bg-spill-accent' : 'bg-spill-surface'
+                      }`}
+                    />
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        )
+      })}
     </div>
   )
 }

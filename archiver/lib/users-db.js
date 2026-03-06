@@ -63,6 +63,15 @@ class UsersDatabase {
       CREATE INDEX IF NOT EXISTS idx_fav_doc ON favorites(document_id);
       CREATE INDEX IF NOT EXISTS idx_comments_doc ON comments(document_id);
       CREATE INDEX IF NOT EXISTS idx_comments_user ON comments(user_id);
+
+      CREATE TABLE IF NOT EXISTS votes (
+        user_id TEXT NOT NULL,
+        document_id TEXT NOT NULL,
+        value INTEGER NOT NULL,
+        created_at INTEGER,
+        PRIMARY KEY (user_id, document_id)
+      );
+      CREATE INDEX IF NOT EXISTS idx_votes_doc ON votes(document_id);
     `)
   }
 
@@ -192,6 +201,31 @@ class UsersDatabase {
       'SELECT COUNT(*) as cnt FROM comments WHERE document_id = ?'
     ).get(docId)
     return row.cnt
+  }
+
+  vote (userId, docId, value) {
+    // value: 1 (upvote), -1 (downvote), 0 (remove vote)
+    if (value === 0) {
+      this.db.prepare('DELETE FROM votes WHERE user_id = ? AND document_id = ?').run(userId, docId)
+    } else {
+      this.db.prepare(`
+        INSERT INTO votes (user_id, document_id, value, created_at) VALUES (?, ?, ?, ?)
+        ON CONFLICT(user_id, document_id) DO UPDATE SET value = ?, created_at = ?
+      `).run(userId, docId, value, Date.now(), value, Date.now())
+    }
+    return this.getVoteStatus(userId, docId)
+  }
+
+  getVoteStatus (userId, docId) {
+    const row = this.db.prepare('SELECT value FROM votes WHERE user_id = ? AND document_id = ?').get(userId, docId)
+    const ups = this.db.prepare('SELECT COUNT(*) as cnt FROM votes WHERE document_id = ? AND value = 1').get(docId).cnt
+    const downs = this.db.prepare('SELECT COUNT(*) as cnt FROM votes WHERE document_id = ? AND value = -1').get(docId).cnt
+    return {
+      userVote: row ? row.value : 0,
+      upvotes: ups,
+      downvotes: downs,
+      score: ups - downs,
+    }
   }
 
   close () {

@@ -1,4 +1,4 @@
-import type { Document, ArchiveStats, EntityDetail } from './api'
+import type { Document, ArchiveStats, EntityDetail, Entity } from './api'
 
 const SERVER_API = process.env.ARCHIVER_URL || 'http://localhost:4000'
 
@@ -42,6 +42,33 @@ export async function listDocumentsServer(options: {
     return res.json()
   } catch {
     return { documents: [], total: 0 }
+  }
+}
+
+export async function getDocumentTextServer(id: string, maxLength = 1000): Promise<string> {
+  try {
+    const res = await fetch(`${SERVER_API}/api/documents/${id}/text`, {
+      next: { revalidate: 3600 },
+    })
+    if (!res.ok) return ''
+    const data = await res.json()
+    const text = data.text || ''
+    return text.slice(0, maxLength)
+  } catch {
+    return ''
+  }
+}
+
+export async function getDocumentEntitiesServer(id: string): Promise<Entity[]> {
+  try {
+    const res = await fetch(`${SERVER_API}/api/documents/${id}/entities`, {
+      next: { revalidate: 3600 },
+    })
+    if (!res.ok) return []
+    const data = await res.json()
+    return data.entities || []
+  } catch {
+    return []
   }
 }
 

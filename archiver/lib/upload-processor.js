@@ -2,6 +2,7 @@ const crypto = require('crypto')
 const fs = require('fs')
 const path = require('path')
 const { EventEmitter } = require('events')
+const { notifyUpload } = require('./slack-notify')
 
 let transcriber = null
 try {
@@ -16,6 +17,16 @@ try {
 let imageKeywords = null
 try {
   imageKeywords = require('../../ingest/lib/image-keywords')
+} catch {}
+
+let textExtract = null
+try {
+  textExtract = require('../../ingest/lib/text-extract')
+} catch {}
+
+let thumbnails = null
+try {
+  thumbnails = require('../../ingest/lib/thumbnails')
 } catch {}
 
 const UPLOAD_DIR = path.join(__dirname, '..', 'data', 'content', 'uploads')
@@ -154,6 +165,31 @@ class UploadProcessor extends EventEmitter {
 
       const stat = fs.statSync(destPath)
 
+      // 5b. Extract text from documents
+      let extractedText = ''
+      let pageCount = null
+      if (textExtract) {
+        try {
+          extractedText = await textExtract.extractText(destPath)
+          pageCount = textExtract.getPageCount(destPath)
+        } catch (err) {
+          console.warn('[upload] Text extraction failed for %s: %s', docId, err.message)
+        }
+      }
+
+      // 5c. Generate thumbnail
+      let thumbPath = null
+      if (thumbnails) {
+        try {
+          const thumbDir = path.join(UPLOAD_DIR, String(UPLOADS_COLLECTION_ID), 'thumbs')
+          const thumbDest = path.join(thumbDir, `${docId}.jpg`)
+          const ok = await thumbnails.generateThumbnail(destPath, thumbDest, contentType)
+          if (ok) thumbPath = thumbDest
+        } catch (err) {
+          console.warn('[upload] Thumbnail generation failed for %s: %s', docId, err.message)
+        }
+      }
+
       // 6. Insert into database
       job.status = 'indexing'
       this.emit('status', job)
@@ -165,7 +201,10 @@ class UploadProcessor extends EventEmitter {
         data_set: UPLOADS_COLLECTION_ID,
         content_type: contentType,
         file_size: stat.size,
+        page_count: pageCount,
         file_path: destPath,
+        thumb_path: thumbPath,
+        extracted_text: extractedText || null,
         collection_id: UPLOADS_COLLECTION_ID,
         sha256_hash: hash,
         created_at: Date.now()
@@ -210,10 +249,12 @@ class UploadProcessor extends EventEmitter {
           data_set: UPLOADS_COLLECTION_ID,
           content_type: contentType,
           file_size: stat.size,
+          page_count: pageCount,
           created_at: Date.now(),
           hasContent: true,
-          hasThumbnail: false
+          hasThumbnail: !!thumbPath
         }
+        if (extractedText) searchDoc.extractedText = extractedText.slice(0, 100000)
         if (transcript) searchDoc.transcript = transcript
         if (keywords) searchDoc.image_keywords = keywords
         await this.searchIndex.addDocuments([searchDoc])
@@ -224,7 +265,7 @@ class UploadProcessor extends EventEmitter {
       // 9. Generate embedding
       if (embedder) {
         try {
-          const embText = [path.basename(job.originalName, ext), transcript].filter(Boolean).join('\n\n')
+          const embText = [path.basename(job.originalName, ext), extractedText, transcript].filter(Boolean).join('\n\n').slice(0, 8000)
           if (embText.length >= 20) {
             const emb = await embedder.embed(embText)
             if (emb) {
@@ -253,6 +294,8 @@ class UploadProcessor extends EventEmitter {
       job.documentId = docId
       this.emit('status', job)
       console.log('[upload] Processed %s → %s', job.originalName, docId)
+      const siteUrl = `https://${process.env.DOMAIN || 'localhost'}`
+      notifyUpload(job.originalName, docId, siteUrl)
 
       // 12. Periodic torrent regeneration
       this._uploadsSinceLastTorrent++

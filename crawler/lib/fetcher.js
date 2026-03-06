@@ -120,12 +120,22 @@ class Fetcher {
     const timeout = isLikelyFile ? this.timeoutFile : this.timeoutHtml
 
     try {
+      const headers = {
+        'User-Agent': USER_AGENT,
+        'Accept': 'text/html,application/xhtml+xml,application/pdf,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
+      }
+
+      // Add auth headers for known APIs
+      try {
+        const hostname = new URL(url).hostname
+        if (hostname === 'www.courtlistener.com' && process.env.COURTLISTENER_TOKEN) {
+          headers.Authorization = `Token ${process.env.COURTLISTENER_TOKEN}`
+        }
+      } catch {}
+
       const resp = await nodeFetch(url, {
-        headers: {
-          'User-Agent': USER_AGENT,
-          'Accept': 'text/html,application/xhtml+xml,application/pdf,*/*;q=0.8',
-          'Accept-Language': 'en-US,en;q=0.9',
-        },
+        headers,
         timeout,
         redirect: 'follow',
         follow: this.maxRedirects,

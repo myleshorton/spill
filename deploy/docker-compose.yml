@@ -21,6 +21,7 @@ services:
       - DOMAIN=${DOMAIN:-localhost}
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL:-}
       - WHISPER_CPP_PATH=/usr/local/bin/whisper-cpp
       - WHISPER_MODEL_PATH=/models/ggml-base.en-q5_1.bin
       - WHISPER_THREADS=${WHISPER_THREADS:-8}

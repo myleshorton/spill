@@ -9,6 +9,7 @@ import DocumentGrid from '@/components/DocumentGrid'
 import Pagination from '@/components/Pagination'
 import { searchDocuments, listDocuments, type Document, type SearchResult, formatNumber } from '@/lib/api'
 import { buildResultSetParams } from '@/lib/result-set'
+import AIAnswerCard from '@/components/AIAnswerCard'
 import { Loader2 } from 'lucide-react'
 
 function SearchContent() {
@@ -90,14 +91,17 @@ function SearchContent() {
 
         <div className="min-w-0 flex-1">
           {query && (
-            <div className="mb-4">
-              <h1 className="font-headline text-lg font-bold text-spill-text-primary">
-                Results for &ldquo;{query}&rdquo;
-              </h1>
-              <p className="text-sm text-spill-text-secondary">
-                {formatNumber(totalHits)} result{totalHits !== 1 ? 's' : ''}
-                {processingTime > 0 && ` in ${processingTime}ms`}
-              </p>
+            <div className="mb-4 space-y-4">
+              <div>
+                <h1 className="font-headline text-lg font-bold text-spill-text-primary">
+                  Results for &ldquo;{query}&rdquo;
+                </h1>
+                <p className="text-sm text-spill-text-secondary">
+                  {formatNumber(totalHits)} result{totalHits !== 1 ? 's' : ''}
+                  {processingTime > 0 && ` in ${processingTime}ms`}
+                </p>
+              </div>
+              <AIAnswerCard query={query} />
             </div>
           )}
 

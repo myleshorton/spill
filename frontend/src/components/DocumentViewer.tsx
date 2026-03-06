@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Download, ExternalLink, Copy, Check, ChevronLeft, Star, MessageSquare, Pencil, Trash2, Send, Shield } from 'lucide-react'
+import { Download, ExternalLink, Copy, Check, ChevronLeft, Star, MessageSquare, Pencil, Trash2, Send, Shield, ThumbsUp, ThumbsDown } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
@@ -9,7 +9,7 @@ import {
   contentUrl, streamUrl, previewUrl, getDocumentText, getDocumentTranscript,
   getDocumentEntities, getDocumentFinancials, formatFileSize,
   toggleStar, getStarStatus, getComments, addComment, updateComment, deleteComment,
-  requestMagicLink
+  requestMagicLink, vote, getVoteStatus, type VoteStatus
 } from '@/lib/api'
 import { siteConfig } from '@/config/site.config'
 
@@ -28,6 +28,7 @@ export default function DocumentViewer({ doc }: DocumentViewerProps) {
   const [copied, setCopied] = useState(false)
   const [starred, setStarred] = useState(false)
   const [starCount, setStarCount] = useState(0)
+  const [voteStatus, setVoteStatus] = useState<VoteStatus>({ userVote: 0, upvotes: 0, downvotes: 0, score: 0 })
   const [comments, setComments] = useState<Comment[]>([])
   const [commentTotal, setCommentTotal] = useState(0)
   const [commentBody, setCommentBody] = useState('')
@@ -43,6 +44,7 @@ export default function DocumentViewer({ doc }: DocumentViewerProps) {
 
   useEffect(() => {
     getStarStatus(doc.id).then(s => { setStarred(s.starred); setStarCount(s.count) }).catch(() => {})
+    getVoteStatus(doc.id).then(setVoteStatus).catch(() => {})
   }, [doc.id])
 
   const loadComments = useCallback((offset = 0) => {
@@ -70,6 +72,25 @@ export default function DocumentViewer({ doc }: DocumentViewerProps) {
     } catch {
       setStarred(prev)
       setStarCount(prevCount)
+    }
+  }
+
+  async function handleVote(value: 1 | -1) {
+    const newValue = voteStatus.userVote === value ? 0 : value
+    // Optimistic update
+    const prev = voteStatus
+    setVoteStatus({
+      ...prev,
+      userVote: newValue,
+      upvotes: prev.upvotes + (newValue === 1 ? 1 : 0) - (prev.userVote === 1 ? 1 : 0),
+      downvotes: prev.downvotes + (newValue === -1 ? 1 : 0) - (prev.userVote === -1 ? 1 : 0),
+      score: prev.score + newValue - prev.userVote,
+    })
+    try {
+      const result = await vote(doc.id, newValue as 1 | -1 | 0)
+      setVoteStatus(result)
+    } catch {
+      setVoteStatus(prev)
     }
   }
 
@@ -160,16 +181,33 @@ export default function DocumentViewer({ doc }: DocumentViewerProps) {
             <h1 className="font-headline text-2xl font-bold text-spill-text-primary flex-1">
               {doc.title}
             </h1>
-            <button
-              onClick={handleToggleStar}
-              className="mt-1 flex shrink-0 items-center gap-1.5 rounded-md px-2 py-1 text-sm transition-colors hover:bg-spill-surface"
-              title={starred ? 'Unstar' : 'Star'}
-            >
-              <Star className={`h-5 w-5 ${starred ? 'fill-yellow-400 text-yellow-400' : 'text-spill-text-secondary'}`} />
-              {starCount > 0 && (
-                <span className="text-xs text-spill-text-secondary">{starCount}</span>
-              )}
-            </button>
+            <div className="mt-1 flex shrink-0 items-center gap-1">
+              <button
+                onClick={() => handleVote(1)}
+                className={`flex items-center gap-1 rounded-md px-1.5 py-1 text-sm transition-colors hover:bg-spill-surface ${voteStatus.userVote === 1 ? 'text-green-400' : 'text-spill-text-secondary'}`}
+                title="Upvote"
+              >
+                <ThumbsUp className={`h-4 w-4 ${voteStatus.userVote === 1 ? 'fill-green-400/30' : ''}`} />
+                {voteStatus.upvotes > 0 && <span className="text-xs">{voteStatus.upvotes}</span>}
+              </button>
+              <button
+                onClick={() => handleVote(-1)}
+                className={`flex items-center gap-1 rounded-md px-1.5 py-1 text-sm transition-colors hover:bg-spill-surface ${voteStatus.userVote === -1 ? 'text-red-400' : 'text-spill-text-secondary'}`}
+                title="Downvote"
+              >
+                <ThumbsDown className={`h-4 w-4 ${voteStatus.userVote === -1 ? 'fill-red-400/30' : ''}`} />
+                {voteStatus.downvotes > 0 && <span className="text-xs">{voteStatus.downvotes}</span>}
+              </button>
+              <span className="mx-0.5 text-spill-divider">|</span>
+              <button
+                onClick={handleToggleStar}
+                className="flex items-center gap-1 rounded-md px-1.5 py-1 text-sm transition-colors hover:bg-spill-surface"
+                title={starred ? 'Unstar' : 'Star'}
+              >
+                <Star className={`h-4 w-4 ${starred ? 'fill-yellow-400 text-yellow-400' : 'text-spill-text-secondary'}`} />
+                {starCount > 0 && <span className="text-xs text-spill-text-secondary">{starCount}</span>}
+              </button>
+            </div>
           </div>
 
           <div className="mt-3 flex flex-wrap items-center gap-2">
