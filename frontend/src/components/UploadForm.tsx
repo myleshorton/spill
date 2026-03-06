@@ -2,7 +2,9 @@
 
 import { useState, useCallback, useRef } from 'react'
 import { Upload, FileUp, Loader2, CheckCircle, XCircle, Shield, FileSearch, Database } from 'lucide-react'
-import { uploadDocument, getUploadStatus, formatFileSize, type UploadJob } from '@/lib/api'
+import { getUploadStatus, formatFileSize, type UploadJob } from '@/lib/api'
+
+type JobWithName = UploadJob & { fileName?: string }
 import { siteConfig } from '@/config/site.config'
 import Link from 'next/link'
 
@@ -19,7 +21,7 @@ export default function UploadForm() {
   const [dragOver, setDragOver] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [progress, setProgress] = useState(0)
-  const [jobs, setJobs] = useState<UploadJob[]>([])
+  const [jobs, setJobs] = useState<JobWithName[]>([])
   const [error, setError] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -81,22 +83,32 @@ export default function UploadForm() {
         xhr.send(form)
       })
 
-    try {
-      const results: UploadJob[] = []
-      for (let i = 0; i < valid.length; i++) {
+    const results: JobWithName[] = []
+    for (let i = 0; i < valid.length; i++) {
+      try {
         const result = await uploadOne(valid[i], i)
-        results.push(result)
+        results.push({ ...result, fileName: valid[i].name })
+        setJobs([...results])
+      } catch (err: any) {
+        results.push({ jobId: `error-${i}`, status: 'failed', error: err.message, fileName: valid[i].name })
         setJobs([...results])
       }
+    }
 
-      setUploading(false)
+    setUploading(false)
 
-      // Poll for status of all jobs
+    // Poll for status of successfully uploaded jobs
+    const hasPollable = results.some(r => r.status !== 'failed')
+    if (hasPollable) {
       if (pollRef.current) clearInterval(pollRef.current)
       pollRef.current = setInterval(async () => {
         try {
           const updated = await Promise.all(
-            results.map(r => getUploadStatus(r.jobId).catch(() => r))
+            results.map(r =>
+              r.status === 'failed' || r.status === 'complete'
+                ? r
+                : getUploadStatus(r.jobId).then(u => ({ ...u, fileName: r.fileName })).catch(() => r)
+            )
           )
           setJobs(updated)
           if (updated.every(j => j.status === 'complete' || j.status === 'failed')) {
@@ -104,9 +116,6 @@ export default function UploadForm() {
           }
         } catch {}
       }, 1500)
-    } catch (err: any) {
-      setError(err.message)
-      setUploading(false)
     }
   }, [maxSize, allowedTypes])
 
@@ -209,6 +218,7 @@ export default function UploadForm() {
               }`} />
               <div className="min-w-0 flex-1">
                 <p className={`text-sm font-medium ${statusInfo.color}`}>
+                  {job.fileName && <span className="text-spill-text-primary">{job.fileName} — </span>}
                   {statusInfo.label}
                 </p>
                 {job.status === 'failed' && job.error && (
