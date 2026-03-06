@@ -38,7 +38,7 @@ function CitationText({ text, sources }: { text: string; sources: ChatSource[] }
   )
 }
 
-const AI_COLLAPSE_CHARS = 600
+const COLLAPSED_HEIGHT = 160 // px
 
 export default function AIAnswerCard({ query }: { query: string }) {
   const [aiText, setAiText] = useState('')
@@ -47,8 +47,10 @@ export default function AIAnswerCard({ query }: { query: string }) {
   const [aiDone, setAiDone] = useState(false)
   const [aiExpanded, setAiExpanded] = useState(false)
   const [aiError, setAiError] = useState<string | null>(null)
+  const [isOverflowing, setIsOverflowing] = useState(false)
   const abortRef = useRef<AbortController | null>(null)
   const lastQueryRef = useRef('')
+  const contentRef = useRef<HTMLDivElement>(null)
 
   const runQuery = useCallback((q: string) => {
     abortRef.current?.abort()
@@ -59,6 +61,7 @@ export default function AIAnswerCard({ query }: { query: string }) {
     setAiDone(false)
     setAiExpanded(false)
     setAiError(null)
+    setIsOverflowing(false)
 
     const controller = new AbortController()
     abortRef.current = controller
@@ -83,10 +86,12 @@ export default function AIAnswerCard({ query }: { query: string }) {
     return () => { abortRef.current?.abort() }
   }, [query, runQuery])
 
-  const needsTruncation = aiDone && aiText.length > AI_COLLAPSE_CHARS
-  const displayText = (!aiExpanded && needsTruncation)
-    ? aiText.slice(0, AI_COLLAPSE_CHARS)
-    : aiText
+  // Check overflow whenever text changes
+  useEffect(() => {
+    if (contentRef.current && !aiExpanded) {
+      setIsOverflowing(contentRef.current.scrollHeight > COLLAPSED_HEIGHT)
+    }
+  }, [aiText, aiExpanded])
 
   if (!query) return null
 
@@ -98,35 +103,44 @@ export default function AIAnswerCard({ query }: { query: string }) {
         {aiStreaming && <Loader2 className="h-3 w-3 animate-spin text-spill-text-secondary" />}
       </div>
 
-      <div className="px-4 py-3">
-        {aiError && (
-          <div className="mb-3 flex items-start gap-2 rounded-lg border border-red-500/30 bg-red-500/5 px-3 py-2 text-sm text-red-400">
-            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-            {aiError}
-          </div>
-        )}
+      <div className="relative">
+        <div
+          ref={contentRef}
+          className="px-4 py-3 overflow-hidden transition-[max-height] duration-300"
+          style={{ maxHeight: aiExpanded ? contentRef.current?.scrollHeight ?? 'none' : COLLAPSED_HEIGHT }}
+        >
+          {aiError && (
+            <div className="mb-3 flex items-start gap-2 rounded-lg border border-red-500/30 bg-red-500/5 px-3 py-2 text-sm text-red-400">
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+              {aiError}
+            </div>
+          )}
 
-        {aiText ? (
-          <div className="prose-sm text-sm leading-relaxed text-spill-text-primary whitespace-pre-wrap">
-            <CitationText text={displayText} sources={aiSources} />
-            {!aiExpanded && needsTruncation && (
-              <span className="text-spill-text-secondary/60">...</span>
-            )}
-          </div>
-        ) : aiStreaming ? (
-          <div className="flex items-center gap-2 text-sm text-spill-text-secondary">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            Searching documents...
-          </div>
-        ) : aiDone && !aiError ? (
-          <p className="text-sm text-spill-text-secondary">No AI answer available.</p>
-        ) : null}
+          {aiText ? (
+            <div className="prose-sm text-sm leading-relaxed text-spill-text-primary whitespace-pre-wrap">
+              <CitationText text={aiText} sources={aiSources} />
+            </div>
+          ) : aiStreaming ? (
+            <div className="flex items-center gap-2 text-sm text-spill-text-secondary">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Searching documents...
+            </div>
+          ) : aiDone && !aiError ? (
+            <p className="text-sm text-spill-text-secondary">No AI answer available.</p>
+          ) : null}
+        </div>
+
+        {/* Fade overlay when collapsed and overflowing */}
+        {!aiExpanded && isOverflowing && (
+          <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-spill-surface to-transparent" />
+        )}
       </div>
 
-      {aiText && (
+      {/* Footer: show more / sources count */}
+      {(isOverflowing || aiExpanded || aiSources.length > 0) && aiText && (
         <div className="border-t border-spill-divider px-4 py-2.5 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            {needsTruncation && (
+            {(isOverflowing || aiExpanded) && (
               <button
                 onClick={() => setAiExpanded(!aiExpanded)}
                 className="flex items-center gap-1 text-xs font-medium text-spill-accent hover:text-spill-accent-hover transition-colors"
