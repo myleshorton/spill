@@ -51,7 +51,10 @@ export default function UploadForm() {
     setUploading(true)
     setProgress(0)
 
-    const uploadOne = (file: File, idx: number): Promise<UploadJob> =>
+    // Track per-file progress for aggregate calculation
+    const fileProgressMap = new Map<number, number>()
+
+    const uploadOne = (file: File, idx: number): Promise<JobWithName> =>
       new Promise((resolve, reject) => {
         const xhr = new XMLHttpRequest()
         const form = new FormData()
@@ -59,15 +62,16 @@ export default function UploadForm() {
 
         xhr.upload.addEventListener('progress', (e) => {
           if (e.lengthComputable) {
-            const fileProgress = Math.round((e.loaded / e.total) * 100)
-            const overall = Math.round(((idx + fileProgress / 100) / valid.length) * 100)
-            setProgress(overall)
+            fileProgressMap.set(idx, e.loaded / e.total)
+            let total = 0
+            fileProgressMap.forEach(v => { total += v })
+            setProgress(Math.round((total / valid.length) * 100))
           }
         })
 
         xhr.addEventListener('load', () => {
           if (xhr.status >= 200 && xhr.status < 300) {
-            resolve(JSON.parse(xhr.responseText))
+            resolve({ ...JSON.parse(xhr.responseText), fileName: file.name })
           } else {
             try {
               const err = JSON.parse(xhr.responseText)
@@ -83,18 +87,17 @@ export default function UploadForm() {
         xhr.send(form)
       })
 
-    const results: JobWithName[] = []
-    for (let i = 0; i < valid.length; i++) {
-      try {
-        const result = await uploadOne(valid[i], i)
-        results.push({ ...result, fileName: valid[i].name })
-        setJobs([...results])
-      } catch (err: any) {
-        results.push({ jobId: `error-${i}`, status: 'failed', error: err.message, fileName: valid[i].name })
-        setJobs([...results])
-      }
-    }
+    // Upload all files in parallel
+    const settled = await Promise.allSettled(
+      valid.map((file, i) => uploadOne(file, i))
+    )
 
+    const results: JobWithName[] = settled.map((s, i) =>
+      s.status === 'fulfilled'
+        ? s.value
+        : { jobId: `error-${i}`, status: 'failed' as const, error: s.reason?.message, fileName: valid[i].name }
+    )
+    setJobs(results)
     setUploading(false)
 
     // Poll for status of successfully uploaded jobs
