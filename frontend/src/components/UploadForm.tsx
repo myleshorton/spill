@@ -1,14 +1,18 @@
 'use client'
 
 import { useState, useCallback, useRef } from 'react'
-import { Upload, FileUp, Loader2, CheckCircle, XCircle, Shield, FileSearch, Database } from 'lucide-react'
+import { FileUp, Loader2, CheckCircle, XCircle, Shield, FileSearch, Database, Upload } from 'lucide-react'
 import { getUploadStatus, formatFileSize, type UploadJob } from '@/lib/api'
-
-type JobWithName = UploadJob & { fileName?: string }
 import { siteConfig } from '@/config/site.config'
 import Link from 'next/link'
 
+type FileJob = UploadJob & {
+  fileName: string
+  uploadProgress?: number // 0-100, only during upload phase
+}
+
 const STATUS_LABELS: Record<string, { label: string; icon: typeof Loader2; color: string }> = {
+  uploading: { label: 'Uploading', icon: Upload, color: 'text-spill-accent' },
   pending: { label: 'Queued', icon: Loader2, color: 'text-spill-text-secondary' },
   scanning: { label: 'Scanning for viruses', icon: Shield, color: 'text-amber-400' },
   extracting: { label: 'Extracting text', icon: FileSearch, color: 'text-blue-400' },
@@ -20,8 +24,7 @@ const STATUS_LABELS: Record<string, { label: string; icon: typeof Loader2; color
 export default function UploadForm() {
   const [dragOver, setDragOver] = useState(false)
   const [uploading, setUploading] = useState(false)
-  const [progress, setProgress] = useState(0)
-  const [jobs, setJobs] = useState<JobWithName[]>([])
+  const [jobs, setJobs] = useState<FileJob[]>([])
   const [error, setError] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -49,12 +52,20 @@ export default function UploadForm() {
     }
 
     setUploading(true)
-    setProgress(0)
 
-    // Track per-file progress for aggregate calculation
-    const fileProgressMap = new Map<number, number>()
+    // Initialize all files as "uploading" with 0% progress
+    const initial: FileJob[] = valid.map((f, i) => ({
+      jobId: `pending-${i}`,
+      status: 'uploading' as any,
+      fileName: f.name,
+      uploadProgress: 0,
+    }))
+    setJobs(initial)
 
-    const uploadOne = (file: File, idx: number): Promise<JobWithName> =>
+    // Mutable ref for building up results so XHR callbacks can update state
+    const current = [...initial]
+
+    const uploadOne = (file: File, idx: number): Promise<FileJob> =>
       new Promise((resolve, reject) => {
         const xhr = new XMLHttpRequest()
         const form = new FormData()
@@ -62,16 +73,19 @@ export default function UploadForm() {
 
         xhr.upload.addEventListener('progress', (e) => {
           if (e.lengthComputable) {
-            fileProgressMap.set(idx, e.loaded / e.total)
-            let total = 0
-            fileProgressMap.forEach(v => { total += v })
-            setProgress(Math.round((total / valid.length) * 100))
+            const pct = Math.round((e.loaded / e.total) * 100)
+            current[idx] = { ...current[idx], uploadProgress: pct }
+            setJobs([...current])
           }
         })
 
         xhr.addEventListener('load', () => {
           if (xhr.status >= 200 && xhr.status < 300) {
-            resolve({ ...JSON.parse(xhr.responseText), fileName: file.name })
+            const result = JSON.parse(xhr.responseText)
+            const job: FileJob = { ...result, fileName: file.name }
+            current[idx] = job
+            setJobs([...current])
+            resolve(job)
           } else {
             try {
               const err = JSON.parse(xhr.responseText)
@@ -82,7 +96,7 @@ export default function UploadForm() {
           }
         })
 
-        xhr.addEventListener('error', () => reject(new Error(`Upload failed — network error (${file.name})`)))
+        xhr.addEventListener('error', () => reject(new Error(`Network error`)))
         xhr.open('POST', '/api/upload')
         xhr.send(form)
       })
@@ -92,28 +106,32 @@ export default function UploadForm() {
       valid.map((file, i) => uploadOne(file, i))
     )
 
-    const results: JobWithName[] = settled.map((s, i) =>
-      s.status === 'fulfilled'
-        ? s.value
-        : { jobId: `error-${i}`, status: 'failed' as const, error: s.reason?.message, fileName: valid[i].name }
-    )
-    setJobs(results)
+    // Update any that failed
+    settled.forEach((s, i) => {
+      if (s.status === 'rejected') {
+        current[i] = { jobId: `error-${i}`, status: 'failed', error: s.reason?.message, fileName: valid[i].name }
+      }
+    })
+    setJobs([...current])
     setUploading(false)
 
-    // Poll for status of successfully uploaded jobs
-    const hasPollable = results.some(r => r.status !== 'failed')
+    // Poll for processing status of successfully uploaded jobs
+    const hasPollable = current.some(r => r.status !== 'failed')
     if (hasPollable) {
       if (pollRef.current) clearInterval(pollRef.current)
+      const pollResults = [...current]
       pollRef.current = setInterval(async () => {
         try {
           const updated = await Promise.all(
-            results.map(r =>
+            pollResults.map(r =>
               r.status === 'failed' || r.status === 'complete'
                 ? r
-                : getUploadStatus(r.jobId).then(u => ({ ...u, fileName: r.fileName })).catch(() => r)
+                : getUploadStatus(r.jobId).then(u => ({ ...u, fileName: r.fileName } as FileJob)).catch(() => r)
             )
           )
-          setJobs(updated)
+          // Sync back
+          updated.forEach((u, i) => { pollResults[i] = u })
+          setJobs([...pollResults])
           if (updated.every(j => j.status === 'complete' || j.status === 'failed')) {
             if (pollRef.current) clearInterval(pollRef.current)
           }
@@ -135,7 +153,7 @@ export default function UploadForm() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Drop zone */}
       <div
         onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
@@ -173,30 +191,16 @@ export default function UploadForm() {
             )}
           </div>
 
-          {uploading ? (
-            <>
-              <p className="font-headline text-sm font-medium text-spill-text-primary">
-                Uploading... {progress}%
+          <div>
+            <p className="font-headline text-sm font-medium text-spill-text-primary">
+              {uploading ? 'Uploading...' : 'Drop files here or click to browse'}
+            </p>
+            {!uploading && (
+              <p className="mt-1 text-xs text-spill-text-secondary">
+                PDF, images, videos, audio, documents — up to {maxSize}MB
               </p>
-              <div className="h-1.5 w-64 overflow-hidden rounded-full bg-spill-surface">
-                <div
-                  className="h-full rounded-full bg-spill-accent transition-all duration-300"
-                  style={{ width: `${progress}%` }}
-                />
-              </div>
-            </>
-          ) : (
-            <>
-              <div>
-                <p className="font-headline text-sm font-medium text-spill-text-primary">
-                  Drop files here or click to browse
-                </p>
-                <p className="mt-1 text-xs text-spill-text-secondary">
-                  PDF, images, videos, audio, documents — up to {maxSize}MB
-                </p>
-              </div>
-            </>
-          )}
+            )}
+          </div>
         </div>
       </div>
 
@@ -210,19 +214,23 @@ export default function UploadForm() {
         </div>
       )}
 
-      {/* Job status */}
+      {/* Per-file status cards */}
       {jobs.map((job) => {
+        const isUploading = (job.status as string) === 'uploading'
         const statusInfo = STATUS_LABELS[job.status] || STATUS_LABELS.pending
+        const StatusIcon = statusInfo.icon
+        const shouldSpin = isUploading || (job.status !== 'complete' && job.status !== 'failed')
+
         return (
           <div key={job.jobId} className="rounded-lg border border-spill-divider bg-spill-surface/50 px-5 py-4">
             <div className="flex items-center gap-3">
-              <statusInfo.icon className={`h-5 w-5 ${statusInfo.color} ${
-                job.status !== 'complete' && job.status !== 'failed' ? 'animate-spin' : ''
-              }`} />
+              <StatusIcon className={`h-5 w-5 ${statusInfo.color} ${shouldSpin ? 'animate-spin' : ''}`} />
               <div className="min-w-0 flex-1">
-                <p className={`text-sm font-medium ${statusInfo.color}`}>
-                  {job.fileName && <span className="text-spill-text-primary">{job.fileName} — </span>}
-                  {statusInfo.label}
+                <p className="text-sm font-medium text-spill-text-primary truncate">
+                  {job.fileName}
+                </p>
+                <p className={`text-xs ${statusInfo.color}`}>
+                  {isUploading ? `Uploading — ${job.uploadProgress ?? 0}%` : statusInfo.label}
                 </p>
                 {job.status === 'failed' && job.error && (
                   <p className="mt-0.5 text-xs text-red-300/70">{job.error}</p>
@@ -238,22 +246,31 @@ export default function UploadForm() {
               </div>
             </div>
 
-            {/* Status pipeline */}
+            {/* Progress bar — upload phase or processing pipeline */}
             {job.status !== 'failed' && (
-              <div className="mt-4 flex items-center gap-1">
-                {['scanning', 'extracting', 'indexing', 'complete'].map((step, i) => {
-                  const steps = ['scanning', 'extracting', 'indexing', 'complete']
-                  const currentIdx = steps.indexOf(job.status)
-                  const done = i <= currentIdx
-                  return (
+              <div className="mt-3 flex items-center gap-1">
+                {isUploading ? (
+                  <div className="h-1 w-full overflow-hidden rounded-full bg-spill-surface">
                     <div
-                      key={step}
-                      className={`h-1 flex-1 rounded-full transition-colors ${
-                        done ? 'bg-spill-accent' : 'bg-spill-surface'
-                      }`}
+                      className="h-full rounded-full bg-spill-accent transition-all duration-300"
+                      style={{ width: `${job.uploadProgress ?? 0}%` }}
                     />
-                  )
-                })}
+                  </div>
+                ) : (
+                  ['scanning', 'extracting', 'indexing', 'complete'].map((step, i) => {
+                    const steps = ['scanning', 'extracting', 'indexing', 'complete']
+                    const currentIdx = steps.indexOf(job.status)
+                    const done = i <= currentIdx
+                    return (
+                      <div
+                        key={step}
+                        className={`h-1 flex-1 rounded-full transition-colors ${
+                          done ? 'bg-spill-accent' : 'bg-spill-surface'
+                        }`}
+                      />
+                    )
+                  })
+                )}
               </div>
             )}
           </div>
