@@ -234,8 +234,49 @@ function createChatRouter (docsDb, searchIndex) {
       const sources = []
       const contextParts = []
       let totalChars = 0
-      const MAX_CHARS_PER_DOC = 4000
-      const MAX_TOTAL_CHARS = 80000
+      const MAX_CHARS_PER_DOC = 6000
+      const MAX_TOTAL_CHARS = 100000
+
+      // Extract relevant passages from long documents instead of just taking the start
+      function extractRelevantPassages (fullText, maxChars) {
+        if (fullText.length <= maxChars) return fullText
+
+        // Split into paragraphs
+        const paragraphs = fullText.split(/\n\s*\n/)
+        if (paragraphs.length <= 1) return fullText.slice(0, maxChars) + '...'
+
+        // Score each paragraph by how many query terms it contains
+        const scored = paragraphs.map((p, i) => {
+          const pLower = p.toLowerCase()
+          let score = 0
+          for (const term of keyTerms) {
+            const idx = pLower.indexOf(term)
+            if (idx !== -1) score += 2
+            // Count multiple occurrences
+            let pos = 0
+            while ((pos = pLower.indexOf(term, pos)) !== -1) { score += 0.5; pos += term.length }
+          }
+          // Slight boost for early paragraphs (context/intro)
+          if (i < 3) score += 0.5
+          return { text: p, score, idx: i }
+        })
+
+        // Always include first paragraph for context, then top-scoring ones
+        const selected = [scored[0]]
+        let chars = scored[0].text.length
+        const rest = scored.slice(1).sort((a, b) => b.score - a.score)
+
+        for (const para of rest) {
+          if (para.score === 0) continue
+          if (chars + para.text.length + 10 > maxChars) continue
+          selected.push(para)
+          chars += para.text.length + 10
+        }
+
+        // Sort back by original order for coherence
+        selected.sort((a, b) => a.idx - b.idx)
+        return selected.map(s => s.text).join('\n\n')
+      }
 
       for (const [id, { doc }] of ranked) {
         if (totalChars >= MAX_TOTAL_CHARS) break
@@ -254,9 +295,7 @@ function createChatRouter (docsDb, searchIndex) {
         } catch {}
         if (!text) continue
 
-        if (text.length > MAX_CHARS_PER_DOC) {
-          text = text.slice(0, MAX_CHARS_PER_DOC) + '...'
-        }
+        text = extractRelevantPassages(text, MAX_CHARS_PER_DOC)
 
         if (totalChars + text.length > MAX_TOTAL_CHARS) {
           text = text.slice(0, MAX_TOTAL_CHARS - totalChars) + '...'
