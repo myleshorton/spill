@@ -15,7 +15,7 @@ const TYPE_COLORS: Record<string, string> = {
   location: '#f59e0b',
 }
 
-export default function EntityGraph({ minShared = 2, limit = 100 }: EntityGraphProps) {
+export default function EntityGraph({ minShared = 5, limit = 2000 }: EntityGraphProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const cyRef = useRef<unknown>(null)
   const [graphData, setGraphData] = useState<EntityGraphData | null>(null)

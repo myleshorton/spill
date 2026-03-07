@@ -16,10 +16,10 @@ const ALLOWED_EXTENSIONS = new Set([
 function createUploadRouter (docsDb, uploadProcessor) {
   const router = express.Router()
 
-  // Rate limit: 10 uploads per hour per IP
+  // Rate limit: 50 uploads per hour per IP
   const uploadLimiter = rateLimit({
     windowMs: 60 * 60 * 1000,
-    max: 10,
+    max: 50,
     keyGenerator: (req) => req.headers['x-real-ip'] || req.ip,
     message: { error: 'Upload rate limit exceeded. Try again later.' }
   })

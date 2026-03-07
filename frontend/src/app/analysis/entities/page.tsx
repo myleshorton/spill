@@ -13,9 +13,9 @@ export default function EntitiesPage() {
   const [topLocations, setTopLocations] = useState<Entity[]>([])
 
   useEffect(() => {
-    getTopEntities('person', 20).then(setTopPeople).catch(() => {})
-    getTopEntities('organization', 20).then(setTopOrgs).catch(() => {})
-    getTopEntities('location', 20).then(setTopLocations).catch(() => {})
+    getTopEntities('person', 50).then(setTopPeople).catch(() => {})
+    getTopEntities('organization', 50).then(setTopOrgs).catch(() => {})
+    getTopEntities('location', 50).then(setTopLocations).catch(() => {})
   }, [])
 
   return (

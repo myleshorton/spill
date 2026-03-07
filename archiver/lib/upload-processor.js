@@ -29,6 +29,11 @@ try {
   thumbnails = require('../../ingest/lib/thumbnails')
 } catch {}
 
+let entityExtractor = null
+try {
+  entityExtractor = require('../../ingest/lib/entity-extractor')
+} catch {}
+
 const UPLOAD_DIR = path.join(__dirname, '..', 'data', 'content', 'uploads')
 
 const ALLOWED_EXTENSIONS = new Set([
@@ -277,7 +282,29 @@ class UploadProcessor extends EventEmitter {
         }
       }
 
-      // 10. Publish to Hyperdrive
+      // 10. Extract entities, relationships, and financial transactions via Ollama
+      if (entityExtractor) {
+        try {
+          const ollamaReady = await entityExtractor.checkOllama()
+          if (ollamaReady) {
+            const text = [extractedText, transcript].filter(Boolean).join('\n\n')
+            if (text.trim().length >= 20) {
+              const extraction = await entityExtractor.extractEntitiesAndFinancials(text)
+              entityExtractor.storeExtractionResults(this.docsDb, docId, extraction)
+              const counts = [
+                extraction.entities.length && `${extraction.entities.length} entities`,
+                extraction.relationships.length && `${extraction.relationships.length} relationships`,
+                extraction.financial.length && `${extraction.financial.length} financial records`
+              ].filter(Boolean)
+              if (counts.length) console.log('[upload] Extracted %s for %s', counts.join(', '), docId)
+            }
+          }
+        } catch (err) {
+          console.warn('[upload] Entity extraction failed for %s: %s', docId, err.message)
+        }
+      }
+
+      // 11. Publish to Hyperdrive
       if (this.archiver && this.archiver.localDrive) {
         try {
           const driveKey = this.archiver.localDrive.key.toString('hex')
@@ -289,7 +316,7 @@ class UploadProcessor extends EventEmitter {
         }
       }
 
-      // 11. Mark complete
+      // 12. Mark complete
       job.status = 'complete'
       job.documentId = docId
       this.emit('status', job)
@@ -297,7 +324,7 @@ class UploadProcessor extends EventEmitter {
       const siteUrl = `https://${process.env.DOMAIN || 'localhost'}`
       notifyUpload(job.originalName, docId, siteUrl)
 
-      // 12. Periodic torrent regeneration
+      // 13. Periodic torrent regeneration
       this._uploadsSinceLastTorrent++
       if (this._uploadsSinceLastTorrent >= 10 && this.torrentManager) {
         this._uploadsSinceLastTorrent = 0

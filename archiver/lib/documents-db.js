@@ -207,6 +207,16 @@ class DocumentsDatabase {
       CREATE INDEX IF NOT EXISTS idx_fin_from ON financial_records(from_entity);
       CREATE INDEX IF NOT EXISTS idx_fin_to ON financial_records(to_entity);
     `)
+
+    // Entity questions cache
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS entity_questions (
+        entity_id INTEGER PRIMARY KEY,
+        questions TEXT NOT NULL,
+        generated_at INTEGER NOT NULL,
+        FOREIGN KEY (entity_id) REFERENCES entities(id)
+      );
+    `)
   }
 
   _seedCollections () {
@@ -558,7 +568,7 @@ class DocumentsDatabase {
     return { documents: rows, total: total.count }
   }
 
-  getEntityCooccurrences (minShared = 2) {
+  getEntityCooccurrences (minShared = 5, limit = 2000) {
     return this.db.prepare(`
       SELECT a.entity_id as source, b.entity_id as target, COUNT(*) as shared_docs
       FROM document_entities a
@@ -566,7 +576,8 @@ class DocumentsDatabase {
       GROUP BY a.entity_id, b.entity_id
       HAVING shared_docs >= ?
       ORDER BY shared_docs DESC
-    `).all(minShared)
+      LIMIT ?
+    `).all(minShared, limit)
   }
 
   getTopEntities (type, limit = 50) {
@@ -693,6 +704,17 @@ class DocumentsDatabase {
       ORDER BY r.relationship_type ASC
       LIMIT ?
     `).all(entityId, entityId, entityId, entityId, entityId, entityId, limit)
+  }
+
+  getEntityQuestions (entityId) {
+    return this.db.prepare('SELECT questions, generated_at FROM entity_questions WHERE entity_id = ?').get(entityId)
+  }
+
+  setEntityQuestions (entityId, questions) {
+    this.db.prepare(`
+      INSERT OR REPLACE INTO entity_questions (entity_id, questions, generated_at)
+      VALUES (?, ?, ?)
+    `).run(entityId, JSON.stringify(questions), Date.now())
   }
 
   getRelationshipTypes () {

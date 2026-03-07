@@ -25,6 +25,8 @@ services:
       - WHISPER_CPP_PATH=/usr/local/bin/whisper-cpp
       - WHISPER_MODEL_PATH=/models/ggml-base.en-q5_1.bin
       - WHISPER_THREADS=${WHISPER_THREADS:-8}
+      - OLLAMA_URL=http://172.19.0.1:11434
+      - GROQ_API_KEY=${GROQ_API_KEY:-}
     depends_on:
       - meilisearch
       - clamav
@@ -108,6 +110,7 @@ services:
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
       - COURTLISTENER_TOKEN=${COURTLISTENER_TOKEN:-}
       - BRAVE_SEARCH_API_KEY=${BRAVE_SEARCH_API_KEY:-}
+      - OLLAMA_URL=http://172.19.0.1:11434
     depends_on:
       - meilisearch
     restart: unless-stopped

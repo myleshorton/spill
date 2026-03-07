@@ -10,6 +10,7 @@ import {
 } from '@/lib/api'
 import DocumentGrid from '@/components/DocumentGrid'
 import Pagination from '@/components/Pagination'
+import EntityChatBar from '@/components/EntityChatBar'
 
 const EntityMiniGraph = dynamic(() => import('@/components/EntityMiniGraph'), { ssr: false })
 
@@ -128,6 +129,21 @@ export default function EntityPageClient({ entity }: Props) {
         </div>
       </div>
 
+      {/* Entity-specific chat bar */}
+      <div className="mb-6">
+        <EntityChatBar entityId={entity.id} entityName={entity.name} />
+      </div>
+
+      {/* Network graph — full width, prominent */}
+      {related.length > 0 && (
+        <div className="mb-6 rounded-lg border border-spill-divider bg-spill-surface p-4">
+          <h3 className="font-headline text-sm font-semibold text-spill-text-primary mb-3">
+            Network
+          </h3>
+          <EntityMiniGraph entityId={entity.id} related={related} entityName={entity.name} entityType={entity.type} relationships={relationships} />
+        </div>
+      )}
+
       <div className="grid gap-8 lg:grid-cols-[1fr_320px]">
         <div className="min-w-0">
           <h2 className="font-headline text-lg font-semibold text-spill-text-primary mb-4">
@@ -210,15 +226,6 @@ export default function EntityPageClient({ entity }: Props) {
                   )
                 })}
               </div>
-            </div>
-          )}
-
-          {related.length > 0 && (
-            <div className="rounded-lg border border-spill-divider bg-spill-surface p-4">
-              <h3 className="font-headline text-sm font-semibold text-spill-text-primary mb-3">
-                Network
-              </h3>
-              <EntityMiniGraph entityId={entity.id} related={related} entityName={entity.name} entityType={entity.type} relationships={relationships} />
             </div>
           )}
         </div>

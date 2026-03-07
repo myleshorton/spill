@@ -16,6 +16,11 @@ const SOURCE_CATEGORY_MAP = {
   'search-discovery': 'web_page',
 }
 
+let entityExtractor = null
+try {
+  entityExtractor = require('../../ingest/lib/entity-extractor')
+} catch {}
+
 class ContentProcessor {
   constructor ({ docsDb, searchIndex, relevanceScorer, textExtract, thumbnails, fileUtils, transcriber, embedder, imageKeywords, options = {} }) {
     this.docsDb = docsDb
@@ -220,7 +225,23 @@ class ContentProcessor {
       }
     }
 
-    // 15. Extract image keywords
+    // 15. Extract entities, relationships, and financial transactions via Ollama
+    if (entityExtractor) {
+      try {
+        const ollamaReady = await entityExtractor.checkOllama()
+        if (ollamaReady) {
+          const allText = [text, transcript].filter(Boolean).join('\n\n')
+          if (allText.trim().length >= 20) {
+            const extraction = await entityExtractor.extractEntitiesAndFinancials(allText)
+            entityExtractor.storeExtractionResults(this.docsDb, docId, extraction)
+          }
+        }
+      } catch (err) {
+        console.warn('[processor] Entity extraction failed for %s: %s', docId, err.message)
+      }
+    }
+
+    // 16. Extract image keywords
     if (this.imageKeywords && fileType.contentType === 'image') {
       try {
         const keywords = await this.imageKeywords.extractKeywords(destFile)

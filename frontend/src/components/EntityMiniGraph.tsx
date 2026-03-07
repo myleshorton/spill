@@ -40,7 +40,7 @@ export default function EntityMiniGraph({ entityId, entityName, entityType, rela
         (cyRef.current as { destroy: () => void }).destroy()
       }
 
-      const topRelated = related.slice(0, 12)
+      const topRelated = related.slice(0, 20)
 
       const elements = [
         {
@@ -133,8 +133,8 @@ export default function EntityMiniGraph({ entityId, entityName, entityType, rela
         } as any,
         minZoom: 0.5,
         maxZoom: 3,
-        userPanningEnabled: false,
-        userZoomingEnabled: false,
+        userPanningEnabled: true,
+        userZoomingEnabled: true,
         boxSelectionEnabled: false,
       })
 
@@ -164,7 +164,7 @@ export default function EntityMiniGraph({ entityId, entityName, entityType, rela
   return (
     <div
       ref={containerRef}
-      className="h-[250px] w-full rounded border border-spill-divider bg-spill-bg"
+      className="h-[350px] w-full rounded border border-spill-divider bg-spill-bg"
     />
   )
 }

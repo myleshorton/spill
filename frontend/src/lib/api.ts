@@ -503,6 +503,12 @@ export async function getRelationshipTypes(): Promise<{ type: string; count: num
   return data.types || []
 }
 
+export async function getEntityQuestions(entityId: number): Promise<{ questions: string[]; generatedAt: number }> {
+  const res = await fetch(`${API_BASE}/entities/${entityId}/questions`)
+  if (!res.ok) return { questions: [], generatedAt: 0 }
+  return res.json()
+}
+
 // --- Feature 4: Financial ---
 
 export interface FinancialRecord {

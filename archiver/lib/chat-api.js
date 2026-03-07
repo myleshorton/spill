@@ -1,5 +1,6 @@
 const express = require('express')
-const Anthropic = require('@anthropic-ai/sdk')
+let Anthropic
+try { Anthropic = require('@anthropic-ai/sdk') } catch {}
 
 // Reuse embedding helpers from users-api pattern
 let _embeddingCache = null
@@ -60,9 +61,11 @@ function createChatRouter (docsDb, searchIndex) {
   const router = express.Router()
 
   router.post('/chat', express.json(), async (req, res) => {
-    const apiKey = process.env.ANTHROPIC_API_KEY
-    if (!apiKey) {
-      return res.status(503).json({ error: 'Chat is not configured — ANTHROPIC_API_KEY is not set.' })
+    const groqKey = process.env.GROQ_API_KEY
+    const anthropicKey = process.env.ANTHROPIC_API_KEY
+    const chatBackend = groqKey ? 'groq' : anthropicKey ? 'anthropic' : null
+    if (!chatBackend) {
+      return res.status(503).json({ error: 'Chat is not configured — GROQ_API_KEY or ANTHROPIC_API_KEY is not set.' })
     }
 
     const { query, history } = req.body
@@ -395,45 +398,116 @@ function createChatRouter (docsDb, searchIndex) {
       // Send sources first
       res.write(`data: ${JSON.stringify({ type: 'sources', sources })}\n\n`)
 
-      const anthropic = new Anthropic({ apiKey })
-      const stream = anthropic.messages.stream({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 4096,
-        system: SYSTEM_PROMPT,
-        messages
-      })
-
       let aborted = false
-      req.on('close', () => {
-        aborted = true
-        stream.abort()
-      })
+      req.on('close', () => { aborted = true })
 
-      stream.on('text', (text) => {
-        if (!aborted) {
-          res.write(`data: ${JSON.stringify({ type: 'delta', text })}\n\n`)
+      if (chatBackend === 'groq') {
+        // Groq streaming via fetch (OpenAI-compatible SSE)
+        try {
+          const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${groqKey}`
+            },
+            body: JSON.stringify({
+              model: 'llama-3.3-70b-versatile',
+              max_tokens: 4096,
+              stream: true,
+              messages: [
+                { role: 'system', content: SYSTEM_PROMPT },
+                ...messages
+              ]
+            })
+          })
+
+          if (!groqRes.ok) {
+            const errText = await groqRes.text()
+            console.error('[chat] Groq API error:', groqRes.status, errText)
+            res.write(`data: ${JSON.stringify({ type: 'error', error: 'Generation failed. Please try again.' })}\n\n`)
+            res.end()
+            return
+          }
+
+          const reader = groqRes.body.getReader()
+          const decoder = new TextDecoder()
+          let buffer = ''
+
+          while (true) {
+            if (aborted) break
+            const { done, value } = await reader.read()
+            if (done) break
+
+            buffer += decoder.decode(value, { stream: true })
+            const lines = buffer.split('\n')
+            buffer = lines.pop() || ''
+
+            for (const line of lines) {
+              if (aborted) break
+              const trimmed = line.trim()
+              if (!trimmed.startsWith('data: ')) continue
+              const data = trimmed.slice(6)
+              if (data === '[DONE]') continue
+
+              try {
+                const parsed = JSON.parse(data)
+                const delta = parsed.choices?.[0]?.delta?.content
+                if (delta) {
+                  res.write(`data: ${JSON.stringify({ type: 'delta', text: delta })}\n\n`)
+                }
+              } catch {}
+            }
+          }
+
+          if (!aborted) {
+            res.write(`data: ${JSON.stringify({ type: 'done', usage: {} })}\n\n`)
+            res.end()
+          }
+        } catch (err) {
+          console.error('[chat] Groq stream error:', err.message)
+          if (!aborted) {
+            res.write(`data: ${JSON.stringify({ type: 'error', error: 'Generation failed. Please try again.' })}\n\n`)
+            res.end()
+          }
         }
-      })
+      } else {
+        // Anthropic streaming
+        const anthropic = new Anthropic({ apiKey: anthropicKey })
+        const stream = anthropic.messages.stream({
+          model: 'claude-sonnet-4-6',
+          max_tokens: 4096,
+          system: SYSTEM_PROMPT,
+          messages
+        })
 
-      let streamEnded = false
+        req.on('close', () => { stream.abort() })
 
-      stream.on('error', (err) => {
-        if (!aborted && !streamEnded) {
-          streamEnded = true
-          console.error('[chat] Stream error:', err.message)
-          res.write(`data: ${JSON.stringify({ type: 'error', error: 'Generation failed. Please try again.' })}\n\n`)
-          res.end()
-        }
-      })
+        stream.on('text', (text) => {
+          if (!aborted) {
+            res.write(`data: ${JSON.stringify({ type: 'delta', text })}\n\n`)
+          }
+        })
 
-      stream.on('end', () => {
-        if (!aborted && !streamEnded) {
-          streamEnded = true
-          const usage = stream.currentMessageSnapshot?.usage || {}
-          res.write(`data: ${JSON.stringify({ type: 'done', usage })}\n\n`)
-          res.end()
-        }
-      })
+        let streamEnded = false
+
+        stream.on('error', (err) => {
+          if (!aborted && !streamEnded) {
+            streamEnded = true
+            console.error('[chat] Stream error:', err.message)
+            res.write(`data: ${JSON.stringify({ type: 'error', error: 'Generation failed. Please try again.' })}\n\n`)
+            res.end()
+          }
+        })
+
+        stream.on('end', () => {
+          if (!aborted && !streamEnded) {
+            streamEnded = true
+            const usage = stream.currentMessageSnapshot?.usage || {}
+            res.write(`data: ${JSON.stringify({ type: 'done', usage })}\n\n`)
+            res.end()
+          }
+        })
+      }
     } catch (err) {
       console.error('[chat] Pipeline error:', err)
       if (!res.headersSent) {

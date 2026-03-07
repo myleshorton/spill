@@ -476,7 +476,9 @@ function createDocumentsRouter (docsDb, searchIndex, archiverRef, torrentManager
     try {
       const type = req.query.type || undefined
       const limit = Math.min(parseInt(req.query.limit) || 50, 200)
-      const entities = docsDb.getTopEntities(type, limit)
+      const entities = docsDb.getTopEntities(type, limit).map(e => ({
+        id: e.id, name: e.name, type: e.type, documentCount: e.document_count
+      }))
       res.json({ entities })
     } catch (err) {
       console.error('[docs-api] Top entities error:', err.message)
@@ -486,12 +488,12 @@ function createDocumentsRouter (docsDb, searchIndex, archiverRef, torrentManager
 
   router.get('/entities/graph', (req, res) => {
     try {
-      const minShared = parseInt(req.query.minShared) || 2
-      const limit = Math.min(parseInt(req.query.limit) || 100, 500)
-      const edges = docsDb.getEntityCooccurrences(minShared)
+      const minShared = parseInt(req.query.minShared) || 5
+      const limit = Math.min(parseInt(req.query.limit) || 2000, 5000)
+      const edges = docsDb.getEntityCooccurrences(minShared, limit)
       // Collect unique entity IDs from edges
       const entityIds = new Set()
-      const limitedEdges = edges.slice(0, limit)
+      const limitedEdges = edges
       for (const e of limitedEdges) {
         entityIds.add(e.source)
         entityIds.add(e.target)
@@ -618,6 +620,108 @@ function createDocumentsRouter (docsDb, searchIndex, archiverRef, torrentManager
     } catch (err) {
       console.error('[docs-api] Entity documents error:', err.message)
       res.status(500).json({ error: 'Failed to fetch entity documents' })
+    }
+  })
+
+  // --- Entity question generation ---
+  router.get('/entities/:id/questions', async (req, res) => {
+    try {
+      const id = parseInt(req.params.id)
+      const entity = docsDb.getEntity(id)
+      if (!entity) return res.status(404).json({ error: 'Entity not found' })
+
+      // Check cache
+      const cached = docsDb.getEntityQuestions(id)
+      const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000
+      if (cached && (Date.now() - cached.generated_at) < SEVEN_DAYS) {
+        return res.json({ questions: JSON.parse(cached.questions), generatedAt: cached.generated_at })
+      }
+
+      // Gather context
+      const relationships = docsDb.getEntityRelationships(id)
+      const related = docsDb.getRelatedEntities(id)
+      const docs = docsDb.getEntityDocuments(id, 10, 0)
+      const docTitles = docs.documents.map(d => d.title).filter(Boolean)
+
+      const contextLines = [
+        `Entity: ${entity.name}`,
+        `Type: ${entity.type}`,
+        `Appears in ${entity.document_count} documents.`
+      ]
+      if (relationships.length > 0) {
+        contextLines.push('Known relationships:')
+        for (const r of relationships.slice(0, 15)) {
+          const dir = r.direction === 'outgoing' ? `→ ${r.other_name}` : `${r.other_name} →`
+          contextLines.push(`  ${dir} (${r.relationship_type}${r.description ? ': ' + r.description : ''})`)
+        }
+      }
+      if (related.length > 0) {
+        contextLines.push('Frequently co-occurring entities:')
+        contextLines.push('  ' + related.slice(0, 10).map(e => `${e.name} (${e.shared_documents} shared docs)`).join(', '))
+      }
+      if (docTitles.length > 0) {
+        contextLines.push('Sample document titles:')
+        for (const t of docTitles) {
+          contextLines.push(`  - ${t}`)
+        }
+      }
+
+      const GROQ_API_KEY = process.env.GROQ_API_KEY
+      if (!GROQ_API_KEY) {
+        const fallback = [
+          `What role did ${entity.name} play in the events documented in this archive?`,
+          `What financial connections exist between ${entity.name} and other entities in these documents?`,
+          `What timeline of events can be constructed around ${entity.name} from the available records?`,
+          `Are there undisclosed meetings or communications involving ${entity.name}?`,
+          `What patterns emerge from ${entity.name}'s appearances across different document sets?`,
+          `Who are the key associates of ${entity.name} based on document co-occurrences?`
+        ]
+        return res.json({ questions: fallback, generatedAt: Date.now() })
+      }
+
+      const systemPrompt = `You generate investigative questions for a document archive about Jeffrey Epstein and associated individuals, organizations, and locations. Given context about an entity, generate 6-8 specific, pointed questions that a journalist or investigator would ask to uncover undiscovered connections, evidence, or patterns. Questions should be specific to this entity's known connections and roles — not generic.
+
+Return JSON only: {"questions": ["question 1", "question 2", ...]}
+/no_think`
+
+      const userPrompt = contextLines.join('\n')
+
+      const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${GROQ_API_KEY}`
+        },
+        body: JSON.stringify({
+          model: 'qwen/qwen3-32b',
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt }
+          ],
+          temperature: 0.7,
+          max_tokens: 1000,
+          response_format: { type: 'json_object' }
+        })
+      })
+
+      if (!groqRes.ok) {
+        console.error('[docs-api] Groq API error:', groqRes.status, await groqRes.text())
+        return res.status(502).json({ error: 'Question generation failed' })
+      }
+
+      const groqData = await groqRes.json()
+      let content = groqData.choices?.[0]?.message?.content || '{}'
+      // Strip any <think> tags that may appear
+      content = content.replace(/<think>[\s\S]*?<\/think>/g, '').trim()
+      const parsed = JSON.parse(content)
+      const questions = Array.isArray(parsed.questions) ? parsed.questions : []
+
+      docsDb.setEntityQuestions(id, questions)
+      const now = Date.now()
+      res.json({ questions, generatedAt: now })
+    } catch (err) {
+      console.error('[docs-api] Entity questions error:', err.message)
+      res.status(500).json({ error: 'Failed to generate entity questions' })
     }
   })
 
