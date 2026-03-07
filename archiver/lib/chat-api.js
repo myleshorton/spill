@@ -111,12 +111,13 @@ function createChatRouter (docsDb, searchIndex) {
               })
             }
 
-            // Targeted searches for key terms (catches specific names/entities)
-            const termSearches = keyTerms
+            // Targeted searches: individual key terms + multi-term combos
+            const significantTerms = keyTerms
               .filter(t => t.length > 3 && /^[a-z]/.test(t))
-              .slice(0, 5)
+              .slice(0, 6)
 
-            for (const term of termSearches) {
+            // Individual term searches
+            for (const term of significantTerms) {
               try {
                 const termResult = await searchIndex.search(term, { limit: 10 })
                 if (termResult && termResult.hits) {
@@ -125,6 +126,27 @@ function createChatRouter (docsDb, searchIndex) {
                   })
                 }
               } catch {}
+            }
+
+            // Paired term searches (e.g., "wexner payments", "epstein wexner")
+            // These surface docs that match multiple query concepts together
+            if (significantTerms.length >= 2) {
+              const pairs = []
+              for (let i = 0; i < Math.min(significantTerms.length, 4); i++) {
+                for (let j = i + 1; j < Math.min(significantTerms.length, 4); j++) {
+                  pairs.push(significantTerms[i] + ' ' + significantTerms[j])
+                }
+              }
+              for (const pair of pairs.slice(0, 6)) {
+                try {
+                  const pairResult = await searchIndex.search(pair, { limit: 5 })
+                  if (pairResult && pairResult.hits) {
+                    pairResult.hits.forEach((hit, i) => {
+                      addScore(hit.id, 0.45 * (1 - i / pairResult.hits.length), hit)
+                    })
+                  }
+                } catch {}
+              }
             }
 
             // If financial intent, search with financial category filter
