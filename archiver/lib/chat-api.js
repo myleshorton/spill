@@ -36,7 +36,9 @@ function getCachedEmbeddings (docsDb) {
 const FINANCIAL_KEYWORDS = [
   'money', 'payment', 'wire', 'transfer', 'bank', 'account', 'financial',
   'dollar', 'fund', 'transaction', 'invoice', 'check', 'deposit',
-  'jpmorgan', 'deutsche', 'million', 'thousand', '$'
+  'jpmorgan', 'deutsche', 'million', 'thousand', '$', 'paid', 'salary',
+  'fee', 'cost', 'price', 'purchase', 'property', 'real estate', 'investment',
+  'trust', 'donation', 'grant', 'compensation', 'wexner'
 ]
 
 const SYSTEM_PROMPT = `You are an AI research assistant for a document archive containing court filings, FBI reports, depositions, financial records, flight logs, emails, and other evidence. Your job is to help researchers understand the documents and find relevant information.
@@ -89,16 +91,58 @@ function createChatRouter (docsDb, searchIndex) {
     const hasFinancialIntent = FINANCIAL_KEYWORDS.some(kw => query.toLowerCase().includes(kw))
 
     try {
+      // Extract key terms from the query for targeted searches
+      const stopWords = new Set(['what', 'who', 'where', 'when', 'how', 'why', 'the', 'and', 'for', 'are', 'was', 'were', 'did', 'does', 'do', 'is', 'in', 'of', 'to', 'a', 'an', 'between', 'about', 'from', 'with', 'that', 'this', 'show', 'say', 'went', 'after', 'before', 'any', 'have', 'has', 'been', 'their', 'they', 'them', 'his', 'her', 'its', 'our', 'your', 'documents', 'records', 'files'])
+      const keyTerms = query.toLowerCase()
+        .replace(/[?.,!;:'"]/g, '')
+        .split(/\s+/)
+        .filter(t => t.length > 2 && !stopWords.has(t))
+
       const [keywordResult, semanticResult, entityResult] = await Promise.allSettled([
-        // Strategy 1: Meilisearch keyword search
+        // Strategy 1: Meilisearch full-query search + targeted term searches
         (async () => {
           try {
+            // Full query search
             const result = await searchIndex.search(query, { limit: 20 })
             if (result && result.hits) {
               result.hits.forEach((hit, i) => {
                 const score = 0.5 * (1 - i / result.hits.length)
                 addScore(hit.id, score, hit)
               })
+            }
+
+            // Targeted searches for key terms (catches specific names/entities)
+            const termSearches = keyTerms
+              .filter(t => t.length > 3 && /^[a-z]/.test(t))
+              .slice(0, 5)
+
+            for (const term of termSearches) {
+              try {
+                const termResult = await searchIndex.search(term, { limit: 10 })
+                if (termResult && termResult.hits) {
+                  termResult.hits.forEach((hit, i) => {
+                    addScore(hit.id, 0.3 * (1 - i / termResult.hits.length), hit)
+                  })
+                }
+              } catch {}
+            }
+
+            // If financial intent, search with financial category filter
+            if (hasFinancialIntent) {
+              const finTerms = keyTerms.filter(t => !FINANCIAL_KEYWORDS.includes(t) && t.length > 3).join(' ')
+              if (finTerms) {
+                try {
+                  const finResult = await searchIndex.search(finTerms, {
+                    limit: 15,
+                    filter: 'category = "financial"'
+                  })
+                  if (finResult && finResult.hits) {
+                    finResult.hits.forEach((hit, i) => {
+                      addScore(hit.id, 0.4 * (1 - i / finResult.hits.length), hit)
+                    })
+                  }
+                } catch {}
+              }
             }
           } catch (err) {
             console.warn('[chat] Keyword search failed:', err.message)
@@ -162,7 +206,7 @@ function createChatRouter (docsDb, searchIndex) {
             const entityResult = docsDb.searchEntities(query, null, 5, 0)
             const entities = entityResult.entities || []
             for (const entity of entities) {
-              const docResult = docsDb.getEntityDocuments(entity.id, 5, 0)
+              const docResult = docsDb.getEntityDocuments(entity.id, 10, 0)
               const docs = docResult.documents || []
               for (const doc of docs) {
                 addScore(doc.id, 0.3, doc)
