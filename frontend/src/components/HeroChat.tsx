@@ -5,13 +5,26 @@ import { useRouter } from 'next/navigation'
 import { MessageSquare, Send } from 'lucide-react'
 
 const PROMPTS = [
-  'Who should be prosecuted and based on what evidence?',
+  'What payments went between Epstein and Les Wexner after 2007?',
+  'What do the financial records show about Hyperion Air?',
+  'What financial transactions involve Towers Financial or Hoffenberg?',
+  'What documents are in Data Sets 6, 7, and 12?',
+  'What do the AT&T phone records show about calls to government officials?',
+  'What did the Palm Beach police reports say about witness intimidation?',
+  'What did the Bureau of Prisons Inspector General find about the night Epstein died?',
+  'Who is Marc Weinstein and what is his connection to Epstein?',
+  'What role did Nick Tartaglione play as Epstein\'s cellmate?',
+  'What were the terms of the 2007 non-prosecution agreement?',
+  'What passport documents exist and what names appear on them?',
+  'What connections exist between Epstein and Southern District of Florida prosecutors?',
+  'What do the FBI 302 interviews reveal about what victims told the FBI?',
+  'What do the financial records show about real estate near Zorro Ranch?',
+  'What documents reference Israel or intelligence agencies?',
+  'What do the Deutsche Bank compliance records say about suspicious activity reports?',
+  'What do the JPMorgan records reveal about Epstein\'s accounts?',
+  'Who were Epstein\'s unnamed Co-Conspirators besides Ghislaine Maxwell?',
+  'What did Peter Skinner do in connection with the case?',
   'What do the flight logs show?',
-  'What did the FBI know?',
-  'Financial connections between entities',
-  'What happened on Little St. James?',
-  'Who are the key witnesses?',
-  'Who were Epstein\'s unnamed "Co-Conspirators" besides Ghislaine Maxwell?',
 ]
 
 export default function HeroChat() {
