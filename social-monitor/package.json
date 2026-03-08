@@ -1,0 +1,14 @@
+{
+  "name": "spill-social-monitor",
+  "version": "1.0.0",
+  "description": "Social media monitor for Epstein Files Archive outreach",
+  "main": "monitor.js",
+  "scripts": {
+    "start": "node monitor.js",
+    "dashboard": "node dashboard.js"
+  },
+  "dependencies": {
+    "ws": "^8.16.0",
+    "better-sqlite3": "^11.0.0"
+  }
+}

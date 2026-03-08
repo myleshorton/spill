@@ -1,8 +1,9 @@
 /**
- * Image keyword extraction via GPT-4o-mini vision (low detail).
+ * Image keyword extraction via Groq vision (Llama 4 Scout) or GPT-4o-mini fallback.
  *
  * Extracts searchable keywords from images (objects, people, setting, text, etc.).
- * Gracefully degrades: warns once and returns null if no OPENAI_API_KEY.
+ * Prefers Groq (GROQ_API_KEY) for cost efficiency, falls back to OpenAI (OPENAI_API_KEY).
+ * Gracefully degrades: warns once and returns null if no API key is set.
  */
 
 const fs = require('fs')
@@ -13,6 +14,9 @@ const RETRY_DELAYS = [1000, 4000, 16000]
 const MAX_FILE_SIZE = 20 * 1024 * 1024 // 20MB
 const ALLOWED_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.gif', '.webp'])
 
+const GROQ_MODEL = 'meta-llama/llama-4-scout-17b-16e-instruct'
+const OPENAI_MODEL = 'gpt-4o-mini'
+
 let OpenAI = null
 let openai = null
 try {
@@ -20,17 +24,37 @@ try {
 } catch {}
 
 let _warnedOnce = false
+let _backend = null // 'groq' | 'openai' | null
 
 function getClient () {
+  // Prefer Groq
+  if (process.env.GROQ_API_KEY && OpenAI) {
+    if (!openai || _backend !== 'groq') {
+      openai = new OpenAI({
+        apiKey: process.env.GROQ_API_KEY,
+        baseURL: 'https://api.groq.com/openai/v1'
+      })
+      _backend = 'groq'
+    }
+    return openai
+  }
+  // Fallback to OpenAI
   if (process.env.OPENAI_API_KEY && OpenAI) {
-    if (!openai) openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+    if (!openai || _backend !== 'openai') {
+      openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+      _backend = 'openai'
+    }
     return openai
   }
   if (!_warnedOnce) {
-    console.warn('[image-keywords] No OPENAI_API_KEY set — image keyword extraction will be skipped.')
+    console.warn('[image-keywords] No GROQ_API_KEY or OPENAI_API_KEY set — image keyword extraction will be skipped.')
     _warnedOnce = true
   }
   return null
+}
+
+function getModel () {
+  return _backend === 'groq' ? GROQ_MODEL : OPENAI_MODEL
 }
 
 function sleep (ms) {
@@ -70,14 +94,14 @@ async function extractKeywords (filePath) {
   for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
     try {
       const res = await client.chat.completions.create({
-        model: 'gpt-4o-mini',
+        model: getModel(),
         max_tokens: 200,
         messages: [
           {
             role: 'user',
             content: [
               { type: 'text', text: PROMPT },
-              { type: 'image_url', image_url: { url: dataUrl, detail: 'low' } }
+              { type: 'image_url', image_url: { url: dataUrl } }
             ]
           }
         ]
@@ -132,14 +156,14 @@ async function extractKeywordsFromPdf (filePath) {
     for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
       try {
         const res = await client.chat.completions.create({
-          model: 'gpt-4o-mini',
+          model: getModel(),
           max_tokens: 200,
           messages: [
             {
               role: 'user',
               content: [
                 { type: 'text', text: PROMPT },
-                { type: 'image_url', image_url: { url: dataUrl, detail: 'low' } }
+                { type: 'image_url', image_url: { url: dataUrl } }
               ]
             }
           ]

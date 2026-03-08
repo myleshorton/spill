@@ -40,14 +40,14 @@ export default function EntityChatBar({ entityId, entityName }: EntityChatBarPro
         setCurrent(i => (i + 1) % questions.length)
         setFade(true)
       }, 300)
-    }, 4000)
+    }, 8000)
     return () => clearInterval(interval)
   }, [questions])
 
   const submit = useCallback(() => {
     const q = query.trim() || questions[current]
     if (!q) return
-    router.push(`/chat?q=${encodeURIComponent(q)}`)
+    router.push(`/chat?q=${encodeURIComponent(q)}&entity=${entityId}`)
   }, [query, questions, current, router])
 
   const placeholder = questions[current] || `Ask about ${entityName}...`
@@ -62,7 +62,14 @@ export default function EntityChatBar({ entityId, entityName }: EntityChatBarPro
         type="text"
         value={query}
         onChange={e => setQuery(e.target.value)}
-        onKeyDown={e => { if (e.key === 'Enter') submit() }}
+        onKeyDown={e => {
+          if (e.key === 'Tab' && !query) {
+            e.preventDefault()
+            setQuery(questions[current] || '')
+          } else if (e.key === 'Enter') {
+            submit()
+          }
+        }}
         className="w-full rounded-xl border border-spill-divider bg-spill-surface py-3.5 pl-12 pr-14 text-sm text-spill-text-primary placeholder:text-spill-text-secondary/50 focus:border-spill-accent focus:outline-none focus:ring-1 focus:ring-spill-accent transition-colors"
         placeholder=""
       />

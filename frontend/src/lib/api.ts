@@ -251,11 +251,11 @@ export async function getRecommendations(limit = 12): Promise<SimilarDocument[]>
   return data.documents || []
 }
 
-export async function requestMagicLink(email: string): Promise<{ ok: boolean }> {
+export async function requestMagicLink(email: string, returnTo?: string): Promise<{ ok: boolean }> {
   const res = await fetchWithUser(`${API_BASE}/auth/magic-link`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email }),
+    body: JSON.stringify({ email, returnTo: returnTo || window.location.pathname }),
   })
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: 'Failed' }))
@@ -669,15 +669,18 @@ export async function streamChat(
   onDelta: (text: string) => void,
   onDone: (usage: Record<string, number>) => void,
   onError: (error: string) => void,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  entityId?: number
 ): Promise<void> {
+  const body: Record<string, unknown> = {
+    query,
+    history: history.map(m => ({ role: m.role, content: m.content }))
+  }
+  if (entityId) body.entityId = entityId
   const res = await fetch(`${API_BASE}/chat`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      query,
-      history: history.map(m => ({ role: m.role, content: m.content }))
-    }),
+    body: JSON.stringify(body),
     signal
   })
 

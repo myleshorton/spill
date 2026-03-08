@@ -3,7 +3,7 @@
 import { Suspense, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Search, Menu, X, Database, FileText, Info, Upload, Share2, Users, ExternalLink, ChevronDown, Star, MessageSquare } from 'lucide-react'
+import { Search, Menu, X, Database, FileText, Info, Upload, Share2, Users, ExternalLink, ChevronDown, Star, MessageSquare, Newspaper } from 'lucide-react'
 import { siteConfig } from '@/config/site.config'
 
 function HeaderSearch() {
@@ -152,6 +152,13 @@ export default function Header() {
             Upload
           </Link>
           <Link
+            href="/blog"
+            className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm text-spill-text-secondary hover:bg-spill-surface hover:text-spill-text-primary transition-colors"
+          >
+            <Newspaper className="h-3.5 w-3.5" />
+            Blog
+          </Link>
+          <Link
             href="/about"
             className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm text-spill-text-secondary hover:bg-spill-surface hover:text-spill-text-primary transition-colors"
           >
@@ -197,6 +204,9 @@ export default function Header() {
             </Link>
             <Link href="/upload" className="rounded-md px-3 py-2 text-sm text-spill-text-secondary hover:text-spill-text-primary" onClick={() => setMobileMenuOpen(false)}>
               Upload
+            </Link>
+            <Link href="/blog" className="rounded-md px-3 py-2 text-sm text-spill-text-secondary hover:text-spill-text-primary" onClick={() => setMobileMenuOpen(false)}>
+              Blog
             </Link>
             <Link href="/about" className="rounded-md px-3 py-2 text-sm text-spill-text-secondary hover:text-spill-text-primary" onClick={() => setMobileMenuOpen(false)}>
               About

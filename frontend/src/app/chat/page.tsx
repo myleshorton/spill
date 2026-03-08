@@ -8,12 +8,13 @@ export const metadata: Metadata = {
   description: 'Ask questions about the archive documents. Get AI-powered answers grounded in real evidence with clickable source citations.',
 }
 
-export default async function ChatPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
-  const { q } = await searchParams
+export default async function ChatPage({ searchParams }: { searchParams: Promise<{ q?: string; entity?: string }> }) {
+  const { q, entity } = await searchParams
+  const entityId = entity ? parseInt(entity, 10) : undefined
   return (
     <div className="flex min-h-screen flex-col">
       <Header />
-      <ChatPanel initialQuery={q} />
+      <ChatPanel initialQuery={q} initialEntityId={entityId && !isNaN(entityId) ? entityId : undefined} />
       <Footer />
     </div>
   )

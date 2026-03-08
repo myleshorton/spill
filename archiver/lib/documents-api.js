@@ -637,7 +637,7 @@ function createDocumentsRouter (docsDb, searchIndex, archiverRef, torrentManager
         return res.json({ questions: JSON.parse(cached.questions), generatedAt: cached.generated_at })
       }
 
-      // Gather context
+      // Gather context — include document excerpts for more specific questions
       const relationships = docsDb.getEntityRelationships(id)
       const related = docsDb.getRelatedEntities(id)
       const docs = docsDb.getEntityDocuments(id, 10, 0)
@@ -666,6 +666,24 @@ function createDocumentsRouter (docsDb, searchIndex, archiverRef, torrentManager
         }
       }
 
+      // Include short excerpts from top documents for specificity
+      const excerpts = []
+      for (const doc of docs.documents.slice(0, 5)) {
+        try {
+          const text = docsDb.getText(doc.id)
+          if (!text) continue
+          // Find paragraph mentioning the entity name
+          const nameLower = entity.name.toLowerCase()
+          const paragraphs = text.split(/\n\s*\n/)
+          const relevant = paragraphs.find(p => p.toLowerCase().includes(nameLower) && p.length > 50 && p.length < 500)
+          if (relevant) excerpts.push(`[${doc.title}]: ${relevant.trim().slice(0, 300)}`)
+        } catch {}
+      }
+      if (excerpts.length > 0) {
+        contextLines.push('Excerpts from key documents:')
+        for (const e of excerpts) contextLines.push(`  ${e}`)
+      }
+
       const GROQ_API_KEY = process.env.GROQ_API_KEY
       if (!GROQ_API_KEY) {
         const fallback = [
@@ -679,7 +697,14 @@ function createDocumentsRouter (docsDb, searchIndex, archiverRef, torrentManager
         return res.json({ questions: fallback, generatedAt: Date.now() })
       }
 
-      const systemPrompt = `You generate investigative questions for a document archive about Jeffrey Epstein and associated individuals, organizations, and locations. Given context about an entity, generate 6-8 specific, pointed questions that a journalist or investigator would ask to uncover undiscovered connections, evidence, or patterns. Questions should be specific to this entity's known connections and roles — not generic.
+      const systemPrompt = `You generate investigative questions for a searchable document archive containing 1.4 million DOJ Epstein documents (court filings, FBI reports, depositions, financial records, flight logs, emails). Given context about an entity, generate 6-8 specific, pointed questions that reference concrete names, dates, or events from the provided context.
+
+RULES:
+- Each question MUST reference at least one specific name, document, relationship, or detail from the context — never generic questions like "What role did X play?"
+- Questions should be answerable by searching the archive — include specific terms a search engine could match
+- Focus on unexplained connections, financial flows, timeline gaps, and contradictions
+- Reference specific related entities by name when possible
+- Vary question types: financial, timeline, relationship, evidentiary
 
 Return JSON only: {"questions": ["question 1", "question 2", ...]}
 /no_think`

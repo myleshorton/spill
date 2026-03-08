@@ -219,6 +219,82 @@ body::after {
   background: #111111;
 }
 
+/* Blog prose styles */
+.prose-spill {
+  color: #D4D4D4;
+  font-size: 1rem;
+  line-height: 1.8;
+}
+
+.prose-spill h2 {
+  font-family: 'Inter Tight', sans-serif;
+  font-weight: 800;
+  font-size: 1.5rem;
+  color: #D4D4D4;
+  margin-top: 2.5rem;
+  margin-bottom: 1rem;
+  letter-spacing: -0.01em;
+}
+
+.prose-spill h3 {
+  font-family: 'Inter Tight', sans-serif;
+  font-weight: 700;
+  font-size: 1.15rem;
+  color: #D4D4D4;
+  margin-top: 2rem;
+  margin-bottom: 0.75rem;
+}
+
+.prose-spill p {
+  margin-bottom: 1.25rem;
+}
+
+.prose-spill a {
+  color: #B71C1C;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  transition: color 0.15s;
+}
+
+.prose-spill a:hover {
+  color: #D32F2F;
+}
+
+.prose-spill ul,
+.prose-spill ol {
+  margin-bottom: 1.25rem;
+  padding-left: 1.5rem;
+}
+
+.prose-spill ul {
+  list-style-type: disc;
+}
+
+.prose-spill ol {
+  list-style-type: decimal;
+}
+
+.prose-spill li {
+  margin-bottom: 0.5rem;
+  padding-left: 0.25rem;
+}
+
+.prose-spill li strong {
+  color: #D4D4D4;
+}
+
+.prose-spill strong {
+  font-weight: 600;
+  color: #D4D4D4;
+}
+
+.prose-spill .signature {
+  margin-top: 3rem;
+  font-style: italic;
+  color: #6B7994;
+  font-size: 0.95rem;
+}
+
 @layer utilities {
   .text-balance {
     text-wrap: balance;

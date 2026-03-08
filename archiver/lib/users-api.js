@@ -334,7 +334,7 @@ function createUsersRouter (docsDb, usersDb) {
 
   // Request magic link
   router.post('/auth/magic-link', express.json(), identify, async (req, res) => {
-    const { email } = req.body || {}
+    const { email, returnTo } = req.body || {}
     if (!email || typeof email !== 'string' || !email.includes('@')) {
       return res.status(400).json({ error: 'Valid email required' })
     }
@@ -352,7 +352,13 @@ function createUsersRouter (docsDb, usersDb) {
       // Email belongs to another account — still send link to allow merge
     }
 
-    const { token, expiresAt } = usersDb.createMagicLink(email, req.userId)
+    // Sanitize returnTo — only allow relative paths to prevent open redirect
+    let safeReturnTo = null
+    if (returnTo && typeof returnTo === 'string' && returnTo.startsWith('/')) {
+      safeReturnTo = returnTo
+    }
+
+    const { token, expiresAt } = usersDb.createMagicLink(email, req.userId, safeReturnTo)
 
     try {
       const resend = new Resend.Resend(process.env.RESEND_API_KEY)
@@ -362,8 +368,8 @@ function createUsersRouter (docsDb, usersDb) {
       await resend.emails.send({
         from: process.env.EMAIL_FROM || 'noreply@unredact.org',
         to: email,
-        subject: 'Sign in to your archive account',
-        html: `<p>Click the link below to sign in. This link expires in 15 minutes.</p><p><a href="${verifyUrl}">${verifyUrl}</a></p>`
+        subject: 'Verify your email — Epstein Files Archive',
+        html: `<p>Click the link below to verify your email and continue. This link expires in 15 minutes.</p><p><a href="${verifyUrl}">${verifyUrl}</a></p>`
       })
 
       res.json({ ok: true, expiresAt })
@@ -373,20 +379,23 @@ function createUsersRouter (docsDb, usersDb) {
     }
   })
 
-  // Verify magic link
+  // Verify magic link — redirects back to where the user was
   router.get('/auth/verify', (req, res) => {
     const { token } = req.query
     if (!token) {
-      return res.status(400).json({ error: 'Token required' })
+      return res.status(400).send('<h1>Invalid link</h1><p>No token provided.</p>')
     }
 
     const link = usersDb.consumeMagicLink(token)
     if (!link) {
-      return res.status(400).json({ error: 'Invalid or expired token' })
+      return res.status(400).send('<h1>Link expired</h1><p>This verification link is invalid or has already been used. Please request a new one.</p>')
     }
 
     usersDb.linkEmail(link.user_id, link.email)
-    res.json({ ok: true, userId: link.user_id, email: link.email })
+
+    // Redirect back to where they were, or home
+    const redirectTo = link.return_to || '/'
+    res.redirect(302, redirectTo)
   })
 
   return router

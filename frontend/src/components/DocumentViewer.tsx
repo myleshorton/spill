@@ -56,6 +56,26 @@ export default function DocumentViewer({ doc }: DocumentViewerProps) {
 
   useEffect(() => { loadComments() }, [loadComments])
 
+  // Auto-submit pending comment after returning from email verification
+  useEffect(() => {
+    try {
+      const pending = localStorage.getItem('pendingComment')
+      if (!pending) return
+      const { docId, body, name } = JSON.parse(pending)
+      if (docId !== doc.id) return
+      localStorage.removeItem('pendingComment')
+      // Pre-fill the form then try to submit
+      setCommentBody(body)
+      setCommentName(name)
+      addComment(doc.id, body, name).then(() => {
+        setCommentBody('')
+        loadComments()
+      }).catch(() => {
+        // Leave the form filled so user can retry manually
+      })
+    } catch {}
+  }, [doc.id, loadComments])
+
   async function handleToggleStar() {
     const prev = starred
     const prevCount = starCount
@@ -127,6 +147,14 @@ export default function DocumentViewer({ doc }: DocumentViewerProps) {
     if (!emailForVerify.includes('@')) return
     setVerifyStatus('sending')
     try {
+      // Save pending comment so it can be auto-submitted after verification
+      if (commentBody.trim() && commentName.trim()) {
+        localStorage.setItem('pendingComment', JSON.stringify({
+          docId: doc.id,
+          body: commentBody.trim(),
+          name: commentName.trim()
+        }))
+      }
       await requestMagicLink(emailForVerify)
       setVerifyStatus('sent')
     } catch {

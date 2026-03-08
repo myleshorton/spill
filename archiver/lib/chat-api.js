@@ -68,7 +68,7 @@ function createChatRouter (docsDb, searchIndex) {
       return res.status(503).json({ error: 'Chat is not configured — GROQ_API_KEY or ANTHROPIC_API_KEY is not set.' })
     }
 
-    const { query, history } = req.body
+    const { query, history, entityId } = req.body
     if (!query || typeof query !== 'string') {
       return res.status(400).json({ error: 'query is required' })
     }
@@ -77,8 +77,9 @@ function createChatRouter (docsDb, searchIndex) {
     }
 
     const chatHistory = Array.isArray(history) ? history.slice(-10) : []
+    const focusEntityId = entityId ? parseInt(entityId) : null
 
-    // --- Retrieval pipeline: 3 strategies in parallel ---
+    // --- Retrieval pipeline: 3+ strategies in parallel ---
     const docScores = new Map() // id → { score, doc }
 
     function addScore (id, score, doc) {
@@ -101,7 +102,7 @@ function createChatRouter (docsDb, searchIndex) {
         .split(/\s+/)
         .filter(t => t.length > 2 && !stopWords.has(t))
 
-      const [keywordResult, semanticResult, entityResult] = await Promise.allSettled([
+      const [keywordResult, semanticResult, entityResult, focusResult] = await Promise.allSettled([
         // Strategy 1: Meilisearch full-query search + targeted term searches
         (async () => {
           try {
@@ -247,6 +248,50 @@ function createChatRouter (docsDb, searchIndex) {
           } catch (err) {
             console.warn('[chat] Entity search failed:', err.message)
           }
+        })(),
+
+        // Strategy 4: Entity-focused retrieval (when coming from an entity page)
+        // Heavily boosts documents linked to the focus entity
+        (async () => {
+          if (!focusEntityId) return
+          try {
+            const entity = docsDb.getEntity(focusEntityId)
+            if (!entity) return
+
+            // Get this entity's documents with high boost
+            const docResult = docsDb.getEntityDocuments(focusEntityId, 30, 0)
+            const docs = docResult.documents || []
+            for (const doc of docs) {
+              addScore(doc.id, 0.8, doc) // High boost for entity's own docs
+            }
+
+            // Also search within entity docs for query-relevant ones via keyword
+            for (const term of keyTerms.slice(0, 4)) {
+              try {
+                const termResult = await searchIndex.search(`${entity.name} ${term}`, { limit: 10 })
+                if (termResult && termResult.hits) {
+                  termResult.hits.forEach((hit, i) => {
+                    addScore(hit.id, 0.5 * (1 - i / termResult.hits.length), hit)
+                  })
+                }
+              } catch {}
+            }
+
+            // Get related entity docs too (second-degree connections)
+            const rels = docsDb.getEntityRelationships(focusEntityId, 10)
+            for (const rel of rels.slice(0, 5)) {
+              const otherId = rel.other_id || rel.otherId
+              if (!otherId) continue
+              try {
+                const relDocs = docsDb.getEntityDocuments(otherId, 5, 0)
+                for (const doc of (relDocs.documents || [])) {
+                  addScore(doc.id, 0.2, doc)
+                }
+              } catch {}
+            }
+          } catch (err) {
+            console.warn('[chat] Entity-focused retrieval failed:', err.message)
+          }
         })()
       ])
 
@@ -335,6 +380,36 @@ function createChatRouter (docsDb, searchIndex) {
         })
 
         contextParts.push(`[Document ID: ${id}]\nTitle: ${docMeta.title || docMeta.file_name || docMeta.fileName || 'Untitled'}\nType: ${docMeta.content_type || docMeta.contentType || 'unknown'}${docMeta.category ? ` (${docMeta.category})` : ''}\n\n${text}`)
+      }
+
+      // Add focus entity context if present
+      if (focusEntityId && focusResult.status === 'fulfilled') {
+        try {
+          const entity = docsDb.getEntity(focusEntityId)
+          if (entity) {
+            const rels = docsDb.getEntityRelationships(focusEntityId, 20)
+            const parts = [`[Focus Entity: "${entity.name}" (${entity.type})]\nThis question was asked from the entity page for ${entity.name}.`]
+            if (rels.length > 0) {
+              parts.push('Known relationships:')
+              for (const r of rels) {
+                const dir = r.direction === 'outgoing' ? `→ ${r.other_name}` : `${r.other_name} →`
+                parts.push(`  ${dir} (${r.relationship_type}${r.description ? ': ' + r.description : ''})`)
+              }
+            }
+            if (hasFinancialIntent) {
+              const financials = docsDb.getFinancialsByEntity(entity.name, 15)
+              if (financials.length > 0) {
+                parts.push('Financial records:')
+                for (const f of financials) {
+                  parts.push(`  ${f.date || 'Unknown date'}: ${f.payer || '?'} → ${f.payee || '?'} $${f.amount || '?'} (${f.description || 'no description'})`)
+                }
+              }
+            }
+            contextParts.unshift(parts.join('\n'))
+          }
+        } catch (err) {
+          console.warn('[chat] Focus entity context failed:', err.message)
+        }
       }
 
       // Add entity relationships if relevant

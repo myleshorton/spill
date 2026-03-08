@@ -37,7 +37,8 @@ class UsersDatabase {
         user_id TEXT NOT NULL,
         created_at INTEGER NOT NULL,
         expires_at INTEGER NOT NULL,
-        used INTEGER DEFAULT 0
+        used INTEGER DEFAULT 0,
+        return_to TEXT
       );
 
       CREATE TABLE IF NOT EXISTS favorites (
@@ -73,6 +74,12 @@ class UsersDatabase {
       );
       CREATE INDEX IF NOT EXISTS idx_votes_doc ON votes(document_id);
     `)
+
+    // Migrate: add return_to column to magic_links if missing
+    const mlCols = this.db.prepare('PRAGMA table_info(magic_links)').all().map(c => c.name)
+    if (!mlCols.includes('return_to')) {
+      this.db.prepare('ALTER TABLE magic_links ADD COLUMN return_to TEXT').run()
+    }
   }
 
   ensureUser (userId) {
@@ -108,14 +115,14 @@ class UsersDatabase {
     this.db.prepare('UPDATE users SET email = ? WHERE id = ?').run(email, userId)
   }
 
-  createMagicLink (email, userId) {
+  createMagicLink (email, userId, returnTo) {
     const token = crypto.randomBytes(32).toString('hex')
     const now = Date.now()
     const expiresAt = now + 15 * 60 * 1000
     this.db.prepare(`
-      INSERT INTO magic_links (token, email, user_id, created_at, expires_at)
-      VALUES (?, ?, ?, ?, ?)
-    `).run(token, email, userId, now, expiresAt)
+      INSERT INTO magic_links (token, email, user_id, created_at, expires_at, return_to)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).run(token, email, userId, now, expiresAt, returnTo || null)
     return { token, expiresAt }
   }
 

@@ -60,7 +60,7 @@ function ContentTypeIcon({ type, className }: { type: string; className?: string
 
 const AI_COLLAPSE_CHARS = 600
 
-export default function ChatPanel({ initialQuery }: { initialQuery?: string }) {
+export default function ChatPanel({ initialQuery, initialEntityId }: { initialQuery?: string; initialEntityId?: number }) {
   const router = useRouter()
   const [input, setInput] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
@@ -82,8 +82,11 @@ export default function ChatPanel({ initialQuery }: { initialQuery?: string }) {
   const [searchTotal, setSearchTotal] = useState(0)
   const [searchLoading, setSearchLoading] = useState(false)
 
+  // Track entity context (set from URL param, cleared on manual queries)
+  const [entityId, setEntityId] = useState<number | undefined>(initialEntityId)
+
   // Run query — used for both initial and subsequent queries
-  const runQuery = useCallback((q: string) => {
+  const runQuery = useCallback((q: string, eId?: number) => {
     // Abort any previous request
     abortRef.current?.abort()
 
@@ -116,7 +119,8 @@ export default function ChatPanel({ initialQuery }: { initialQuery?: string }) {
       (delta) => { fullText += delta; setAiText(fullText) },
       () => { setAiStreaming(false); setAiDone(true) },
       (err) => { setAiStreaming(false); setAiDone(true); setAiError(err) },
-      controller.signal
+      controller.signal,
+      eId
     ).catch(() => { setAiStreaming(false); setAiDone(true) })
   }, [])
 
@@ -125,15 +129,16 @@ export default function ChatPanel({ initialQuery }: { initialQuery?: string }) {
   useEffect(() => {
     if (initialQuery && !initialSubmitted.current) {
       initialSubmitted.current = true
-      runQuery(initialQuery)
+      runQuery(initialQuery, initialEntityId)
     }
-  }, [initialQuery, runQuery])
+  }, [initialQuery, initialEntityId, runQuery])
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     const q = input.trim()
     if (!q) return
-    // Update URL without full navigation so we can reuse the component
+    // Manual queries clear entity context
+    setEntityId(undefined)
     router.replace(`/chat?q=${encodeURIComponent(q)}`, { scroll: false })
     setInput('')
     runQuery(q)
