@@ -47,3 +47,6 @@ deploy/certbot/
 .env
 .env.*
 !.env.example
+social-monitor/monitor.db
+social-monitor/monitor.db-*
+social-monitor/monitor.log
