@@ -130,7 +130,7 @@ function ExtractionCard({ extraction, index }: { extraction: Extraction; index: 
 
   return (
     <Link
-      href={`/documents/${extraction.documentId}`}
+      href={`/doc/${extraction.documentId}`}
       className="group animate-fade-in rounded-lg border border-spill-divider bg-spill-surface p-4 transition-all hover:border-spill-accent/30 hover:shadow-lg hover:shadow-spill-accent/5"
       style={{ animationDelay: `${index * 50}ms` }}
     >
