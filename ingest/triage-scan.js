@@ -7,7 +7,7 @@
  */
 const path = require('path')
 const DocumentsDatabase = require('../archiver/lib/documents-db')
-const { triageScore } = require('./lib/triage-heuristics')
+const { triageScore, detectHiddenContent } = require('./lib/triage-heuristics')
 
 const args = parseArgs(process.argv.slice(2))
 const DB_PATH = args['db-path'] || path.join(__dirname, '..', 'archiver', 'data', 'documents.db')
@@ -33,6 +33,7 @@ async function main () {
 
   let processed = 0
   let flagged = 0
+  let hiddenCount = 0
   const scoreDistribution = {}
   const startTime = Date.now()
   let lastLog = startTime
@@ -61,8 +62,13 @@ async function main () {
     const rows = []
     for (const doc of batch) {
       const { score, flags } = triageScore(doc)
-      if (score > 0) {
-        rows.push({ id: doc.id, score, flags })
+      const hidden = detectHiddenContent(doc)
+      if (hidden) {
+        flags.push('hidden_content')
+        hiddenCount++
+      }
+      if (score > 0 || hidden) {
+        rows.push({ id: doc.id, score: hidden ? Math.max(score, 50) : score, flags })
         flagged++
         const bucket = Math.floor(score / 10) * 10
         scoreDistribution[bucket] = (scoreDistribution[bucket] || 0) + 1
@@ -84,6 +90,7 @@ async function main () {
   const elapsed = ((Date.now() - startTime) / 1000).toFixed(1)
   console.log(`\nDone: ${processed} documents triaged in ${elapsed}s`)
   console.log(`Flagged: ${flagged} documents with score > 0`)
+  console.log(`Hidden content detected: ${hiddenCount} documents`)
   console.log('\nScore distribution:')
   for (const [bucket, count] of Object.entries(scoreDistribution).sort((a, b) => b[0] - a[0])) {
     console.log(`  ${bucket}-${parseInt(bucket) + 9}: ${count}`)

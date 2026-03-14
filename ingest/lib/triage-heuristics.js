@@ -84,4 +84,26 @@ function triageScore (doc) {
   return { score, flags }
 }
 
-module.exports = { triageScore, SIGNALS }
+/**
+ * Detect hidden content: PDF text layer contains substantial HTML source code
+ * that isn't visible when viewing the PDF normally.
+ * Returns { isHidden, htmlPct, textLen } or null if not hidden.
+ */
+function detectHiddenContent (doc) {
+  const text = doc.extracted_text || ''
+  if (text.length < 20000) return null
+
+  const htmlMatches = text.match(/<[^>]+>/g) || []
+  const htmlChars = htmlMatches.reduce((sum, t) => sum + t.length, 0)
+  const htmlPct = (htmlChars / text.length) * 100
+
+  if (htmlPct < 30) return null
+
+  return {
+    isHidden: true,
+    htmlPct: Math.round(htmlPct),
+    textLen: text.length
+  }
+}
+
+module.exports = { triageScore, detectHiddenContent, SIGNALS }

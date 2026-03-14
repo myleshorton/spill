@@ -21,6 +21,7 @@ const DB_PATH = args['db-path'] || path.join(__dirname, '..', 'archiver', 'data'
 const MIN_SCORE = parseInt(args['min-score'] || '20') || 20
 const LIMIT = parseInt(args.limit || '0') || 0
 const CONCURRENCY = parseInt(args.concurrency || '5') || 5
+const HIDDEN_ONLY = args['hidden-only'] !== 'false' // default true
 const CONTENT_DIR = args['content-dir'] || path.join(__dirname, '..', 'archiver', 'data', 'content')
 const PYTHON_SCRIPT = path.join(__dirname, 'lib', 'extract-pdf-gen.py')
 
@@ -176,13 +177,13 @@ async function main () {
   const startTime = Date.now()
   let lastLog = startTime
 
-  console.log(`Deep extraction: min_score=${MIN_SCORE}, concurrency=${CONCURRENCY}`)
+  console.log(`Deep extraction: min_score=${MIN_SCORE}, concurrency=${CONCURRENCY}, hidden_only=${HIDDEN_ONLY}`)
 
   while (true) {
     const batchLimit = LIMIT > 0 ? Math.min(100, LIMIT - totalProcessed) : 100
     if (batchLimit <= 0) break
 
-    const docs = db.getTriagedDocs(MIN_SCORE, batchLimit, 0) // offset=0 because we mark scanned
+    const docs = db.getTriagedDocs(MIN_SCORE, batchLimit, 0, { hiddenOnly: HIDDEN_ONLY })
     if (docs.length === 0) break
 
     const results = await Promise.all(

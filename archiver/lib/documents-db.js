@@ -1046,12 +1046,14 @@ class DocumentsDatabase {
     `).run(documentId, score, JSON.stringify(flags), Date.now())
   }
 
-  getTriagedDocs (minScore = 20, limit = 1000, offset = 0) {
+  getTriagedDocs (minScore = 20, limit = 1000, offset = 0, { hiddenOnly = false } = {}) {
+    const hiddenFilter = hiddenOnly ? "AND et.flags LIKE '%hidden_content%'" : ''
     return this.db.prepare(`
       SELECT et.*, d.file_name, d.file_path, d.extracted_text, d.file_size, d.page_count, d.content_type
       FROM extraction_triage et
       JOIN documents d ON d.id = et.document_id
       WHERE et.score >= ? AND (d.deep_extract_attempted = 0 OR d.deep_extract_attempted IS NULL)
+      ${hiddenFilter}
       ORDER BY et.score DESC
       LIMIT ? OFFSET ?
     `).all(minScore, limit, offset)

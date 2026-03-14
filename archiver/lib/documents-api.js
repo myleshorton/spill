@@ -851,6 +851,7 @@ Return JSON only: {"questions": ["question 1", "question 2", ...]}
         JOIN extraction_triage et ON et.document_id = em.document_id
         JOIN documents d ON d.id = em.document_id
         WHERE em.summary IS NOT NULL AND em.summary != ''
+          AND et.flags LIKE '%hidden_content%'
         ORDER BY et.score DESC, em.confidence DESC
         LIMIT ? OFFSET ?
       `).all(limit, offset)
@@ -859,6 +860,7 @@ Return JSON only: {"questions": ["question 1", "question 2", ...]}
         SELECT COUNT(*) as cnt FROM extraction_metadata em
         JOIN extraction_triage et ON et.document_id = em.document_id
         WHERE em.summary IS NOT NULL AND em.summary != ''
+          AND et.flags LIKE '%hidden_content%'
       `).get().cnt
 
       res.json({
