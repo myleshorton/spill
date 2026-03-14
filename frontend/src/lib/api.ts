@@ -678,6 +678,42 @@ export interface ChatSource {
   category: string | null
 }
 
+export interface Extraction {
+  documentId: string
+  extractedDocId: string
+  extractionType: string
+  emailCount: number
+  senders: string[]
+  recipients: string[]
+  dateRangeStart: string | null
+  dateRangeEnd: string | null
+  peopleMentioned: string[]
+  summary: string
+  confidence: number
+  score: number
+  flags: string[]
+  sourceTitle: string
+  sourceFileName: string
+  sourceDataSet: number
+  sourceContentType: string
+  sourceFileSize: number
+  sourcePageCount: number | null
+  hasSourceThumbnail: boolean
+  hasSourceContent: boolean
+}
+
+export async function getTopExtractions(options: {
+  limit?: number
+  offset?: number
+} = {}): Promise<{ extractions: Extraction[], total: number }> {
+  const params = new URLSearchParams()
+  if (options.limit) params.set('limit', String(options.limit))
+  if (options.offset) params.set('offset', String(options.offset))
+  const res = await fetch(`${API_BASE}/top-extractions?${params}`)
+  if (!res.ok) throw new Error(`Failed to fetch top extractions: ${res.status}`)
+  return res.json()
+}
+
 export interface ChatMessage {
   role: 'user' | 'assistant'
   content: string

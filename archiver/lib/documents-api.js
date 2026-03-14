@@ -837,6 +837,62 @@ Return JSON only: {"questions": ["question 1", "question 2", ...]}
     }
   })
 
+  // Top extractions — highest-scoring documents with extraction metadata
+  router.get('/top-extractions', (req, res) => {
+    try {
+      const limit = Math.min(parseInt(req.query.limit) || 6, 50)
+      const offset = parseInt(req.query.offset) || 0
+      const rows = docsDb.db.prepare(`
+        SELECT em.*, et.score, et.flags,
+               d.title AS source_title, d.file_name AS source_file_name, d.data_set AS source_data_set,
+               d.content_type AS source_content_type, d.file_size AS source_file_size,
+               d.page_count AS source_page_count, d.thumb_path AS source_thumb_path, d.file_path AS source_file_path
+        FROM extraction_metadata em
+        JOIN extraction_triage et ON et.document_id = em.document_id
+        JOIN documents d ON d.id = em.document_id
+        WHERE em.summary IS NOT NULL AND em.summary != ''
+        ORDER BY et.score DESC, em.confidence DESC
+        LIMIT ? OFFSET ?
+      `).all(limit, offset)
+
+      const total = docsDb.db.prepare(`
+        SELECT COUNT(*) as cnt FROM extraction_metadata em
+        JOIN extraction_triage et ON et.document_id = em.document_id
+        WHERE em.summary IS NOT NULL AND em.summary != ''
+      `).get().cnt
+
+      res.json({
+        extractions: rows.map(r => ({
+          documentId: r.document_id,
+          extractedDocId: r.extracted_doc_id,
+          extractionType: r.extraction_type,
+          emailCount: r.email_count,
+          senders: JSON.parse(r.senders || '[]'),
+          recipients: JSON.parse(r.recipients || '[]'),
+          dateRangeStart: r.date_range_start,
+          dateRangeEnd: r.date_range_end,
+          peopleMentioned: JSON.parse(r.people_mentioned || '[]'),
+          summary: r.summary,
+          confidence: r.confidence,
+          score: r.score,
+          flags: JSON.parse(r.flags || '[]'),
+          sourceTitle: r.source_title,
+          sourceFileName: r.source_file_name,
+          sourceDataSet: r.source_data_set,
+          sourceContentType: r.source_content_type,
+          sourceFileSize: r.source_file_size,
+          sourcePageCount: r.source_page_count,
+          hasSourceThumbnail: !!r.source_thumb_path,
+          hasSourceContent: !!r.source_file_path
+        })),
+        total
+      })
+    } catch (err) {
+      console.error('[docs-api] Top extractions error:', err.message)
+      res.status(500).json({ error: 'Failed to fetch top extractions' })
+    }
+  })
+
   return router
 }
 
