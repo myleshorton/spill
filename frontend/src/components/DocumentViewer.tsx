@@ -610,6 +610,20 @@ function ContentRenderer({ doc, url }: { doc: Document, url: string }) {
     )
   }
 
+  if (doc.contentType === 'text') {
+    return (
+      <div className="overflow-hidden rounded-lg border border-spill-divider bg-spill-surface">
+        <iframe
+          src={url}
+          sandbox="allow-same-origin"
+          className="h-[75vh] w-full bg-white"
+          title={doc.title}
+          style={{ colorScheme: 'light' }}
+        />
+      </div>
+    )
+  }
+
   if (doc.contentType === 'video') {
     const ext = (doc.fileName || '').split('.').pop()?.toLowerCase()
     const needsTranscode = ext && !['mp4', 'webm', 'ogg'].includes(ext)

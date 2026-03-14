@@ -120,23 +120,17 @@ async function processDocument (db, doc) {
     console.warn(`  Groq failed for ${doc.document_id}: ${err.message}`)
   }
 
-  // Step 5: Generate output PDF
+  // Step 5: Save extracted text as .txt file
   const docId = crypto.createHash('md5').update(`deep_extract_${doc.document_id}_${Date.now()}`).digest('hex')
   const outputDir = path.join(CONTENT_DIR, 'extracted')
   if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir, { recursive: true })
-  const outputPath = path.join(outputDir, `${docId}.pdf`)
+  const outputPath = path.join(outputDir, `${docId}.txt`)
 
   const title = `Extracted: ${doc.file_name || doc.document_id}`
 
-  try {
-    await runPython(['generate', outputPath, title], extractedText)
-  } catch (err) {
-    console.warn(`  PDF generation failed for ${doc.document_id}: ${err.message}`)
-    db.markDeepExtractScanned(doc.document_id)
-    return { status: 'error', reason: 'pdf_gen_failed' }
-  }
+  fs.writeFileSync(outputPath, extractedText, 'utf8')
 
-  // Step 6: Store results — use full cleaned text, not Groq summary
+  // Step 6: Store results
   const now = Date.now()
   db.db.prepare(`
     INSERT OR IGNORE INTO documents (id, title, file_name, data_set, content_type, file_path, extracted_text, created_at, collection_id)
@@ -144,9 +138,9 @@ async function processDocument (db, doc) {
   `).run(
     docId,
     title,
-    `${docId}.pdf`,
+    `${docId}.txt`,
     0,
-    'pdf',
+    'text',
     outputPath,
     extractedText,
     now,
