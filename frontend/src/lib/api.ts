@@ -531,6 +531,28 @@ export interface FinancialSummary {
   dateRange: { min: string | null; max: string | null }
 }
 
+export interface LinkedDocument {
+  id: string
+  title: string
+  fileName: string
+  dataSet: number
+  contentType: string
+  category: string | null
+  fileSize: number
+  pageCount: number | null
+  hasThumbnail: boolean
+  hasContent: boolean
+  linkType: string
+  linkDescription: string | null
+  direction: 'incoming' | 'outgoing'
+}
+
+export async function getLinkedDocuments(id: string): Promise<LinkedDocument[]> {
+  const res = await fetch(`${API_BASE}/documents/${id}/linked`)
+  if (!res.ok) return []
+  return res.json()
+}
+
 export async function getDocumentFinancials(id: string): Promise<FinancialRecord[]> {
   const res = await fetch(`${API_BASE}/documents/${id}/financials`)
   if (!res.ok) return []

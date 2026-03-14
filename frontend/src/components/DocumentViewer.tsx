@@ -4,9 +4,9 @@ import { useState, useEffect, useCallback } from 'react'
 import { Download, ExternalLink, Copy, Check, Star, MessageSquare, Pencil, Trash2, Send, Shield, ThumbsUp, ThumbsDown, Share2, Link as LinkIcon } from 'lucide-react'
 import Link from 'next/link'
 import {
-  type Document, type Entity, type FinancialRecord, type Comment,
+  type Document, type Entity, type FinancialRecord, type Comment, type LinkedDocument,
   contentUrl, streamUrl, previewUrl, getDocumentText, getDocumentTranscript,
-  getDocumentEntities, getDocumentFinancials, formatFileSize,
+  getDocumentEntities, getDocumentFinancials, getLinkedDocuments, formatFileSize,
   toggleStar, getStarStatus, getComments, addComment, updateComment, deleteComment,
   requestMagicLink, vote, getVoteStatus, type VoteStatus
 } from '@/lib/api'
@@ -21,6 +21,7 @@ export default function DocumentViewer({ doc }: DocumentViewerProps) {
   const [showText, setShowText] = useState(false)
   const [entities, setEntities] = useState<Entity[]>([])
   const [financials, setFinancials] = useState<FinancialRecord[]>([])
+  const [linkedDocs, setLinkedDocs] = useState<LinkedDocument[]>([])
   const [copied, setCopied] = useState(false)
   const [starred, setStarred] = useState(false)
   const [starCount, setStarCount] = useState(0)
@@ -175,6 +176,7 @@ export default function DocumentViewer({ doc }: DocumentViewerProps) {
   useEffect(() => {
     getDocumentEntities(doc.id).then(setEntities).catch(() => {})
     getDocumentFinancials(doc.id).then(setFinancials).catch(() => {})
+    getLinkedDocuments(doc.id).then(setLinkedDocs).catch(() => {})
   }, [doc.id])
 
   function copyText() {
@@ -439,6 +441,34 @@ export default function DocumentViewer({ doc }: DocumentViewerProps) {
                     }`}
                   >
                     {e.name}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Linked documents */}
+          {linkedDocs.length > 0 && (
+            <div className="rounded-lg border border-spill-divider bg-spill-surface p-4">
+              <h3 className="flex items-center gap-1.5 font-headline text-sm font-semibold text-spill-text-primary">
+                <LinkIcon className="h-3.5 w-3.5" />
+                Linked Documents
+              </h3>
+              <div className="mt-3 space-y-2">
+                {linkedDocs.map((ld) => (
+                  <Link
+                    key={ld.id}
+                    href={`/doc/${ld.id}`}
+                    className="block rounded bg-spill-bg p-2.5 transition-colors hover:bg-spill-surface-light"
+                  >
+                    <p className="text-sm font-medium text-spill-text-primary line-clamp-2">{ld.title}</p>
+                    <div className="mt-1 flex items-center gap-2 text-xs text-spill-text-secondary">
+                      <span className="rounded bg-spill-accent/10 px-1.5 py-0.5 font-mono uppercase text-spill-accent text-[10px]">
+                        {ld.contentType}
+                      </span>
+                      {ld.linkDescription && <span>{ld.linkDescription}</span>}
+                      {!ld.linkDescription && <span className="capitalize">{ld.linkType.replace(/_/g, ' ')}</span>}
+                    </div>
                   </Link>
                 ))}
               </div>

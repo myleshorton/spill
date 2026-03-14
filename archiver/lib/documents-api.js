@@ -812,6 +812,31 @@ Return JSON only: {"questions": ["question 1", "question 2", ...]}
     }
   })
 
+  // Linked documents (parent/child, extractions, etc.)
+  router.get('/documents/:id/linked', (req, res) => {
+    try {
+      const rows = docsDb.getLinkedDocuments(req.params.id)
+      res.json(rows.map(r => ({
+        id: r.id,
+        title: r.title,
+        fileName: r.file_name,
+        dataSet: r.data_set,
+        contentType: r.content_type,
+        category: r.category,
+        fileSize: r.file_size,
+        pageCount: r.page_count,
+        hasThumbnail: !!r.thumb_path,
+        hasContent: !!r.file_path,
+        linkType: r.link_type,
+        linkDescription: r.link_description,
+        direction: r.direction
+      })))
+    } catch (err) {
+      console.error('[docs-api] Linked documents error:', err.message)
+      res.status(500).json({ error: 'Failed to fetch linked documents' })
+    }
+  })
+
   return router
 }
 

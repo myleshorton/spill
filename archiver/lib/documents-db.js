@@ -121,6 +121,9 @@ class DocumentsDatabase {
     if (!colNames.has('financial_scan_attempted')) {
       this.db.exec('ALTER TABLE documents ADD COLUMN financial_scan_attempted INTEGER DEFAULT 0')
     }
+    if (!colNames.has('deep_extract_attempted')) {
+      this.db.exec('ALTER TABLE documents ADD COLUMN deep_extract_attempted INTEGER DEFAULT 0')
+    }
 
     // Entity tables
     this.db.exec(`
@@ -215,6 +218,55 @@ class DocumentsDatabase {
         questions TEXT NOT NULL,
         generated_at INTEGER NOT NULL,
         FOREIGN KEY (entity_id) REFERENCES entities(id)
+      );
+    `)
+
+    // Document links (parent/child, extracted, related, etc.)
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS document_links (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        source_id TEXT NOT NULL,
+        target_id TEXT NOT NULL,
+        link_type TEXT NOT NULL,
+        description TEXT,
+        created_at INTEGER,
+        FOREIGN KEY (source_id) REFERENCES documents(id),
+        FOREIGN KEY (target_id) REFERENCES documents(id),
+        UNIQUE(source_id, target_id, link_type)
+      );
+      CREATE INDEX IF NOT EXISTS idx_doclinks_source ON document_links(source_id);
+      CREATE INDEX IF NOT EXISTS idx_doclinks_target ON document_links(target_id);
+    `)
+
+    // Extraction triage table
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS extraction_triage (
+        document_id TEXT PRIMARY KEY,
+        score INTEGER,
+        flags TEXT,
+        triaged_at INTEGER,
+        FOREIGN KEY (document_id) REFERENCES documents(id)
+      );
+      CREATE INDEX IF NOT EXISTS idx_triage_score ON extraction_triage(score);
+    `)
+
+    // Extraction metadata table
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS extraction_metadata (
+        document_id TEXT PRIMARY KEY,
+        extracted_doc_id TEXT,
+        extraction_type TEXT,
+        email_count INTEGER,
+        senders TEXT,
+        recipients TEXT,
+        date_range_start TEXT,
+        date_range_end TEXT,
+        people_mentioned TEXT,
+        summary TEXT,
+        confidence REAL,
+        extracted_at INTEGER,
+        FOREIGN KEY (document_id) REFERENCES documents(id),
+        FOREIGN KEY (extracted_doc_id) REFERENCES documents(id)
       );
     `)
   }
@@ -962,6 +1014,66 @@ class DocumentsDatabase {
 
     this._activityCache = { ts: now, data: result }
     return result
+  }
+
+  // --- Document Links ---
+
+  linkDocuments (sourceId, targetId, linkType, description = null) {
+    this.db.prepare(`
+      INSERT OR IGNORE INTO document_links (source_id, target_id, link_type, description, created_at)
+      VALUES (?, ?, ?, ?, ?)
+    `).run(sourceId, targetId, linkType, description, Date.now())
+  }
+
+  getLinkedDocuments (docId) {
+    // Get documents linked in either direction, deduplicated by target doc
+    const rows = this.db.prepare(`
+      SELECT d.*, dl.link_type, dl.description AS link_description,
+             CASE WHEN dl.source_id = ? THEN 'outgoing' ELSE 'incoming' END AS direction
+      FROM document_links dl
+      JOIN documents d ON d.id = CASE WHEN dl.source_id = ? THEN dl.target_id ELSE dl.source_id END
+      WHERE dl.source_id = ? OR dl.target_id = ?
+      GROUP BY d.id
+      ORDER BY dl.created_at DESC
+    `).all(docId, docId, docId, docId)
+    return rows
+  }
+
+  upsertTriage (documentId, score, flags) {
+    this.db.prepare(`
+      INSERT OR REPLACE INTO extraction_triage (document_id, score, flags, triaged_at)
+      VALUES (?, ?, ?, ?)
+    `).run(documentId, score, JSON.stringify(flags), Date.now())
+  }
+
+  getTriagedDocs (minScore = 20, limit = 1000, offset = 0) {
+    return this.db.prepare(`
+      SELECT et.*, d.file_name, d.file_path, d.extracted_text, d.file_size, d.page_count, d.content_type
+      FROM extraction_triage et
+      JOIN documents d ON d.id = et.document_id
+      WHERE et.score >= ? AND (d.deep_extract_attempted = 0 OR d.deep_extract_attempted IS NULL)
+      ORDER BY et.score DESC
+      LIMIT ? OFFSET ?
+    `).all(minScore, limit, offset)
+  }
+
+  insertExtractionMetadata (meta) {
+    this.db.prepare(`
+      INSERT OR REPLACE INTO extraction_metadata
+      (document_id, extracted_doc_id, extraction_type, email_count, senders, recipients,
+       date_range_start, date_range_end, people_mentioned, summary, confidence, extracted_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      meta.documentId, meta.extractedDocId, meta.extractionType, meta.emailCount || 0,
+      JSON.stringify(meta.senders || []), JSON.stringify(meta.recipients || []),
+      meta.dateRangeStart || null, meta.dateRangeEnd || null,
+      JSON.stringify(meta.peopleMentioned || []), meta.summary || null,
+      meta.confidence || 0, Date.now()
+    )
+  }
+
+  markDeepExtractScanned (docId) {
+    this.db.prepare('UPDATE documents SET deep_extract_attempted = 1 WHERE id = ?').run(docId)
   }
 
   close () {
