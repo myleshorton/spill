@@ -127,17 +127,16 @@ async function processDocument (db, doc) {
   const outputPath = path.join(outputDir, `${docId}.pdf`)
 
   const title = `Extracted: ${doc.file_name || doc.document_id}`
-  const contentForPdf = groqResult?.cleaned_text || extractedText.slice(0, 50000)
 
   try {
-    await runPython(['generate', outputPath, title], contentForPdf)
+    await runPython(['generate', outputPath, title], extractedText)
   } catch (err) {
     console.warn(`  PDF generation failed for ${doc.document_id}: ${err.message}`)
     db.markDeepExtractScanned(doc.document_id)
     return { status: 'error', reason: 'pdf_gen_failed' }
   }
 
-  // Step 6: Store results
+  // Step 6: Store results — use full cleaned text, not Groq summary
   const now = Date.now()
   db.db.prepare(`
     INSERT OR IGNORE INTO documents (id, title, file_name, data_set, content_type, file_path, extracted_text, created_at, collection_id)
@@ -149,7 +148,7 @@ async function processDocument (db, doc) {
     0,
     'pdf',
     outputPath,
-    groqResult?.cleaned_text || extractedText.slice(0, 10000),
+    extractedText,
     now,
     1
   )
