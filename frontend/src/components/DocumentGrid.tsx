@@ -31,7 +31,7 @@ function ContentTypeIcon({ type, className }: { type: string, className?: string
 }
 
 export default function DocumentGrid({ documents, highlightQuery, resultSetParams }: DocumentGridProps) {
-  const [viewMode, setViewMode] = useLocalStorage<'grid' | 'list' | 'map' | 'timeline'>('viewMode', 'list')
+  const [viewMode, setViewMode] = useLocalStorage<'grid' | 'list' | 'map' | 'timeline'>('viewMode', 'grid')
 
   const hasGeoDocuments = useMemo(() =>
     documents.some(d => d._geo || (d.locationLatitude != null && d.locationLongitude != null)),
