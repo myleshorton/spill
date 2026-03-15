@@ -111,8 +111,8 @@ async function processDocument (db, doc) {
   // Step 3: Extract email headers programmatically
   const emailHeaders = extractEmailHeaders(extractedText)
 
-  // Step 4: Groq LLM cleanup
-  let groqResult = null
+  // Step 4: Groq LLM — clean up text + extract metadata
+  let groqResult = { metadata: null, cleanedText: extractedText }
   try {
     groqResult = await groqCleanup(extractedText)
     await sleep(200) // rate limit
@@ -120,7 +120,9 @@ async function processDocument (db, doc) {
     console.warn(`  Groq failed for ${doc.document_id}: ${err.message}`)
   }
 
-  // Step 5: Save extracted text as .txt file
+  const cleanedText = groqResult.cleanedText || extractedText
+
+  // Step 5: Save cleaned text as .txt file
   const docId = crypto.createHash('md5').update(`deep_extract_${doc.document_id}_${Date.now()}`).digest('hex')
   const outputDir = path.join(CONTENT_DIR, 'extracted')
   if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir, { recursive: true })
@@ -128,7 +130,7 @@ async function processDocument (db, doc) {
 
   const title = `Extracted: ${doc.file_name || doc.document_id}`
 
-  fs.writeFileSync(outputPath, extractedText, 'utf8')
+  fs.writeFileSync(outputPath, cleanedText, 'utf8')
 
   // Step 6: Store results
   const now = Date.now()
@@ -142,7 +144,7 @@ async function processDocument (db, doc) {
     0,
     'text',
     outputPath,
-    extractedText,
+    cleanedText,
     now,
     1
   )
@@ -152,7 +154,7 @@ async function processDocument (db, doc) {
   db.linkDocuments(docId, doc.document_id, 'source', 'Original source document')
 
   // Store metadata
-  storeExtractionMetadata(db, doc.document_id, docId, groqResult, 'deep_extraction')
+  storeExtractionMetadata(db, doc.document_id, docId, groqResult.metadata, 'deep_extraction')
 
   // Mark scanned
   db.markDeepExtractScanned(doc.document_id)
