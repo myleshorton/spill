@@ -14,131 +14,134 @@ export interface BlogPost {
 const posts: BlogPost[] = [
   {
     slug: 'hidden-text-behind-redaction-bars',
-    title: 'We Found Hidden Text Behind the Redaction Bars in 686 Epstein Documents',
-    date: 'March 16, 2026',
+    title: 'How a Reddit Post Led Us to Unredact 686 Epstein Documents',
+    date: 'March 17, 2026',
     tag: 'INVESTIGATION',
     excerpt:
-      'Whoever redacted these documents blacked out the visual content but forgot to strip the text data underneath. We scanned all 1.44 million files to find which ones have content hiding behind the black bars.',
+      'A Redditor named Quick_Director_8191 showed that a 118-page PDF of apparent garbage actually contained a full email thread hidden behind redaction bars. We spent days trying to replicate their work at scale. Here is everything that went wrong and what finally worked.',
     html: `
-<p>One document changed everything. <a href="/doc/b8cf180ba0ea133b990013efab2746aa">EFTA00143287</a> &mdash; 118 pages, looks like total garbage when you open it. Black bars everywhere, raw HTML source code printed across the pages, OCR text that reads like someone fell asleep on a keyboard.</p>
+<h2>Credit Where It's Due</h2>
 
-<p>But the PDF's text layer told a different story. Under those black bars, the full text of an email thread was sitting there untouched. Whoever did the redaction blacked out the visual content but forgot to strip the text data underneath. The thread ran from October 2024 to January 2025, named dozens of people, and made detailed allegations about JP Morgan and the Epstein trafficking network. None of it shows up when you view the PDF. All of it was right there in the data.</p>
+<p>We need to start by tipping our hats to Reddit user <strong>u/Quick_Director_8191</strong> on <a href="https://reddit.com/r/Epstein">r/Epstein</a>. They did something genuinely impressive. They took <a href="/doc/b8cf180ba0ea133b990013efab2746aa">EFTA00143287</a> &mdash; a 118-page PDF that looks like absolute garbage when you open it, black bars everywhere, walls of raw HTML source code, OCR gibberish &mdash; and reconstructed a complete email thread from it. Over a dozen emails spanning October 2024 to January 2025, naming Keir Starmer, Cyril Ramaphosa, Putin, Xi, Trump, Elon Musk, David Boies, Alan Dershowitz, Jamie Dimon, Zelenskyy, Jeff Bezos, and Ghislaine Maxwell. Allegations about JP Morgan, the Epstein trafficking network, starvation, intimidation, and a lot more.</p>
 
-<p>So: how many of the other 1.44 million documents in the archive have the same problem?</p>
+<p>Their post was a revelation. They explained that the document was "completely scrambled" but that AI could "put everything back together." They were right. And when we read it, our first thought was: there are 1.44 million documents in this archive. How many others have the same kind of hidden content?</p>
 
-<h2>Scanning 1.44 Million Documents in 5 Minutes</h2>
+<p>Our second thought was: how hard can it be to replicate what they did?</p>
 
-<p>We couldn't afford to run AI on every file. Instead we wrote a scoring script &mdash; eight regex checks, no AI, no API calls. Things like: does the text layer contain HTML tags? Are there email headers? Is the file huge but the extracted text tiny?</p>
+<p>Very hard, as it turns out.</p>
 
-<p>It ran through all 1,435,616 documents in 5.6 minutes. Almost every document triggered something &mdash; 99.5% scored above zero. A million of them landed in the 30-39 point range, mostly because they're email PDFs that naturally have <code>From:</code> and <code>To:</code> headers. Useless for our purposes.</p>
+<h2>What's Actually Going On in That PDF</h2>
 
-<p>Only 6,487 scored above 50. That's where things got interesting.</p>
+<p>When someone redacts a PDF, they draw black rectangles over the sensitive content. If done properly, the underlying text data gets stripped too. But in hundreds of documents in this archive, whoever did the redaction only covered the visual layer. The text data underneath the black bars was left completely intact.</p>
 
-<h2>Three Wrong Turns</h2>
+<p>So when you view EFTA00143287 in a PDF reader, you see a mess of black bars and garbled HTML. But when you extract the text layer programmatically, you get the raw email source code &mdash; complete with From/To/Date headers, message bodies, and a nested reply chain spanning dozens of messages.</p>
 
-<h3>Wrong Turn 1: "Just use AI to clean up the text"</h3>
+<p>The catch: the extracted text is still garbled. OCR engines tried to read through the black bars and produced a mix of real text and noise. Names are mangled (SURMA instead of STARMER, PAMLY instead of FAMILY). HTML tags are fused with words. Half the characters are artifacts. u/Quick_Director_8191 used AI to untangle all of this into readable emails. We wanted to do the same thing, automatically, for every document in the archive.</p>
 
-<p>The text behind redactions is rough. Names are garbled, HTML is fused with words, half the characters are noise. Obvious idea: send it through an LLM to clean it up.</p>
+<h2>Attempt 1: Just Use AI to Clean It Up (Catastrophic Failure)</h2>
 
-<p>We used Groq with Llama 3.3 70B. Prompt: clean up this OCR text, fix names, remove artifacts. It looked great in testing.</p>
+<p>Obvious first move. Take the garbled text, send it to an LLM, ask it to clean up the OCR errors. We used Groq with Llama 3.3 70B. "Clean up this OCR text, fix garbled names, remove HTML artifacts." Looked great in testing.</p>
 
-<p>Then we checked the output for a document that was actually an email from someone named Barbro Ehnbom sending Epstein photos of a young woman. The "cleaned" version? A detailed email thread between Keir Starmer and Rebecca Long-Bailey discussing Brexit strategy, with Emily Thornberry asking to join a meeting.</p>
+<p>Then we spot-checked the results.</p>
 
-<p>Keir Starmer does not appear anywhere in the original document. Not once. The LLM invented an entire fake email exchange and dropped it into an archive of legal evidence.</p>
+<p>One document &mdash; actually an email from someone named Barbro Ehnbom sending Epstein photos of a young woman &mdash; came back "cleaned" with a detailed email thread between <strong>Keir Starmer and Rebecca Long-Bailey discussing Brexit strategy</strong>, with Emily Thornberry asking to join a meeting.</p>
 
-<p>We killed LLM text cleanup immediately. Groq now only generates metadata &mdash; summaries, people mentioned, document type &mdash; and those are clearly labeled as AI-generated. The actual document text is never touched by an LLM.</p>
+<p>None of these people appear anywhere in the original document. The LLM invented an entire fake email exchange about UK Labour Party politics and dropped it into an evidence archive. We verified: zero mentions of "Starmer" in the original text of that document. The model hallucinated the whole thing.</p>
 
-<p>Messy but real beats clean but fabricated. Every time.</p>
+<p>We killed all LLM text cleanup immediately. Messy but real beats clean but fabricated.</p>
 
-<h3>Wrong Turn 2: "Let's make nice PDFs"</h3>
+<h2>Attempt 2: Make Nice PDFs (Silently Blank)</h2>
 
-<p>We wanted the extracted text to look good, so we generated formatted PDFs using fpdf2 with Unicode fonts. Title pages, proper formatting, page numbers. The files looked right &mdash; correct page count, reasonable file size, title page rendered fine.</p>
+<p>OK, so we can't use AI to clean the text. Fine. We'll at least make the extracted text look nice by generating formatted PDFs with title pages and page numbers. We used fpdf2 with Unicode fonts. The output looked right &mdash; correct page count, reasonable file size, title page rendered fine.</p>
 
-<p>Pages 2 through 164 were completely blank.</p>
+<p>Pages 2 through 164 were completely blank. No errors, no warnings. Each line worked individually. Combined into one document, everything after page 1 vanished. We tried different fonts. Tried PyMuPDF's own PDF writer. Same result.</p>
 
-<p>No errors. No warnings. Each line worked individually. Combined into one document, everything after page 1 vanished. We tried different fonts. We tried PyMuPDF's own PDF writer. Same thing.</p>
+<p>Never figured out why. Gave up and stored everything as plain text files.</p>
 
-<p>We never figured out why. We just gave up on PDF generation and stored everything as plain text files. Less polished, actually works.</p>
+<h2>Attempt 3: Find Hidden Content by Looking for HTML (Too Many False Positives)</h2>
 
-<h3>Wrong Turn 3: "HTML in the text layer means hidden content"</h3>
+<p>We needed to find which of the 1.44 million documents had hidden content. We wrote a scoring script &mdash; eight regex heuristics, no AI &mdash; that ran through all 1,435,616 documents in 5.6 minutes. Then we added a "hidden HTML content" detector: if a document's text layer is more than 30% HTML source code with more than 20KB of text, it probably has hidden content. This flagged 1,641 documents.</p>
 
-<p>We figured: if a document's text layer is mostly HTML source code, that HTML probably isn't visible when viewing the PDF. We flagged everything with &gt;30% HTML content and &gt;20KB of text. That gave us 1,641 documents.</p>
+<p>Then we actually looked at them. Tons of false positives. Many were PDFs where the raw email source code was literally printed on the page as visible text. You could see the HTML tags and email headers just by opening the file. Nothing was hidden &mdash; it was just ugly.</p>
 
-<p>Then we looked at them. Tons of false positives. Many were PDFs where the raw email source code was literally printed on the page as visible text. The pages showed <code>&lt;div&gt;</code>, <code>&lt;blockquote&gt;</code>, <code>From:</code> headers &mdash; you could see it all just by opening the file. The text layer matched the visual content. Nothing was hidden.</p>
+<h2>The Black Bars Are the Signal</h2>
 
-<h2>What Actually Distinguishes Hidden Content</h2>
+<p>We were overcomplicating this. The documents with hidden content have black redaction bars on them. The documents without hidden content don't.</p>
 
-<p>The answer was embarrassingly physical. The documents with hidden content have black bars on them. The documents without hidden content don't.</p>
+<p>We wrote a pixel scanner. For each PDF, render a few sample pages, walk across the image counting long horizontal stretches of near-black pixels. Redaction bars are just big dark rectangles.</p>
 
-<p>We wrote a pixel scanner. Render a few pages from each PDF, walk across the image looking for long horizontal stretches of near-black pixels. Redaction bars are just big dark rectangles. Count them.</p>
+<p>EFTA00143287 (truly hidden content): 107 dark runs on page 1, average 35.7 per page. EFTA02715081 (content already visible): 9 on page 1, average 2.0.</p>
 
-<p>EFTA00143287 (truly hidden content): 107 dark runs on page 1, average 35.7 per page.<br/>
-EFTA02715081 (content is visible): 9 on page 1, average 2.0.</p>
+<p>Threshold of 15. That cut our set from 1,641 down to <strong>686 documents</strong> with actual redaction bars hiding text.</p>
 
-<p>Threshold of 15 dark runs per page. That cut our set from 1,641 down to 686 documents.</p>
+<h2>Attempt 4: Generic OCR Cleanup with GPT-4o (Getting Warmer)</h2>
 
-<h2>What About the Images?</h2>
+<p>We had 686 documents. The programmatic cleanup (strip HTML, MIME headers, base64 data, garbled tag remnants) helped but still left the text pretty rough. We went back to AI, this time more carefully.</p>
 
-<p>Someone asked whether the PDFs contained hidden embedded images &mdash; photos or attachments tucked into the file data that don't show up when viewing the document.</p>
+<p>We tried sending chunks of text to GPT-4o asking it to "clean up this OCR text." Better than Llama, but the model kept summarizing instead of reconstructing. Or it would extract one or two sentences per email and mark everything else as "[Garbled and redacted content]." Or it would start looping, repeating the same email over and over with fabricated timestamps.</p>
 
-<p>We checked. The "images" in these PDFs are page scans &mdash; one per page, full resolution, and completely visible when you open the file. They're what you see. We also searched all 1,641 hidden-content documents for <code>data:image</code> base64 content and <code>cid:</code> inline attachment references. Zero documents had embedded base64 images. Nine had <code>cid:</code> references, but those just point to email attachments that weren't included in the PDF.</p>
+<p>The fundamental problem: "clean up this text" is too open-ended. The model doesn't know what's noise and what's content, so it either plays it too safe (marking everything as illegible) or too loose (inventing content to fill gaps).</p>
 
-<p>No hidden images. The hidden content in this archive is text, not pictures.</p>
+<h2>What u/Quick_Director_8191 Actually Did</h2>
 
-<h2>The Final Pipeline</h2>
+<p>Looking at their Reddit post more carefully, we realized the task they gave the AI was fundamentally different from ours. They didn't ask the AI to "clean up OCR text." They asked it to <strong>reconstruct an email thread from raw HTML source</strong>. That's a structured task. The AI can use the email reply chain structure &mdash; nested blockquotes, repeated headers, date patterns &mdash; to figure out where one email ends and the next begins, and to distinguish real content from quoted text in replies.</p>
+
+<p>The other thing we realized: the reference to "Keir Starmer" we thought was hallucinated? It's real in <em>this</em> document. The subject line of the email thread literally says "KEIR STARMER." Our OCR read it as "KEIR SURMA" and we assumed the AI made it up. But it didn't &mdash; it correctly decoded the OCR error. The hallucination happened on a <em>different</em> document where Starmer genuinely doesn't appear.</p>
+
+<h2>The Approach That Worked: Multi-Pass Windowed Extraction</h2>
+
+<p>The breakthrough was splitting the problem up. These email PDFs are deeply nested &mdash; each reply quotes every previous message, so a 118-page document might only have 20 unique emails buried in mountains of repeated quoted text. Sending the whole thing to an LLM in one shot doesn't work because:</p>
+
+<ol>
+<li>The document is too big (758K characters for EFTA00143287)</li>
+<li>The LLM can't tell unique content from repeated quotes</li>
+<li>It runs out of output tokens and starts looping</li>
+</ol>
+
+<p>Our solution: process the PDF in overlapping page windows. For each window of 5-15 pages, send the text to GPT-4o with a specific prompt: "Extract the FULL body text of every unique email in this section. Here are emails already extracted from previous sections &mdash; do NOT repeat them." Then at the end, do one consolidation pass to deduplicate and order the final thread.</p>
+
+<p>For EFTA00143287, this meant 15 API calls across overlapping windows, plus one consolidation call. The result: <strong>50 unique emails</strong> with full body text, proper dates, sender identification, and OCR errors corrected where the meaning was clear from context. References to Starmer, Cyril Ramaphosa, Putin, Trump, Elon Musk, Jeff Bezos, Alan Dershowitz, Jamie Dimon, Zelenskyy, David Boies, Bill Ackman, Larry Fink, Ghislaine Maxwell, Georgia Meloni, and more &mdash; all actually present in the source text.</p>
+
+<p>Total cost for that one document: about $2.30.</p>
+
+<h2>Scaling to All 686 Documents</h2>
+
+<p>We estimated this would cost $50-80 for the top 32 highest-scoring documents. Actual cost: <strong>$0.88</strong>. Most documents are much smaller than the 118-page monster that started all this. A typical 20-page redacted PDF needs 3-4 API calls, not 15.</p>
+
+<p>Across 32 documents, we extracted <strong>584 unique emails</strong> from behind redaction bars. The biggest single document yielded 203 emails. We're now running the same process across all 686 documents.</p>
+
+<p><a href="/doc/1bf696f0667024e26fe7037520d1254f">Read the reconstructed EFTA00143287 email thread here.</a></p>
+
+<h2>What We Learned</h2>
+
+<p><strong>Cheap models hallucinate on messy input.</strong> Llama 3.3 70B via Groq fabricated entire fake email conversations when given garbled OCR text. GPT-4o is much better but still needs careful prompting and structured tasks.</p>
+
+<p><strong>"Clean up this text" is the wrong prompt.</strong> "Reconstruct the email thread from this HTML source" works because it gives the model a structured task with clear success criteria. Open-ended cleanup invites fabrication.</p>
+
+<p><strong>You have to split the work up.</strong> Sending a 758K-character document to an LLM in one shot doesn't work. Overlapping page windows with dedup context between passes does.</p>
+
+<p><strong>The physical signal is the simplest one.</strong> We tried fancy heuristics based on HTML content percentages and text-to-filesize ratios. What actually works: count the black rectangles on the page. Redacted documents have black bars. Non-redacted documents don't.</p>
+
+<p><strong>Check your "hallucinations" twice.</strong> We almost threw away the Keir Starmer connection because we assumed the AI made it up. It didn't &mdash; it correctly decoded "SURMA" to "STARMER" from the actual document. The hallucination was on a different file entirely.</p>
+
+<p><strong>Some random person on Reddit is often way ahead of you.</strong> u/Quick_Director_8191 did this before we even knew it was possible. Their post is the reason 686 documents are now readable that weren't before. We just automated what they figured out by hand.</p>
+
+<h2>The Pipeline</h2>
 
 <ol>
 <li>Score all 1.44M docs with regex heuristics (5 min, no AI)</li>
 <li>Flag docs where text layer is &gt;30% HTML, &gt;20KB</li>
 <li>Render sample pages, count dark pixel runs, skip anything without redaction bars</li>
-<li>Check if another document with the same filename was already extracted (dedup)</li>
+<li>Deduplicate by filename</li>
 <li>Pull the full text layer with PyMuPDF</li>
-<li>Programmatic cleanup &mdash; strip HTML tags, MIME headers, base64 blocks, garbled-tag remnants, image filename clusters, lines that are mostly non-word characters</li>
-<li>One Groq call for metadata (summary, people, doc type) &mdash; labeled as AI-generated</li>
-<li>Save as .txt, link back to original, store metadata</li>
+<li>Programmatic cleanup &mdash; strip HTML, MIME, base64, garbled tags</li>
+<li>Multi-pass GPT-4o reconstruction &mdash; overlapping page windows with dedup context</li>
+<li>Consolidation pass &mdash; deduplicate and order the final thread</li>
+<li>Groq metadata extraction &mdash; summary, people, doc type (labeled as AI-generated)</li>
+<li>Store as .txt, link to original, index for search</li>
 </ol>
 
-<p>686 documents. About 12 minutes end to end. Two dollars in API costs.</p>
-
-<h2>The Text Is Still Ugly</h2>
-
-<p>We're not going to pretend otherwise. Here's what extracted text from behind redaction bars looks like:</p>
-
-<pre><code>Sabin HATERHAL EMAIL] SOS mum EMERGENCY, KEIR SURMA IT RADAR Elan
-MUMS HOUSE OTT RUTIN AND XI HUNGER GAMES UN KEW HEAD:WARIER:5 ATE =III
-
-If I WU ONE EVEN CM CONVLISMION HAS BEEN IIAD ADOOT ME. WITHOW MY
-KNOWLEDGE OR WITHOUT AN ATTORNEY AND Of3f11ONS HAVE BEEN MADE ON MY
-WHALE WITHOUT MY KNOWLEDGE OR AN ATTORNEY PRESENT I WIU. SUE EACH OF YOU
-
-PLEASE CAN SOMEONE ASK
-
-KAPUT. TORCHED PHYSICALLY AND MENTALLY AND NOT INE PERSON HAS OFFERED
-THE LEAST YOU COULD HAVE COIM IS MD ESPECIALLY AFTER OVERA YEAR OF
-BEGGING AND PLEADING EVIDENCE TO RACY M ALL MY ALLEGATIONS?</code></pre>
-
-<p>You can read it if you squint. Someone threatening to sue, saying they've been torched physically and mentally, accusing people of intimidation, begging for help. It's interspersed with OCR garbage because the scanner tried to read through the black bars and picked up fragments mixed with visual noise.</p>
-
-<p>We can't clean this up programmatically &mdash; the garbage is fused with the real text at the character level. And we can't use AI to clean it, because that's how you get fake Keir Starmer emails in your evidence archive.</p>
-
-<p>It's searchable though. "Attorney," "sue," "allegations," "evidence" &mdash; those all work. The AI-generated summary gives you the gist. The raw text is there for anyone who wants to dig through it.</p>
-
-<h2>What's Left to Find</h2>
-
-<p>686 is the high-confidence set. There could be more hiding in ways we haven't checked:</p>
-
-<ul>
-<li>PDF attachments embedded in the file data</li>
-<li>Metadata fields nobody looks at</li>
-<li>Text layers positioned off-screen</li>
-<li>White text on white background</li>
-</ul>
-
-<p>Each would need its own detector. The pipeline's modular enough to add them. But for now, 686 documents of previously invisible content is a start.</p>
-
-<h2>Stack</h2>
-
-<p>PyMuPDF does all the heavy lifting &mdash; text extraction, page rendering, image analysis, redaction detection. Node.js and SQLite handle the pipeline and storage. Groq provides metadata summaries at a fraction of a cent per document. The whole thing runs on one server with no GPU.</p>
+<p>686 documents. Under $20 total. Every extracted document is linked back to its original so you can always check the source.</p>
 
 <p class="signature">&mdash; The Archive Collective</p>
 `,
