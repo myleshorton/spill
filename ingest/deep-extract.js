@@ -86,6 +86,20 @@ async function processDocument (db, doc) {
 
   let extractedText = doc.extracted_text || ''
 
+  // Step 0: Check for redaction bars — skip if content is already visible
+  if (doc.content_type === 'pdf' || (doc.file_name || '').toLowerCase().endsWith('.pdf')) {
+    try {
+      const redactionCheck = JSON.parse(await runPython(['check-redactions', filePath]))
+      if (!redactionCheck.has_redactions) {
+        db.markDeepExtractScanned(doc.document_id)
+        return { status: 'skipped', reason: `no_redactions (dark_runs=${redactionCheck.dark_runs_avg})` }
+      }
+    } catch (err) {
+      console.warn(`  Redaction check failed for ${doc.document_id}: ${err.message}`)
+      // Continue anyway if check fails
+    }
+  }
+
   // Step 1: Try PyMuPDF extraction for PDFs
   if (doc.content_type === 'pdf' || (doc.file_name || '').toLowerCase().endsWith('.pdf')) {
     try {
