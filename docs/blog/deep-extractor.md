@@ -1,121 +1,88 @@
-# Unredacting 1.44 Million Documents: What We Found Behind the Black Bars
+# We Found Hidden Text Behind the Redaction Bars in 686 Epstein Documents
 
-## The Discovery
+One document changed everything. EFTA00143287 — 118 pages, looks like total garbage when you open it. Black bars everywhere, raw HTML source code printed across the pages, OCR text that reads like someone fell asleep on a keyboard.
 
-It started with a single document. EFTA00143287 is a 118-page PDF from the Epstein archive that, when you open it, looks like a wall of redacted garbage — heavy black bars over most of the content, fragments of raw HTML source code printed on the pages, garbled OCR text everywhere.
+But the PDF's text layer told a different story. Under those black bars, the full text of an email thread was sitting there untouched. Whoever did the redaction blacked out the visual content but forgot to strip the text data underneath. The thread ran from October 2024 to January 2025, named dozens of people, and made detailed allegations about JP Morgan and the Epstein trafficking network. None of it shows up when you view the PDF. All of it was right there in the data.
 
-But someone noticed that the PDF's text layer — the invisible data that sits behind the visual content — contained far more than what was visible on the pages. Behind those black redaction bars, the full text of an email conversation was preserved. The redaction covered the visual rendering, but nobody had stripped the underlying text data.
+So: how many of the other 1.44 million documents in the archive have the same problem?
 
-The email thread spanned October 2024 to January 2025, referenced dozens of named individuals, and contained detailed allegations about JP Morgan litigation and the Epstein trafficking network. None of it was visible when viewing the PDF. All of it was sitting in the text layer, waiting to be read.
+## Scanning 1.44 Million Documents in 5 Minutes
 
-This raised an obvious question: how many of the other 1.44 million documents in the archive have content hiding behind redaction bars?
+We couldn't afford to run AI on every file. Instead we wrote a scoring script — eight regex checks, no AI, no API calls. Things like: does the text layer contain HTML tags? Are there email headers? Is the file huge but the extracted text tiny?
 
-## Phase 1: Finding the Needles (5.6 Minutes, No AI)
+It ran through all 1,435,616 documents in 5.6 minutes. Almost every document triggered something — 99.5% scored above zero. A million of them landed in the 30-39 point range, mostly because they're email PDFs that naturally have `From:` and `To:` headers. Useless for our purposes.
 
-We needed to scan all 1.44 million documents, but running an LLM on each one would cost thousands of dollars and take days. Instead, we built a heuristic triage scanner — pure regex and arithmetic, no AI — that scores every document's "extraction potential."
+Only 6,487 scored above 50. That's where things got interesting.
 
-Eight signals, each worth a point value:
+## Three Wrong Turns
 
-| Signal | Points | What It Detects |
-|---|---|---|
-| HTML tags in extracted text | +25 | Raw email source code embedded in text layer |
-| Email headers | +20 | `From:`, `To:`, `Subject:` patterns |
-| High file-size-to-text ratio | +15 | Large file, suspiciously little text |
-| Multi-page with short text | +10 | 10+ pages but only a few KB of text |
-| Embedded image references | +10 | `cid:`, `data:image` inline attachments |
-| Known email filename pattern | +10 | `EFTA*`, `MAIL*` prefixes |
-| Attachment references | +5 | Mentions of attachments |
-| Very long text (100K+) | +5 | Likely bundled email threads |
+### Wrong Turn 1: "Just use AI to clean up the text"
 
-The triage scanner processed all 1,435,616 documents in 5.6 minutes. Results:
+The text behind redactions is rough. Names are garbled, HTML is fused with words, half the characters are noise. Obvious idea: send it through an LLM to clean it up.
 
-- **1,428,065 documents** had at least one signal firing (99.5%)
-- Score distribution peaked heavily at 30-39 (over a million documents — mostly DS9 emails with email headers and attachment references)
-- Only **6,487 documents** scored 50+ (the interesting ones)
+We used Groq with Llama 3.3 70B. Prompt: clean up this OCR text, fix names, remove artifacts. It looked great in testing.
 
-The first surprise: nearly every document in the archive triggers at least one heuristic. That's too many. We needed a better filter.
+Then we checked the output for a document that was actually an email from someone named Barbro Ehnbom sending Epstein photos of a young woman. The "cleaned" version? A detailed email thread between Keir Starmer and Rebecca Long-Bailey discussing Brexit strategy, with Emily Thornberry asking to join a meeting.
 
-## The Hidden Content Signal
+Keir Starmer does not appear anywhere in the original document. Not once. The LLM invented an entire fake email exchange and dropped it into an archive of legal evidence.
 
-Scoring high on heuristics doesn't mean content is actually hidden. Most of the flagged documents were ordinary email PDFs where the email headers are clearly visible when viewing the file. We needed to distinguish between "has email content" and "has email content *that you can't see*."
+We killed LLM text cleanup immediately. Groq now only generates metadata — summaries, people mentioned, document type — and those are clearly labeled as AI-generated. The actual document text is never touched by an LLM.
 
-We added a new detection: **hidden HTML content**. If a document's text layer is more than 30% HTML source code by character count, with more than 20KB of text, then the text layer likely contains raw email HTML that isn't visible in the rendered PDF. This flagged **1,641 documents**.
+Messy but real beats clean but fabricated. Every time.
 
-But even 1,641 was too many. When we ran deep extraction on all of them and spot-checked the results, many were false positives — the raw email source code WAS visible on the pages. The PDF showed the HTML source as printed text, and our text extraction just picked up what was already readable.
+### Wrong Turn 2: "Let's make nice PDFs"
 
-## Detecting Actual Redactions
+We wanted the extracted text to look good, so we generated formatted PDFs using fpdf2 with Unicode fonts. Title pages, proper formatting, page numbers. The files looked right — correct page count, reasonable file size, title page rendered fine.
 
-The key difference between EFTA00143287 (truly hidden) and the false positives was physical: EFTA00143287 had heavy black redaction bars covering the content on the page images. The false positives didn't.
+Pages 2 through 164 were completely blank.
 
-We built a pixel-level redaction detector. For each PDF, we render a few sample pages, scan the page images for long horizontal runs of dark pixels (redaction bars), and count them:
+No errors. No warnings. Each line worked individually. Combined into one document, everything after page 1 vanished. We tried different fonts. We tried PyMuPDF's own PDF writer. Same thing.
 
-- **EFTA00143287** (hidden content): 107 dark runs on page 1, average 35.7 across sampled pages
-- **EFTA02715081** (visible content): 9 dark runs on page 1, average 2.0 across sampled pages
+We never figured out why. We just gave up on PDF generation and stored everything as plain text files. Less polished, actually works.
 
-The threshold: if a document averages more than 15 dark runs per sampled page, it has redaction bars — and therefore likely has content behind them that the text layer preserves.
+### Wrong Turn 3: "HTML in the text layer means hidden content"
 
-This reduced our extraction set from 1,641 to **686 documents** — the ones where redaction bars are actually hiding text.
+We figured: if a document's text layer is mostly HTML source code, that HTML probably isn't visible when viewing the PDF. We flagged everything with >30% HTML content and >20KB of text. That gave us 1,641 documents.
 
-## What We Tried That Failed
+Then we looked at them. Tons of false positives. Many were PDFs where the raw email source code was literally printed on the page as visible text. The pages showed `<div>`, `<blockquote>`, `From:` headers — you could see it all just by opening the file. The text layer matched the visual content. Nothing was hidden.
 
-### Attempt 1: LLM Text Cleanup (Hallucination Disaster)
+## What Actually Distinguishes Hidden Content
 
-Our original plan was to use Groq (Llama 3.3 70B) to clean up the garbled OCR text. The raw text from behind redactions is messy — names are mangled, HTML artifacts are fused with words, formatting is broken.
+The answer was embarrassingly physical. The documents with hidden content have black bars on them. The documents without hidden content don't.
 
-We sent chunks of text to Groq with a prompt asking it to "clean up this OCR text, fix garbled names, remove HTML artifacts." It worked beautifully on test cases. Then we spot-checked the results.
+We wrote a pixel scanner. Render a few pages from each PDF, walk across the image looking for long horizontal stretches of near-black pixels. Redaction bars are just big dark rectangles. Count them.
 
-One document — EFTA02715081, an email from Barbro Ehnbom to Jeffrey Epstein's gmail account forwarding a CV and photos — came back with the cleaned text containing a multi-email thread between **Keir Starmer** and **Rebecca Long-Bailey** about **Brexit strategy**, followed by **Emily Thornberry** asking to join a meeting.
+EFTA00143287 (truly hidden content): 107 dark runs on page 1, average 35.7 per page.
+EFTA02715081 (content is visible): 9 on page 1, average 2.0.
 
-None of these people appeared anywhere in the original document. The LLM had wholesale fabricated an entirely plausible-looking email conversation and inserted it into the extracted text. The original document was about someone sending Epstein photos of a young woman, and the "cleaned" version was about UK Labour Party politics.
+Threshold of 15 dark runs per page. That cut our set from 1,641 down to 686 documents.
 
-We verified: zero mentions of "Starmer" in the original text. The LLM hallucinated the entire thing.
+## What About the Images?
 
-We immediately removed all LLM text cleanup. The garbled OCR text is messy, but at least it's real. We now only use Groq for structured metadata extraction (summary, people mentioned, document classification) where the outputs are clearly labeled as AI-generated and don't replace the source text.
+Someone asked whether the PDFs contained hidden embedded images — photos or attachments tucked into the file data that don't show up when viewing the document.
 
-**Lesson: Never let an LLM rewrite source documents in an archive. Summaries and metadata are fine. Replacing the actual text is not.**
+We checked. The "images" in these PDFs are page scans — one per page, full resolution, and completely visible when you open the file. They're what you see. We also searched all 1,641 hidden-content documents for `data:image` base64 content and `cid:` inline attachment references. Zero documents had embedded base64 images. Nine had `cid:` references, but those just point to email attachments that weren't included in the PDF.
 
-### Attempt 2: PDF Generation with fpdf2 (Silently Blank Pages)
+No hidden images. The hidden content in this archive is text, not pictures.
 
-We originally generated formatted PDFs from the extracted text using fpdf2 (a Python PDF library) with DejaVu Unicode fonts. The PDFs looked right — correct page counts, proper file sizes, title pages rendered correctly.
+## The Final Pipeline
 
-But every page after page 1 was blank.
+Here's what actually runs:
 
-We spent considerable time debugging. Each line rendered correctly when tested individually. The font existed and supported the characters. No errors were thrown. But when all lines were combined into a single document, pages 2-164 were empty — both visually and when extracting text back out with PyMuPDF.
+1. Score all 1.44M docs with regex heuristics (5 min, no AI)
+2. Flag docs where text layer is >30% HTML, >20KB
+3. Render sample pages, count dark pixel runs, skip anything without redaction bars
+4. Check if another document with the same filename was already extracted (dedup)
+5. Pull the full text layer with PyMuPDF
+6. Programmatic cleanup — strip HTML tags, MIME headers, base64 blocks, garbled-tag remnants, image filename clusters, lines that are mostly non-word characters
+7. One Groq call for metadata (summary, people, doc type) — labeled as AI-generated
+8. Save as .txt, link back to original, store metadata
 
-We tested with Helvetica instead of DejaVu — same result. We tested with PyMuPDF's own PDF generation — also blank. The issue appears to be a deep fpdf2 bug where `multi_cell()` silently stops rendering after a certain amount of Unicode text content.
+686 documents. About 12 minutes end to end. Two dollars in API costs.
 
-We solved this by abandoning PDF generation entirely. The extracted text is now stored as plain `.txt` files. The document viewer renders them in an iframe. It's less pretty, but it actually works.
+## The Text Is Still Ugly
 
-**Lesson: Test generated documents by extracting their content back out, not just by checking file size and page count.**
-
-### Attempt 3: HTML Percentage as Hidden Content Signal (Too Many False Positives)
-
-Our first hidden content heuristic — text layer is >30% HTML with >20KB text — flagged 1,641 documents. But many of these were PDFs where the raw email source code was printed visually on the pages as text. The content wasn't hidden; it was just ugly.
-
-For example, EFTA02715081 is a 58-page PDF where every page is a full-page scan showing raw email headers and HTML source code. The text layer matches what's on the page. Nothing is hidden. But it scored high on our HTML percentage heuristic because the text layer was full of HTML.
-
-The fix was adding the pixel-level redaction bar detector. If the page images don't have black bars, the content isn't hidden — it's just a document that happens to contain HTML source code as its visible content.
-
-**Lesson: "Contains HTML" and "has hidden content behind redactions" are very different things. You need to check the visual rendering, not just the text layer.**
-
-## What Actually Works
-
-The final pipeline:
-
-1. **Heuristic triage** (5.6 min, all 1.44M docs, no LLM) — scores documents with 8 regex-based signals
-2. **Hidden content detection** — flags documents where >30% of text layer is HTML with >20KB text
-3. **Redaction bar detection** — renders sample pages, counts dark pixel runs, skips documents where content is already visible
-4. **Filename deduplication** — skips documents that share a filename with one already extracted (handles re-uploads)
-5. **PyMuPDF text extraction** — extracts the full text layer content
-6. **Deep programmatic cleanup** — strips HTML tags, MIME headers, base64 data, image filename clusters, and lines with too many non-word characters
-7. **Groq metadata extraction** — one API call per document for summary, people mentioned, document type classification (clearly labeled as AI-generated, never replaces source text)
-8. **Store as .txt** — saves cleaned text as a plain text file, creates bidirectional links between extraction and source, stores structured metadata
-
-The result: **686 documents** with genuinely hidden content extracted from behind redaction bars. Each extraction is linked to its source document, searchable, and annotated with AI-generated metadata.
-
-## The Extracted Text Is Still Messy
-
-We should be honest: the extracted text from behind redaction bars is not clean. It looks like this:
+We're not going to pretend otherwise. Here's what extracted text from behind redaction bars looks like:
 
 ```
 Sabin HATERHAL EMAIL] SOS mum EMERGENCY, KEIR SURMA IT RADAR Elan
@@ -132,42 +99,23 @@ THE LEAST YOU COULD HAVE COIM IS MD ESPECIALLY AFTER OVERA YEAR OF
 BEGGING AND PLEADING EVIDENCE TO RACY M ALL MY ALLEGATIONS?
 ```
 
-The readable parts are there — someone threatening to sue, references to being torched physically and mentally, accusations of intimidation. But they're interspersed with OCR artifacts, garbled characters, and noise from the redaction process. The OCR engine tried to read through the black bars and captured fragments of the text underneath, mixed with the visual noise of the bars themselves.
+You can read it if you squint. Someone threatening to sue, saying they've been torched physically and mentally, accusing people of intimidation, begging for help. It's interspersed with OCR garbage because the scanner tried to read through the black bars and picked up fragments mixed with visual noise.
 
-We can't clean this up further without an LLM, and we learned the hard way that LLMs hallucinate replacement content when given garbled input. The messy-but-real text is more valuable than clean-but-fabricated text.
+We can't clean this up programmatically — the garbage is fused with the real text at the character level. And we can't use AI to clean it, because that's how you get fake Keir Starmer emails in your evidence archive.
 
-The content is still searchable. Keywords like "attorney," "sue," "allegations," "evidence" all work. Entity extraction picks up the names. The metadata summary provides a readable overview. The raw text is there for anyone who wants to read it carefully.
+It's searchable though. "Attorney," "sue," "allegations," "evidence" — those all work. The AI-generated summary gives you the gist. The raw text is there for anyone who wants to dig through it.
 
-## The Numbers
+## What's Left to Find
 
-| Metric | Value |
-|---|---|
-| Documents scanned | 1,435,616 |
-| Triage time | 5.6 minutes |
-| Documents with hidden HTML content | 1,641 |
-| Documents with actual redaction bars | 686 |
-| Extraction time (686 docs) | ~6 minutes |
-| Success rate | 100% |
-| LLM cost (Groq, metadata only) | ~$2 |
-| Total pipeline time | ~12 minutes |
+686 is the high-confidence set. There could be more hiding in ways we haven't checked:
 
-## What's Next
+- PDF attachments embedded in the file data
+- Metadata fields nobody looks at
+- Text layers positioned off-screen
+- White text on white background
 
-The 686 extracted documents are the high-confidence set — documents where we can prove content was hidden behind redaction bars. There may be other types of hidden content we're not detecting yet:
+Each would need its own detector. The pipeline's modular enough to add them. But for now, 686 documents of previously invisible content is a start.
 
-- **Embedded file attachments** within PDFs that aren't rendered
-- **Metadata fields** with information not shown in the document body
-- **Invisible text layers** placed outside the visible page area
-- **White-on-white text** or other visual hiding techniques
+## Stack
 
-Each would need its own detection heuristic. The pipeline is designed to be extensible — add a new check to `extract-pdf-gen.py`, add a flag to the triage scanner, and the deep extractor will pick it up.
-
-## Technical Stack
-
-- **PyMuPDF (fitz)** — PDF text extraction, page rendering, image extraction, redaction detection
-- **Node.js + better-sqlite3** — pipeline orchestration, document database, metadata storage
-- **Groq (Llama 3.3 70B)** — metadata extraction only (summary, people, classification)
-- **p-limit** — concurrency control for parallel processing
-- **fpdf2** — we tried it for PDF generation; it didn't work (see "What We Tried That Failed")
-
-The entire pipeline runs on a single server. No GPU required. No expensive AI APIs for the core extraction. The only LLM spend is one Groq call per document for metadata, which costs fractions of a cent per document.
+PyMuPDF does all the heavy lifting — text extraction, page rendering, image analysis, redaction detection. Node.js and SQLite handle the pipeline and storage. Groq provides metadata summaries at a fraction of a cent per document. The whole thing runs on one server with no GPU.
