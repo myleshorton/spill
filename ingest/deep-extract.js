@@ -86,7 +86,25 @@ async function processDocument (db, doc) {
 
   let extractedText = doc.extracted_text || ''
 
-  // Step 0: Check for redaction bars — skip if content is already visible
+  // Step 0a: Deduplicate — skip if another doc with same filename already has an extraction
+  if (doc.file_name) {
+    const existing = db.db.prepare(`
+      SELECT dl.source_id FROM document_links dl
+      JOIN documents d ON d.id = dl.source_id
+      JOIN documents src ON src.id = dl.target_id
+      WHERE dl.link_type = 'source' AND src.file_name = ? AND src.id != ?
+      LIMIT 1
+    `).get(doc.file_name, doc.document_id)
+    if (existing) {
+      // Link to the existing extraction instead of creating a duplicate
+      db.linkDocuments(doc.document_id, existing.source_id, 'extraction', 'Deep extraction output (dedup)')
+      db.linkDocuments(existing.source_id, doc.document_id, 'source', 'Original source document (dedup)')
+      db.markDeepExtractScanned(doc.document_id)
+      return { status: 'skipped', reason: 'duplicate_filename' }
+    }
+  }
+
+  // Step 0b: Check for redaction bars — skip if content is already visible
   if (doc.content_type === 'pdf' || (doc.file_name || '').toLowerCase().endsWith('.pdf')) {
     try {
       const redactionCheck = JSON.parse(await runPython(['check-redactions', filePath]))
