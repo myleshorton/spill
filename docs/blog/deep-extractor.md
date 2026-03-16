@@ -1,118 +1,173 @@
-# Mining 1.44 Million Documents: How We Built a Deep Document Extractor
+# Unredacting 1.44 Million Documents: What We Found Behind the Black Bars
 
 ## The Discovery
 
-While investigating the Spill Archive — a collection of 1.44 million documents, 96% of them PDFs — we stumbled on something interesting. A single 118-page PDF (EFTA00143287) looked like garbage at first glance: walls of raw HTML source code, mangled OCR text, broken formatting. Our standard text extraction pipeline captured it as noise.
+It started with a single document. EFTA00143287 is a 118-page PDF from the Epstein archive that, when you open it, looks like a wall of redacted garbage — heavy black bars over most of the content, fragments of raw HTML source code printed on the pages, garbled OCR text everywhere.
 
-But buried inside that noise was a complete email conversation spanning October 2024 to January 2025, with dozens of named individuals, detailed allegations, and a reconstructable chronological thread. The existing pipeline had missed all of it.
+But someone noticed that the PDF's text layer — the invisible data that sits behind the visual content — contained far more than what was visible on the pages. Behind those black redaction bars, the full text of an email conversation was preserved. The redaction covered the visual rendering, but nobody had stripped the underlying text data.
 
-This raised an obvious question: how many of the other 1.44 million documents contain similarly hidden structure that our extraction is missing?
+The email thread spanned October 2024 to January 2025, referenced dozens of named individuals, and contained detailed allegations about JP Morgan litigation and the Epstein trafficking network. None of it was visible when viewing the PDF. All of it was sitting in the text layer, waiting to be read.
 
-## The Problem
+This raised an obvious question: how many of the other 1.44 million documents in the archive have content hiding behind redaction bars?
 
-Standard PDF text extraction (what most document pipelines do) treats every page as a flat block of text. But real-world documents are messy:
+## Phase 1: Finding the Needles (5.6 Minutes, No AI)
 
-- **Email threads rendered as HTML inside PDFs** — the raw `<div>`, `<blockquote>`, `From:` / `To:` headers are all there, but extraction flattens them into unreadable noise
-- **OCR-garbled text** — names, dates, and key terms mangled beyond keyword search
-- **Embedded metadata** — structured data hiding in document properties that never surfaces in search
-- **Structured tables** — financial records and spreadsheets that lose all formatting when extracted as plain text
+We needed to scan all 1.44 million documents, but running an LLM on each one would cost thousands of dollars and take days. Instead, we built a heuristic triage scanner — pure regex and arithmetic, no AI — that scores every document's "extraction potential."
 
-The EFTA00143287 case proved that ~90% of the extraction work is programmatic (PDF parsing, HTML stripping, regex-based header extraction, thread reconstruction) and only ~10% needs an LLM (cleaning up garbled names, classifying document type, generating summaries).
-
-## The Design: Two Phases
-
-We designed a two-phase pipeline that separates cheap heuristic scoring from expensive deep extraction.
-
-### Phase 1: Triage (No LLM, 5-15 Minutes for All 1.44M Docs)
-
-Every document gets a score based on eight heuristic signals:
+Eight signals, each worth a point value:
 
 | Signal | Points | What It Detects |
 |---|---|---|
-| HTML tags in text | +25 | Email source code trapped inside PDFs |
-| Email headers | +20 | `From:`, `To:`, `Subject:` patterns indicating email content |
-| High file-size-to-text ratio | +15 | Large files with suspiciously little extracted text — something's being missed |
-| Multi-page, short text | +10 | Many pages but only a few KB of text — likely images or hidden content |
-| Embedded image references | +10 | `cid:`, `data:image` — inline email attachments |
-| Known email filename patterns | +10 | Files matching `EFTA*`, `MAIL*`, and other email-indicating patterns |
-| Attachment references | +5 | Mentions of attachments that weren't extracted |
-| Very long text (100K+) | +5 | Likely multi-thread email bundles |
+| HTML tags in extracted text | +25 | Raw email source code embedded in text layer |
+| Email headers | +20 | `From:`, `To:`, `Subject:` patterns |
+| High file-size-to-text ratio | +15 | Large file, suspiciously little text |
+| Multi-page with short text | +10 | 10+ pages but only a few KB of text |
+| Embedded image references | +10 | `cid:`, `data:image` inline attachments |
+| Known email filename pattern | +10 | `EFTA*`, `MAIL*` prefixes |
+| Attachment references | +5 | Mentions of attachments |
+| Very long text (100K+) | +5 | Likely bundled email threads |
 
-No LLM. No API calls. Pure regex and arithmetic. This scores all 1.44 million documents in minutes and produces a ranked list of extraction candidates.
+The triage scanner processed all 1,435,616 documents in 5.6 minutes. Results:
 
-### Phase 2: Deep Extraction (LLM-Assisted, Score-Ordered)
+- **1,428,065 documents** had at least one signal firing (99.5%)
+- Score distribution peaked heavily at 30-39 (over a million documents — mostly DS9 emails with email headers and attachment references)
+- Only **6,487 documents** scored 50+ (the interesting ones)
 
-Documents scoring above the threshold (default: 20) get processed in order, highest score first. Each document runs through a six-step pipeline:
+The first surprise: nearly every document in the archive triggers at least one heuristic. That's too many. We needed a better filter.
 
-1. **Load raw file** — PyMuPDF for PDFs, direct read for HTML/text
-2. **Detect content type** — Is this an HTML email dump? An email thread? A structured table?
-3. **Programmatic parse** — Strip HTML, extract email headers, identify message boundaries, reconstruct chronological thread order, extract attachment references. No LLM needed for any of this.
-4. **LLM cleanup** — A single Groq API call per document handles four tasks at once: clean garbled OCR, identify people and organizations from mangled names, classify the document type, and generate a 2-3 sentence summary. Using Llama 3.3 70B via Groq keeps this fast and cheap.
-5. **Generate output PDF** — Clean, formatted PDF with title page, properly structured content, and page numbers. Using fpdf2 with Unicode font support.
-6. **Store and link** — The extracted document gets its own record in the archive, bidirectionally linked to the original. Structured metadata (senders, recipients, date ranges, people mentioned) is stored separately and feeds into entity scanning.
+## The Hidden Content Signal
 
-### Why Two Phases?
+Scoring high on heuristics doesn't mean content is actually hidden. Most of the flagged documents were ordinary email PDFs where the email headers are clearly visible when viewing the file. We needed to distinguish between "has email content" and "has email content *that you can't see*."
 
-Cost. Running an LLM on 1.44 million documents would be expensive and slow. But running regex heuristics on 1.44 million documents is essentially free. We expect maybe 60-100K documents to score above threshold — and at Groq's pricing with Llama 3.3 70B, processing all of those costs roughly $10-30 total.
+We added a new detection: **hidden HTML content**. If a document's text layer is more than 30% HTML source code by character count, with more than 20KB of text, then the text layer likely contains raw email HTML that isn't visible in the rendered PDF. This flagged **1,641 documents**.
 
-The triage phase also lets us calibrate. After scoring everything, we can look at the score distribution and adjust the threshold before committing to any LLM spend.
+But even 1,641 was too many. When we ran deep extraction on all of them and spot-checked the results, many were false positives — the raw email source code WAS visible on the pages. The PDF showed the HTML source as printed text, and our text extraction just picked up what was already readable.
 
-## The Architecture
+## Detecting Actual Redactions
+
+The key difference between EFTA00143287 (truly hidden) and the false positives was physical: EFTA00143287 had heavy black redaction bars covering the content on the page images. The false positives didn't.
+
+We built a pixel-level redaction detector. For each PDF, we render a few sample pages, scan the page images for long horizontal runs of dark pixels (redaction bars), and count them:
+
+- **EFTA00143287** (hidden content): 107 dark runs on page 1, average 35.7 across sampled pages
+- **EFTA02715081** (visible content): 9 dark runs on page 1, average 2.0 across sampled pages
+
+The threshold: if a document averages more than 15 dark runs per sampled page, it has redaction bars — and therefore likely has content behind them that the text layer preserves.
+
+This reduced our extraction set from 1,641 to **686 documents** — the ones where redaction bars are actually hiding text.
+
+## What We Tried That Failed
+
+### Attempt 1: LLM Text Cleanup (Hallucination Disaster)
+
+Our original plan was to use Groq (Llama 3.3 70B) to clean up the garbled OCR text. The raw text from behind redactions is messy — names are mangled, HTML artifacts are fused with words, formatting is broken.
+
+We sent chunks of text to Groq with a prompt asking it to "clean up this OCR text, fix garbled names, remove HTML artifacts." It worked beautifully on test cases. Then we spot-checked the results.
+
+One document — EFTA02715081, an email from Barbro Ehnbom to Jeffrey Epstein's gmail account forwarding a CV and photos — came back with the cleaned text containing a multi-email thread between **Keir Starmer** and **Rebecca Long-Bailey** about **Brexit strategy**, followed by **Emily Thornberry** asking to join a meeting.
+
+None of these people appeared anywhere in the original document. The LLM had wholesale fabricated an entirely plausible-looking email conversation and inserted it into the extracted text. The original document was about someone sending Epstein photos of a young woman, and the "cleaned" version was about UK Labour Party politics.
+
+We verified: zero mentions of "Starmer" in the original text. The LLM hallucinated the entire thing.
+
+We immediately removed all LLM text cleanup. The garbled OCR text is messy, but at least it's real. We now only use Groq for structured metadata extraction (summary, people mentioned, document classification) where the outputs are clearly labeled as AI-generated and don't replace the source text.
+
+**Lesson: Never let an LLM rewrite source documents in an archive. Summaries and metadata are fine. Replacing the actual text is not.**
+
+### Attempt 2: PDF Generation with fpdf2 (Silently Blank Pages)
+
+We originally generated formatted PDFs from the extracted text using fpdf2 (a Python PDF library) with DejaVu Unicode fonts. The PDFs looked right — correct page counts, proper file sizes, title pages rendered correctly.
+
+But every page after page 1 was blank.
+
+We spent considerable time debugging. Each line rendered correctly when tested individually. The font existed and supported the characters. No errors were thrown. But when all lines were combined into a single document, pages 2-164 were empty — both visually and when extracting text back out with PyMuPDF.
+
+We tested with Helvetica instead of DejaVu — same result. We tested with PyMuPDF's own PDF generation — also blank. The issue appears to be a deep fpdf2 bug where `multi_cell()` silently stops rendering after a certain amount of Unicode text content.
+
+We solved this by abandoning PDF generation entirely. The extracted text is now stored as plain `.txt` files. The document viewer renders them in an iframe. It's less pretty, but it actually works.
+
+**Lesson: Test generated documents by extracting their content back out, not just by checking file size and page count.**
+
+### Attempt 3: HTML Percentage as Hidden Content Signal (Too Many False Positives)
+
+Our first hidden content heuristic — text layer is >30% HTML with >20KB text — flagged 1,641 documents. But many of these were PDFs where the raw email source code was printed visually on the pages as text. The content wasn't hidden; it was just ugly.
+
+For example, EFTA02715081 is a 58-page PDF where every page is a full-page scan showing raw email headers and HTML source code. The text layer matches what's on the page. Nothing is hidden. But it scored high on our HTML percentage heuristic because the text layer was full of HTML.
+
+The fix was adding the pixel-level redaction bar detector. If the page images don't have black bars, the content isn't hidden — it's just a document that happens to contain HTML source code as its visible content.
+
+**Lesson: "Contains HTML" and "has hidden content behind redactions" are very different things. You need to check the visual rendering, not just the text layer.**
+
+## What Actually Works
+
+The final pipeline:
+
+1. **Heuristic triage** (5.6 min, all 1.44M docs, no LLM) — scores documents with 8 regex-based signals
+2. **Hidden content detection** — flags documents where >30% of text layer is HTML with >20KB text
+3. **Redaction bar detection** — renders sample pages, counts dark pixel runs, skips documents where content is already visible
+4. **Filename deduplication** — skips documents that share a filename with one already extracted (handles re-uploads)
+5. **PyMuPDF text extraction** — extracts the full text layer content
+6. **Deep programmatic cleanup** — strips HTML tags, MIME headers, base64 data, image filename clusters, and lines with too many non-word characters
+7. **Groq metadata extraction** — one API call per document for summary, people mentioned, document type classification (clearly labeled as AI-generated, never replaces source text)
+8. **Store as .txt** — saves cleaned text as a plain text file, creates bidirectional links between extraction and source, stores structured metadata
+
+The result: **686 documents** with genuinely hidden content extracted from behind redaction bars. Each extraction is linked to its source document, searchable, and annotated with AI-generated metadata.
+
+## The Extracted Text Is Still Messy
+
+We should be honest: the extracted text from behind redaction bars is not clean. It looks like this:
 
 ```
-Phase 1: Triage                    Phase 2: Deep Extraction
-┌─────────────────┐                ┌─────────────────────────┐
-│  1.44M documents │               │  Flagged docs (by score) │
-│  ──────────────  │               │  ───────────────────────  │
-│  8 heuristics    │──score > 20──▶│  PyMuPDF parse           │
-│  No LLM          │               │  Regex extraction        │
-│  ~10 min          │               │  Groq LLM cleanup        │
-│  extraction_triage│               │  PDF generation          │
-│  table            │               │  Link + index            │
-└─────────────────┘                └─────────────────────────┘
+Sabin HATERHAL EMAIL] SOS mum EMERGENCY, KEIR SURMA IT RADAR Elan
+MUMS HOUSE OTT RUTIN AND XI HUNGER GAMES UN KEW HEAD:WARIER:5 ATE =III
+
+If I WU ONE EVEN CM CONVLISMION HAS BEEN IIAD ADOOT ME. WITHOW MY
+KNOWLEDGE OR WITHOUT AN ATTORNEY AND Of3f11ONS HAVE BEEN MADE ON MY
+WHALE WITHOUT MY KNOWLEDGE OR AN ATTORNEY PRESENT I WIU. SUE EACH OF YOU
+
+PLEASE CAN SOMEONE ASK
+
+KAPUT. TORCHED PHYSICALLY AND MENTALLY AND NOT INE PERSON HAS OFFERED
+THE LEAST YOU COULD HAVE COIM IS MD ESPECIALLY AFTER OVERA YEAR OF
+BEGGING AND PLEADING EVIDENCE TO RACY M ALL MY ALLEGATIONS?
 ```
 
-Both phases integrate into the existing ingest pipeline. New documents get triaged and (if they score high enough) deep-extracted automatically as they're ingested.
+The readable parts are there — someone threatening to sue, references to being torched physically and mentally, accusations of intimidation. But they're interspersed with OCR artifacts, garbled characters, and noise from the redaction process. The OCR engine tried to read through the black bars and captured fragments of the text underneath, mixed with the visual noise of the bars themselves.
 
-## LLM Usage: Minimal by Design
+We can't clean this up further without an LLM, and we learned the hard way that LLMs hallucinate replacement content when given garbled input. The messy-but-real text is more valuable than clean-but-fabricated text.
 
-We deliberately minimize LLM involvement. Here's what does and doesn't use an LLM:
+The content is still searchable. Keywords like "attorney," "sue," "allegations," "evidence" all work. Entity extraction picks up the names. The metadata summary provides a readable overview. The raw text is there for anyone who wants to read it carefully.
 
-| Step | LLM? |
+## The Numbers
+
+| Metric | Value |
 |---|---|
-| Triage scoring | No |
-| HTML stripping | No |
-| Email header parsing | No |
-| Thread reconstruction | No |
-| OCR cleanup | Yes (Groq) |
-| Name identification | Yes (Groq) |
-| Document classification | Yes (Groq) |
-| Summary generation | Yes (Groq) |
-| PDF generation | No |
+| Documents scanned | 1,435,616 |
+| Triage time | 5.6 minutes |
+| Documents with hidden HTML content | 1,641 |
+| Documents with actual redaction bars | 686 |
+| Extraction time (686 docs) | ~6 minutes |
+| Success rate | 100% |
+| LLM cost (Groq, metadata only) | ~$2 |
+| Total pipeline time | ~12 minutes |
 
-The four LLM tasks are combined into a single API call per document. Input is the first ~6K characters of the *programmatically parsed* content (not the raw OCR garbage), which means the LLM gets clean-ish input and only needs to handle the parts that are genuinely ambiguous.
+## What's Next
 
-## What We Extract
+The 686 extracted documents are the high-confidence set — documents where we can prove content was hidden behind redaction bars. There may be other types of hidden content we're not detecting yet:
 
-For each processed document, we store structured metadata:
+- **Embedded file attachments** within PDFs that aren't rendered
+- **Metadata fields** with information not shown in the document body
+- **Invisible text layers** placed outside the visible page area
+- **White-on-white text** or other visual hiding techniques
 
-- **Extraction type** — email_thread, embedded_html, metadata_rich, structured_table
-- **Email details** — count of emails, senders, recipients, date range
-- **People mentioned** — feeds into the existing entity scanning system
-- **Summary** — 2-3 sentence description of the document's actual content
-- **Confidence score** — how reliable the extraction was
+Each would need its own detection heuristic. The pipeline is designed to be extensible — add a new check to `extract-pdf-gen.py`, add a flag to the triage scanner, and the deep extractor will pick it up.
 
-This metadata makes previously opaque documents searchable, browsable, and connected to the rest of the archive through entity relationships.
+## Technical Stack
 
-## Backfill Strategy
+- **PyMuPDF (fitz)** — PDF text extraction, page rendering, image extraction, redaction detection
+- **Node.js + better-sqlite3** — pipeline orchestration, document database, metadata storage
+- **Groq (Llama 3.3 70B)** — metadata extraction only (summary, people, classification)
+- **p-limit** — concurrency control for parallel processing
+- **fpdf2** — we tried it for PDF generation; it didn't work (see "What We Tried That Failed")
 
-1. Run triage across all 1.44M documents (~10 minutes, no LLM, no cost)
-2. Review score distribution to calibrate the threshold
-3. Process flagged documents in score order (highest potential first, across all datasets)
-4. The DS9 dataset (emails, 560K documents) is expected to dominate the flagged set
-
-## The Lesson from EFTA00143287
-
-The key insight from our initial manual extraction was this: most of the valuable work is parsing, not AI. PyMuPDF, regex, and HTML stripping did 90% of the heavy lifting. The LLM was only needed for the genuinely ambiguous parts — garbled names, document classification, and summarization.
-
-That's why we designed the pipeline this way. Cheap heuristics to find the needles, programmatic tools to do the heavy extraction, and a single targeted LLM call to clean up what the tools can't handle. At scale, this means processing over a million documents for the cost of a few coffees.
+The entire pipeline runs on a single server. No GPU required. No expensive AI APIs for the core extraction. The only LLM spend is one Groq call per document for metadata, which costs fractions of a cent per document.
