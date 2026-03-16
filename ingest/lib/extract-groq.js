@@ -43,7 +43,7 @@ const CLEANUP_PROMPT = `Clean up the following text that was extracted from a PD
 - Preserve the actual content and meaning
 - Keep it as plain readable text
 
-Return ONLY the cleaned text, nothing else. Do not summarize — return the full cleaned version of the input.`
+CRITICAL: Return ONLY the cleaned text. Do NOT add commentary, explanations, or notes about the text quality. Do NOT say things like "the text appears to be corrupted" or "unable to extract". If the text is too garbled to clean, return it unchanged. Never replace the original content with your own description of it.`
 
 async function groqMetadata (text) {
   const client = getGroq()
