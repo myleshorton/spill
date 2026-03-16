@@ -130,15 +130,13 @@ async function processDocument (db, doc) {
     }
   }
 
-  // Step 2: Clean HTML if present
-  if (/<(div|br|table|html|body)[>\s]/i.test(extractedText)) {
-    try {
-      const cleaned = await runPython(['clean-html'], extractedText)
-      if (cleaned.trim().length > 100) {
-        extractedText = cleaned.trim()
-      }
-    } catch { /* keep original */ }
-  }
+  // Step 2: Deep clean — strip HTML, MIME noise, garbled OCR artifacts
+  try {
+    const cleaned = await runPython(['deep-clean'], extractedText)
+    if (cleaned.trim().length > 100) {
+      extractedText = cleaned.trim()
+    }
+  } catch { /* keep original */ }
 
   // Step 3: Extract email headers programmatically
   const emailHeaders = extractEmailHeaders(extractedText)

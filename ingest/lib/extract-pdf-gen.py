@@ -48,6 +48,98 @@ def clean_html(text):
     return text.strip()
 
 
+def deep_clean(text):
+    """Aggressively clean OCR-extracted text from redacted PDFs.
+
+    Removes garbled HTML remnants, MIME noise, base64 data, and lines
+    that are mostly non-word characters. Keeps lines with real English words.
+    """
+    # First do basic HTML cleanup
+    text = clean_html(text)
+
+    # Remove MIME headers and boundaries
+    text = re.sub(r'^-{5,}.*$', '', text, flags=re.MULTILINE)
+    text = re.sub(r'^Content-\S+:.*$', '', text, flags=re.MULTILINE)
+    text = re.sub(r'^charset=.*$', '', text, flags=re.MULTILINE)
+    text = re.sub(r'^MIME-Version:.*$', '', text, flags=re.MULTILINE)
+    text = re.sub(r'^boundary=.*$', '', text, flags=re.MULTILINE)
+
+    # Remove base64-like blocks (long strings of alphanumeric + /+=)
+    text = re.sub(r'[A-Za-z0-9+/=]{60,}', '', text)
+
+    # Remove image filename clusters
+    text = re.sub(r'(?:IMG[_.]?\S*\s*){3,}', '', text, flags=re.IGNORECASE)
+
+    # Remove hex/encoded data patterns
+    text = re.sub(r'(?:[0-9A-Fa-f]{2}[=:]){4,}[0-9A-Fa-f]*', '', text)
+
+    # Remove garbled HTML tag remnants (OCR'd tags like "cldre,", "ctliv,", "Antcp:")
+    text = re.sub(r'\b[cd][a-z]{2,5}[,>:]\s*', '', text)
+    text = re.sub(r'\b[Aa]nt[a-z]{1,4}[,:]\s*', '', text)
+    text = re.sub(r'\b[Ss]nt[a-z]{1,4}[,:]\s*', '', text)
+
+    # Remove lines that are mostly encoded/garbled data
+    text = re.sub(r'^.*[A-Za-z0-9+/]{20,}[-=*]{2,}.*$', '', text, flags=re.MULTILINE)
+
+    # Remove CSS/style-like noise
+    text = re.sub(r'\b\w+-\w+:\s*\S+[;>]\s*', '', text)
+
+    # Process line by line — keep lines with enough real words
+    cleaned_lines = []
+    for line in text.split('\n'):
+        line = line.strip()
+        if not line:
+            if cleaned_lines and cleaned_lines[-1] != '':
+                cleaned_lines.append('')
+            continue
+
+        # Keep email header lines
+        if re.match(r'^(From|To|Cc|Bcc|Subject|Date|Sent|Importance):\s', line, re.IGNORECASE):
+            cleaned_lines.append(line)
+            continue
+
+        # Count "real" words (3+ alpha chars, common English-like)
+        words = re.findall(r'[A-Za-z]{3,}', line)
+        total_chars = len(line)
+
+        # Skip very short lines that are just noise
+        if total_chars < 5:
+            continue
+
+        # Calculate ratio of real word characters to total
+        word_chars = sum(len(w) for w in words)
+        word_ratio = word_chars / total_chars if total_chars > 0 else 0
+
+        # Skip lines with too many special/noise characters
+        noise_chars = len(re.findall(r'[^A-Za-z0-9\s.,!?\'\"()\-:;]', line))
+        noise_ratio = noise_chars / total_chars if total_chars > 0 else 0
+
+        # Keep line if it has enough real words and not too much noise
+        if word_ratio > 0.45 and noise_ratio < 0.3 and len(words) >= 2:
+            # Strip non-word noise from within the line, keeping readable runs
+            # Split on obvious noise boundaries and keep good chunks
+            chunks = re.split(r'[A-Za-z0-9+/=]{15,}|[^A-Za-z0-9\s.,!?\'"()\-:;@/]{3,}', line)
+            clean_chunks = []
+            for chunk in chunks:
+                chunk = chunk.strip()
+                if not chunk:
+                    continue
+                cw = re.findall(r'[A-Za-z]{3,}', chunk)
+                if len(cw) >= 1 and len(' '.join(cw)) > len(chunk) * 0.4:
+                    chunk = re.sub(r'[•▪®™©„]+', '', chunk)
+                    chunk = re.sub(r'\s{2,}', ' ', chunk).strip()
+                    if chunk:
+                        clean_chunks.append(chunk)
+            cleaned = ' '.join(clean_chunks).strip()
+            if len(cleaned) > 10:
+                cleaned_lines.append(cleaned)
+
+    result = '\n'.join(cleaned_lines)
+    # Collapse excessive blank lines
+    result = re.sub(r'\n{3,}', '\n\n', result)
+    return result.strip()
+
+
 def generate_pdf(output_path, title):
     """Read text from stdin and generate a formatted PDF."""
     from fpdf import FPDF
@@ -172,6 +264,9 @@ if __name__ == '__main__':
     elif command == 'clean-html':
         text = sys.stdin.read()
         print(clean_html(text))
+    elif command == 'deep-clean':
+        text = sys.stdin.read()
+        print(deep_clean(text))
     elif command == 'check-redactions':
         if len(sys.argv) < 3:
             print('Usage: extract-pdf-gen.py check-redactions <path>', file=sys.stderr)
