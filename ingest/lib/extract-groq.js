@@ -129,21 +129,14 @@ function sleep (ms) {
   return new Promise(resolve => setTimeout(resolve, ms))
 }
 
-// Combined: get metadata + clean text (sequential to avoid rate limits)
+// Metadata only — no LLM text cleanup (hallucination risk)
 async function groqCleanup (text) {
   let metadata = null
   try {
     metadata = await groqMetadata(text)
   } catch { /* metadata is optional */ }
 
-  await sleep(300) // breathing room between calls
-
-  let cleanedText = text
-  try {
-    cleanedText = await groqCleanupText(text)
-  } catch { /* fall back to original text */ }
-
-  return { metadata, cleanedText }
+  return { metadata, cleanedText: text }
 }
 
-module.exports = { groqCleanup, groqMetadata, groqCleanupText }
+module.exports = { groqCleanup, groqMetadata }
