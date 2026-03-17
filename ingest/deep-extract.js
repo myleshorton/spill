@@ -108,9 +108,9 @@ async function processDocument (db, doc) {
   if (doc.content_type === 'pdf' || (doc.file_name || '').toLowerCase().endsWith('.pdf')) {
     try {
       const redactionCheck = JSON.parse(await runPython(['check-redactions', filePath]))
-      if (!redactionCheck.has_redactions) {
+      if (!redactionCheck.has_hidden_content) {
         db.markDeepExtractScanned(doc.document_id)
-        return { status: 'skipped', reason: `no_redactions (dark_runs=${redactionCheck.dark_runs_avg})` }
+        return { status: 'skipped', reason: `no_hidden_content (dark_runs=${redactionCheck.dark_runs_avg}, text/page=${redactionCheck.text_per_page}, html=${redactionCheck.html_tags})` }
       }
     } catch (err) {
       console.warn(`  Redaction check failed for ${doc.document_id}: ${err.message}`)

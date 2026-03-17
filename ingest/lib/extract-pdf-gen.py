@@ -189,16 +189,21 @@ def generate_pdf(output_path, title):
 
 
 def check_redactions(pdf_path):
-    """Check if a PDF has redaction bars (hidden content behind black rectangles).
+    """Check if a PDF has genuinely hidden content behind redaction bars.
 
-    Samples a few pages, renders them, and counts long horizontal dark pixel runs.
-    Returns JSON with has_redactions boolean and dark_runs_avg.
+    Two-signal detection:
+    1. Dark runs: long horizontal stretches of dark pixels (redaction bars)
+    2. Text density: substantial text content (>1000 chars/page) or HTML tags (>20)
+       in the text layer, suggesting email/document content vs handwritten notes
+
+    Returns JSON with has_redactions, has_hidden_content, and diagnostic fields.
     """
     import fitz
     doc = fitz.open(pdf_path)
     pages_to_check = [0, min(2, len(doc)-1), min(5, len(doc)-1)]
     pages_to_check = list(set(p for p in pages_to_check if p < len(doc)))
 
+    # Signal 1: Dark runs
     total_dark_runs = 0
     pages_checked = 0
 
@@ -234,12 +239,30 @@ def check_redactions(pdf_path):
         total_dark_runs += dark_runs
         pages_checked += 1
 
-    doc.close()
     avg_dark_runs = total_dark_runs / pages_checked if pages_checked > 0 else 0
     has_redactions = avg_dark_runs > 15
+
+    # Signal 2: Text density and structure
+    full_text = ""
+    n_pages = min(20, len(doc))
+    for i in range(n_pages):
+        full_text += doc[i].get_text() + "\n"
+
+    text_per_page = len(full_text) / max(n_pages, 1)
+    html_tags = len(re.findall(r'<[a-z/]', full_text, re.IGNORECASE))
+
+    has_dense_text = text_per_page > 1000 or html_tags > 20
+
+    # Hidden content requires BOTH signals
+    has_hidden_content = has_redactions and has_dense_text
+
+    doc.close()
     print(json.dumps({
         'has_redactions': has_redactions,
+        'has_hidden_content': has_hidden_content,
         'dark_runs_avg': round(avg_dark_runs, 1),
+        'text_per_page': round(text_per_page),
+        'html_tags': html_tags,
         'pages_checked': pages_checked
     }))
 
