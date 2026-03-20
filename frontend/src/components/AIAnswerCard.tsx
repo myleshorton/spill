@@ -14,7 +14,7 @@ function CitationText({ text, sources }: { text: string; sources: ChatSource[] }
       {parts.map((part, i) => {
         const match = part.match(/^\[DOC:([^\]]+)\]$/)
         if (match) {
-          const docId = match[1]
+          const docId = match[1].trim()
           const source = sourceMap.get(docId)
           return (
             <Link
