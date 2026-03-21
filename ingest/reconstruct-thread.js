@@ -77,7 +77,9 @@ async function extractFromWindow (pages, start, end, prevContext) {
     max_tokens: 6000
   })
 
-  return resp.choices[0].message.content
+  const inputCost = (resp.usage.prompt_tokens / 1000000) * 2.50
+  const outputCost = (resp.usage.completion_tokens / 1000000) * 10.00
+  return { text: resp.choices[0].message.content, cost: inputCost + outputCost }
 }
 
 async function consolidate (rawEmails, fileName) {
@@ -100,7 +102,9 @@ async function consolidate (rawEmails, fileName) {
   let output = resp.choices[0].message.content
   const spamIdx = output.indexOf('[Redacted] [Redacted] [Redacted]')
   if (spamIdx > -1) output = output.slice(0, spamIdx).trim()
-  return { output, tokens: resp.usage.total_tokens }
+  const inputCost = (resp.usage.prompt_tokens / 1000000) * 2.50
+  const outputCost = (resp.usage.completion_tokens / 1000000) * 10.00
+  return { output, tokens: resp.usage.total_tokens, cost: inputCost + outputCost }
 }
 
 async function reconstructDoc (db, sourceDoc) {
@@ -126,16 +130,20 @@ async function reconstructDoc (db, sourceDoc) {
 
   const allEmails = []
   const prevLines = []
+  let docCost = 0
 
   for (const [start, end] of windows) {
     const context = prevLines.slice(-15).join('\n')
     const result = await extractFromWindow(pages, start, end, context)
 
-    if (result && !result.includes('DUPLICATE') && result.trim().length > 50) {
-      allEmails.push(result.trim())
-      const lines = result.split('\n').filter(l => l.length > 30)
+    if (result && result.text && !result.text.includes('DUPLICATE') && result.text.trim().length > 50) {
+      allEmails.push(result.text.trim())
+      docCost += result.cost || 0
+      const lines = result.text.split('\n').filter(l => l.length > 30)
       for (const l of lines.slice(0, 5)) prevLines.push(l.slice(0, 100))
-      console.error('    pages ' + (start + 1) + '-' + end + ': ' + result.length + ' chars')
+      console.error('    pages ' + (start + 1) + '-' + end + ': ' + result.text.length + ' chars')
+    } else if (result) {
+      docCost += result.cost || 0
     }
     await sleep(800)
   }
@@ -148,7 +156,8 @@ async function reconstructDoc (db, sourceDoc) {
   // Consolidate
   const combined = allEmails.join('\n\n---\n\n')
   console.error('  Consolidating ' + allEmails.length + ' sections (' + combined.length + ' chars)...')
-  const { output, tokens } = await consolidate(combined, sourceDoc.file_name)
+  const { output, cost: consolidateCost } = await consolidate(combined, sourceDoc.file_name)
+  docCost += consolidateCost || 0
 
   const header = 'Reconstructed & Cleaned Email Thread \u2014 ' + sourceDoc.file_name + '\n' +
     'Unique messages presented in reverse chronological order (newest to oldest).\n' +
@@ -156,7 +165,7 @@ async function reconstructDoc (db, sourceDoc) {
 
   const final = header + output
   const emailCount = (final.match(/\nOn /g) || []).length
-  console.error('  Final: ' + final.length + ' chars, ' + emailCount + ' emails, ' + tokens + ' tokens')
+  console.error('  Final: ' + final.length + ' chars, ' + emailCount + ' emails, $' + docCost.toFixed(2))
 
   // Update the extracted document
   const extracted = db.db.prepare(
@@ -169,12 +178,12 @@ async function reconstructDoc (db, sourceDoc) {
     console.error('  Updated ' + extracted.id)
   }
 
-  return { emailCount, chars: final.length, tokens }
+  return { emailCount, chars: final.length, cost: docCost }
 }
 
 async function main () {
   const db = new DocumentsDatabase(DB_PATH)
-  let totalTokens = 0
+  let totalCost = 0
   let totalDocs = 0
 
   if (DOC_ID) {
@@ -183,7 +192,7 @@ async function main () {
     if (!doc) { console.error('Doc not found'); process.exit(1) }
     console.error('Reconstructing: ' + doc.file_name)
     const result = await reconstructDoc(db, doc)
-    if (result) totalTokens = result.tokens
+    if (result) totalCost = result.cost
   } else if (BATCH) {
     // Batch mode: process all high-scoring docs
     const docs = db.db.prepare(`
@@ -214,9 +223,9 @@ async function main () {
       try {
         const result = await reconstructDoc(db, doc)
         if (result) {
-          totalTokens += result.tokens
+          totalCost += result.cost
           totalDocs++
-          console.error('  Running total: ' + totalDocs + ' docs, ' + totalTokens + ' tokens (~$' + ((totalTokens / 1000000) * 5).toFixed(2) + ')')
+          console.error('  Running total: ' + totalDocs + ' docs, $' + totalCost.toFixed(2))
         }
       } catch (e) {
         console.error('  Error: ' + e.message)
@@ -224,7 +233,7 @@ async function main () {
     }
   }
 
-  console.error('\nDone. ' + totalDocs + ' docs, ' + totalTokens + ' total tokens (~$' + ((totalTokens / 1000000) * 5).toFixed(2) + ')')
+  console.error('\nDone. ' + totalDocs + ' docs, $' + totalCost.toFixed(2) + ' total')
   db.db.close()
 }
 

@@ -11,7 +11,7 @@ export interface BlogPost {
  * Blog posts are defined inline here. Simple and dependency-free —
  * no markdown parser needed. Add new posts to the top of the array.
  */
-const posts: BlogPost[] = [
+const drafts: BlogPost[] = [
   {
     slug: 'hidden-text-behind-redaction-bars',
     title: 'How a Reddit Post Led Us to Unredact 686 Epstein Documents',
@@ -146,6 +146,9 @@ const posts: BlogPost[] = [
 <p class="signature">&mdash; The Archive Collective</p>
 `,
   },
+]
+
+const posts: BlogPost[] = [
   {
     slug: 'welcome-to-the-archive',
     title: 'Welcome to the Archive: What We Built and Why',
