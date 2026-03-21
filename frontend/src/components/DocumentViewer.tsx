@@ -238,6 +238,17 @@ export default function DocumentViewer({ doc }: DocumentViewerProps) {
             )}
           </div>
 
+          {doc.origin && (
+            <div className="mt-3 text-xs text-spill-text-secondary">
+              <span className="font-medium text-spill-text-secondary/70">Origin:</span>{' '}
+              {doc.origin.startsWith('http') ? (
+                <a href={doc.origin} target="_blank" rel="noopener" className="text-spill-accent hover:underline">{doc.origin}</a>
+              ) : (
+                <span>{doc.origin}</span>
+              )}
+            </div>
+          )}
+
           <div className="mt-6">
             <ContentRenderer doc={doc} url={url} />
           </div>

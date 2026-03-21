@@ -124,6 +124,9 @@ class DocumentsDatabase {
     if (!colNames.has('deep_extract_attempted')) {
       this.db.exec('ALTER TABLE documents ADD COLUMN deep_extract_attempted INTEGER DEFAULT 0')
     }
+    if (!colNames.has('origin')) {
+      this.db.exec('ALTER TABLE documents ADD COLUMN origin TEXT')
+    }
 
     // Entity tables
     this.db.exec(`

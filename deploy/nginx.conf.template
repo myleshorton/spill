@@ -22,6 +22,9 @@ http {
     gzip_comp_level 6;
     gzip_types text/plain text/css application/json application/javascript text/xml application/xml text/javascript image/svg+xml;
 
+    # Disable access log to avoid logging visitor IP addresses
+    access_log off;
+
     # Rate limiting
     limit_req_zone $binary_remote_addr zone=search:10m rate=30r/s;
     limit_req_zone $binary_remote_addr zone=api:10m rate=60r/s;

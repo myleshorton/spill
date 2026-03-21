@@ -22,6 +22,7 @@ export interface Document {
   locationLongitude: number | null
   mediaDate: string | null
   documentDate: string | null
+  origin: string | null
   _geo?: { lat: number; lng: number }
 }
 

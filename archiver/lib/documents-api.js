@@ -32,6 +32,15 @@ function getMimeType (filePath) {
   return MIME_TYPES[ext] || 'application/octet-stream'
 }
 
+function deriveOrigin (row) {
+  if (row.origin) return row.origin
+  if (row.id && row.id.startsWith('upload-')) return 'Community Upload'
+  if (row.title && row.title.startsWith('Extracted:')) return 'Deep Extraction Pipeline'
+  if (row.source_url) return row.source_url
+  if (row.data_set && row.data_set > 0 && row.data_set < 1000) return 'DOJ Release \u2014 Data Set ' + row.data_set
+  return null
+}
+
 function rowToDoc (row) {
   return {
     id: row.id,
@@ -52,7 +61,8 @@ function rowToDoc (row) {
     locationLatitude: row.location_latitude || null,
     locationLongitude: row.location_longitude || null,
     mediaDate: row.media_date || null,
-    documentDate: row.document_date || null
+    documentDate: row.document_date || null,
+    origin: deriveOrigin(row)
   }
 }
 
