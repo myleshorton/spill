@@ -43,7 +43,8 @@ export default function ActivityFeed() {
           <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
           <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
         </span>
-        <span className="font-mono text-sm text-spill-text-secondary/60">{"Connecting\u2026"}</span>
+        <Search className="h-3.5 w-3.5 shrink-0 text-spill-accent/70" />
+        <span className="font-mono text-sm text-spill-text-secondary">{"1.4M documents archived. And counting."}</span>
       </div>
     )
   }
