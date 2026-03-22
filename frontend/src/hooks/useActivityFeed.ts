@@ -80,24 +80,23 @@ function generateAmbientEvents(data: ActivityData): ActivityEvent[] {
   if (t.entities > 0) {
     events.push({ id: 'stat-entities', message: `${formatCount(t.entities)} names, orgs, and connections mapped`, icon: 'brain', url: '/analysis/entities' })
   }
-  if (t.geoLocated > 0) {
-    events.push({ id: 'stat-geo', message: `${t.geoLocated} documents pinned to locations on the map`, icon: 'map-pin' })
+  if (t.geoLocated > 100) {
+    events.push({ id: 'stat-geo', message: `${formatCount(t.geoLocated)} documents pinned to locations on the map`, icon: 'map-pin' })
   }
   if (t.withKeywords > 0) {
     events.push({ id: 'stat-keywords', message: `${formatCount(t.withKeywords)} images analyzed and tagged`, icon: 'tags' })
   }
 
   // --- Progress (text extraction / transcription) ---
-  if (p && p.textPending > 0) {
+  // Only show progress messages when there's meaningful work remaining (>5%)
+  if (p && p.textPending > 0 && p.textTotal > 0 && (p.textPending / p.textTotal) > 0.05) {
     events.push(
       { id: 'prog-text', message: `OCR in progress\u2026 ${formatCount(p.textExtracted)} of ${formatCount(p.textTotal)} documents (${formatPct(p.textExtracted, p.textTotal)})`, icon: 'search' },
-      { id: 'prog-text-remaining', message: `${formatCount(p.textPending)} documents still being scanned for text`, icon: 'search' },
     )
   }
-  if (p && p.avPending > 0) {
+  if (p && p.avPending > 0 && p.avTotal > 0 && (p.avPending / p.avTotal) > 0.05) {
     events.push(
       { id: 'prog-av', message: `Transcribing audio\u2026 ${formatCount(p.avTranscribed)} of ${formatCount(p.avTotal)} (${formatPct(p.avTranscribed, p.avTotal)})`, icon: 'mic' },
-      { id: 'prog-av-remaining', message: `${formatCount(p.avPending)} recordings waiting for transcription`, icon: 'mic' },
     )
   }
 
