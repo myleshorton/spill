@@ -3,7 +3,7 @@
 import { Suspense, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Search, Menu, X, Database, FileText, Info, Upload, Share2, Users, ExternalLink, ChevronDown, Star, MessageSquare, Newspaper } from 'lucide-react'
+import { Search, Menu, X, Database, FileText, Info, Upload, Share2, Users, ExternalLink, ChevronDown, Star, MessageSquare, Newspaper, Scale } from 'lucide-react'
 import { siteConfig } from '@/config/site.config'
 
 function HeaderSearch() {
@@ -131,6 +131,13 @@ export default function Header() {
             People
           </Link>
           <Link
+            href="/analysis/political-ties"
+            className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm text-spill-text-secondary hover:bg-spill-surface hover:text-spill-text-primary transition-colors"
+          >
+            <Scale className="h-3.5 w-3.5" />
+            Politicians
+          </Link>
+          <Link
             href="/chat"
             className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm text-spill-text-secondary hover:bg-spill-surface hover:text-spill-text-primary transition-colors"
           >
@@ -195,6 +202,9 @@ export default function Header() {
             </Link>
             <Link href="/entities" className="rounded-md px-3 py-2 text-sm text-spill-text-secondary hover:text-spill-text-primary" onClick={() => setMobileMenuOpen(false)}>
               People
+            </Link>
+            <Link href="/analysis/political-ties" className="rounded-md px-3 py-2 text-sm text-spill-text-secondary hover:text-spill-text-primary" onClick={() => setMobileMenuOpen(false)}>
+              Politicians
             </Link>
             <Link href="/chat" className="rounded-md px-3 py-2 text-sm text-spill-text-secondary hover:text-spill-text-primary" onClick={() => setMobileMenuOpen(false)}>
               Ask AI
