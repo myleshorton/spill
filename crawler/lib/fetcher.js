@@ -6,6 +6,7 @@ const crypto = require('crypto')
 const { URL } = require('url')
 
 const USER_AGENT = 'UnredactBot/1.0 (+https://unredact.org/bot)'
+const WICK_PROXY = process.env.WICK_PROXY_URL || 'http://172.19.0.1:9876'
 
 const ARCHIVE_FILE_PATTERN = /\.(zip|tar|tar\.gz|tgz|gz)$/i
 const ARCHIVE_ORG_DOMAINS = /^(.*\.)?archive\.org$/i
@@ -111,22 +112,58 @@ class Fetcher {
       return { url, error: 'excluded', skipped: true }
     }
 
-    const allowed = await this.checkRobots(url)
-    if (!allowed) {
-      return { url, error: 'robots.txt disallowed', skipped: true }
+    // Skip robots.txt check — wick uses --no-robots
+    const isLikelyFile = /\.(pdf|doc|docx|xls|xlsx|csv|txt|eml|msg|zip|tar|tar\.gz|tgz|mp4|webm|mov|avi|mkv|wmv|mpg|mpeg|m4v|flv)$/i.test(url)
+
+    // Save to cache
+    const domain = new URL(url).hostname
+    const hash = crypto.createHash('sha256').update(url).digest('hex').slice(0, 16)
+    const domainDir = path.join(this.cacheDir, domain)
+    if (!fs.existsSync(domainDir)) fs.mkdirSync(domainDir, { recursive: true })
+
+    // For binary files, use node-fetch directly (wick is for HTML/text)
+    if (isLikelyFile) {
+      return this._fetchBinary(url, domain, hash, domainDir)
     }
 
-    const isLikelyFile = /\.(pdf|doc|docx|xls|xlsx|csv|txt|eml|msg|zip|tar|tar\.gz|tgz|mp4|webm|mov|avi|mkv|wmv|mpg|mpeg|m4v|flv)$/i.test(url)
-    const timeout = isLikelyFile ? this.timeoutFile : this.timeoutHtml
+    // Use wick proxy for HTML pages
+    try {
+      const wickUrl = `${WICK_PROXY}/fetch?url=${encodeURIComponent(url)}&format=html`
+      const resp = await nodeFetch(wickUrl, { timeout: 60000 })
 
+      if (!resp.ok) {
+        const body = await resp.text()
+        let errMsg = `wick proxy error: ${resp.status}`
+        try { errMsg = JSON.parse(body).error || errMsg } catch {}
+        return { url, error: errMsg, skipped: false }
+      }
+
+      const html = await resp.text()
+      const filePath = path.join(domainDir, `${hash}.html`)
+      fs.writeFileSync(filePath, html)
+
+      return {
+        url,
+        finalUrl: url,
+        status: 200,
+        contentType: 'text/html',
+        filePath,
+        headers: {},
+        size: Buffer.byteLength(html),
+      }
+    } catch (err) {
+      return { url, error: `wick: ${err.message}`, skipped: false }
+    }
+  }
+
+  async _fetchBinary (url, domain, hash, domainDir) {
+    const timeout = this.timeoutFile
     try {
       const headers = {
         'User-Agent': USER_AGENT,
-        'Accept': 'text/html,application/xhtml+xml,application/pdf,*/*;q=0.8',
-        'Accept-Language': 'en-US,en;q=0.9',
+        'Accept': '*/*',
       }
 
-      // Add auth headers for known APIs
       try {
         const hostname = new URL(url).hostname
         if (hostname === 'www.courtlistener.com' && process.env.COURTLISTENER_TOKEN) {
@@ -155,13 +192,7 @@ class Fetcher {
         }
       }
 
-      // Save to cache
-      const domain = new URL(finalUrl).hostname
-      const hash = crypto.createHash('sha256').update(finalUrl).digest('hex').slice(0, 16)
       const ext = this._guessExtension(contentType, finalUrl)
-      const domainDir = path.join(this.cacheDir, domain)
-      if (!fs.existsSync(domainDir)) fs.mkdirSync(domainDir, { recursive: true })
-
       const filePath = path.join(domainDir, `${hash}${ext}`)
       const buffer = await resp.buffer()
       fs.writeFileSync(filePath, buffer)
@@ -179,11 +210,7 @@ class Fetcher {
         size: buffer.length,
       }
     } catch (err) {
-      return {
-        url,
-        error: err.message,
-        skipped: false,
-      }
+      return { url, error: err.message, skipped: false }
     }
   }
 
