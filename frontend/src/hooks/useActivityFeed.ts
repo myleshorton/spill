@@ -140,7 +140,7 @@ function generateAmbientEvents(data: ActivityData): ActivityEvent[] {
     const title = data.latestDoc.title.length > 50
       ? data.latestDoc.title.slice(0, 47) + '\u2026'
       : data.latestDoc.title
-    events.push({ id: 'latest', message: `Latest: ${title}`, icon: 'file-plus' })
+    events.push({ id: 'latest', message: `Latest: ${title}`, icon: 'file-plus', url: `/doc/${data.latestDoc.id}` })
   }
 
   // Shuffle so it's not the same order every time

@@ -992,7 +992,7 @@ class DocumentsDatabase {
     ).all(fiveMinAgo)
 
     const latestDoc = this.db.prepare(
-      'SELECT title, content_type FROM documents ORDER BY created_at DESC LIMIT 1'
+      'SELECT id, title, content_type FROM documents ORDER BY created_at DESC LIMIT 1'
     ).get()
 
     // Collection / torrent stats
@@ -1012,7 +1012,7 @@ class DocumentsDatabase {
         avPending: avTotal - avTranscribed
       },
       recent: { count: recentDocs, byType: Object.fromEntries(recentByType.map(r => [r.content_type, r.c])) },
-      latestDoc: latestDoc ? { title: latestDoc.title, contentType: latestDoc.content_type } : null
+      latestDoc: latestDoc ? { id: latestDoc.id, title: latestDoc.title, contentType: latestDoc.content_type } : null
     }
 
     this._activityCache = { ts: now, data: result }

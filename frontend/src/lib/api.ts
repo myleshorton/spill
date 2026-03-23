@@ -360,7 +360,7 @@ export interface ActivityData {
     geoLocated: number
     keywordsAdded: number
   } | null
-  latestDoc: { title: string; contentType: string } | null
+  latestDoc: { id: string; title: string; contentType: string } | null
   status: {
     peerCount: number
     connected: boolean
