@@ -79,7 +79,35 @@
 
     { "url": "https://media.ca11.uscourts.gov/opinions/pub/files/201913843.pdf", "adapter": "court", "priority": 0.9 },
     { "url": "https://www.miamiherald.com/topics/jeffrey-epstein", "adapter": "news", "priority": 0.8 },
-    { "url": "https://www.thedailybeast.com/tag/jeffrey-epstein", "adapter": "news", "priority": 0.7 }
+    { "url": "https://www.thedailybeast.com/tag/jeffrey-epstein", "adapter": "news", "priority": 0.7 },
+
+    { "url": "https://www.reddit.com/r/Epstein/", "adapter": "news", "priority": 0.9 },
+    { "url": "https://www.reddit.com/r/Epstein/top/?t=all", "adapter": "news", "priority": 0.9 },
+    { "url": "https://www.reddit.com/r/Epstein/top/?t=month", "adapter": "news", "priority": 0.85 },
+    { "url": "https://www.reddit.com/r/EpsteinAndFriends/", "adapter": "news", "priority": 0.8 },
+    { "url": "https://www.reddit.com/r/ghislaine/", "adapter": "news", "priority": 0.75 },
+    { "url": "https://www.reddit.com/r/MaxwellTrial/", "adapter": "news", "priority": 0.75 },
+
+    { "url": "https://epsteinweb.org/", "adapter": "news", "priority": 0.9 },
+    { "url": "https://www.insider.com/jeffrey-epstein", "adapter": "news", "priority": 0.8 },
+    { "url": "https://www.nytimes.com/topic/person/jeffrey-epstein", "adapter": "news", "priority": 0.8 },
+    { "url": "https://www.washingtonpost.com/politics/epstein-files/", "adapter": "news", "priority": 0.85 },
+    { "url": "https://www.theguardian.com/us-news/jeffrey-epstein", "adapter": "news", "priority": 0.8 },
+    { "url": "https://www.bbc.com/news/topics/c302m85q5ljt", "adapter": "news", "priority": 0.75 },
+    { "url": "https://www.aljazeera.com/tag/jeffrey-epstein/", "adapter": "news", "priority": 0.75 },
+    { "url": "https://apnews.com/hub/jeffrey-epstein", "adapter": "news", "priority": 0.8 },
+    { "url": "https://www.reuters.com/tags/jeffrey-epstein/", "adapter": "news", "priority": 0.8 },
+    { "url": "https://www.cbsnews.com/tag/jeffrey-epstein/", "adapter": "news", "priority": 0.75 },
+    { "url": "https://www.nbcnews.com/news/us-news/jeffrey-epstein", "adapter": "news", "priority": 0.75 },
+
+    { "url": "https://www.britannica.com/topic/Epstein-Files-Fallout-The-Resignations-Firings-and-Arrests", "adapter": "news", "priority": 0.85 },
+    { "url": "https://en.wikipedia.org/wiki/List_of_people_named_in_the_Epstein_files", "adapter": "news", "priority": 0.7 },
+    { "url": "https://en.wikipedia.org/wiki/Epstein_files", "adapter": "news", "priority": 0.7 },
+    { "url": "https://en.wikipedia.org/wiki/Death_of_Jeffrey_Epstein", "adapter": "news", "priority": 0.65 },
+
+    { "url": "https://www.scribd.com/search?query=jeffrey+epstein+documents", "adapter": "news", "priority": 0.7 },
+    { "url": "https://katiecouric.com/news/high-profile-figures-arrested-fired-over-epstein-files/", "adapter": "news", "priority": 0.8 },
+    { "url": "https://www.vanityfair.com/tag/jeffrey-epstein", "adapter": "news", "priority": 0.75 }
   ],
   "searchQueries": [
     "Jeffrey Epstein court documents",
@@ -101,7 +129,31 @@
     "Epstein NPA non-prosecution agreement Palm Beach",
     "Giuffre v Maxwell unsealed documents 2024",
     "Jeffrey Epstein financial records SEC",
-    "Epstein victim impact statements sentencing"
+    "Epstein victim impact statements sentencing",
+    "JPMorgan Epstein unsealed documents",
+    "Deutsche Bank Epstein victims settlement",
+    "Epstein estate probate Virgin Islands",
+    "Epstein files resignations 2026",
+    "Epstein files arrests Prince Andrew 2026",
+    "Howard Lutnick Epstein island connection",
+    "Stephen Feinberg Cerberus Epstein files",
+    "RFK Kennedy Epstein plane flights",
+    "Kathy Ruemmler Epstein White House counsel",
+    "Leon Black Epstein payments Apollo",
+    "Ehud Barak Epstein apartment visits",
+    "Les Wexner Epstein Limited Brands",
+    "Bill Gates Epstein meetings dinners",
+    "Epstein redacted documents hidden text",
+    "Epstein files bad redaction unredacted names",
+    "Sergey Brin Epstein subpoena",
+    "Elon Musk Epstein files connection",
+    "Trump Epstein Mar-a-Lago relationship",
+    "Epstein victims compensation fund settlement",
+    "Epstein co-conspirators unnamed accomplices",
+    "Epstein recruiter Sarah Kellen immunity",
+    "Jean-Luc Brunel MC2 model trafficking",
+    "site:reddit.com Epstein files documents analysis",
+    "site:reddit.com r/Epstein unredacted hidden text"
   ],
   "keywords": {
     "primary": ["epstein", "ghislaine maxwell", "jeffrey epstein"],
@@ -114,7 +166,11 @@
     "Sarah Kellen", "Nadia Marcinkova", "Bill Clinton", "Leon Black",
     "Lesley Groff", "Alfredo Rodriguez", "Julie Brown", "Brad Edwards",
     "Courtney Wild", "Annie Farmer", "Juan Alessi", "Denise George",
-    "Steve Scully", "Adriana Ross", "Emmy Taylor", "Haley Robson"
+    "Steve Scully", "Adriana Ross", "Emmy Taylor", "Haley Robson",
+    "Howard Lutnick", "Stephen Feinberg", "Kathy Ruemmler", "Tom Pritzker",
+    "Jamie Dimon", "Elon Musk", "Bill Gates", "Ehud Barak",
+    "Larry Summers", "Glenn Dubin", "Sergey Brin", "Jeff Bezos",
+    "Pam Bondi", "William Barr", "Donald Trump"
   ],
   "socialPosting": {
     "enabled": true,
