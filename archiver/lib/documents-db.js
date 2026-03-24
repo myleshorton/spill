@@ -345,7 +345,7 @@ class DocumentsDatabase {
   }
 
   list (options = {}) {
-    const { limit = 50, offset = 0, dataSet, contentType, category } = options
+    const { limit = 50, offset = 0, dataSet, contentType, category, sort = 'default' } = options
     const conditions = []
     const params = []
 
@@ -368,10 +368,11 @@ class DocumentsDatabase {
     }
 
     const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : ''
+    const orderBy = sort === 'newest' ? 'ORDER BY created_at DESC' : 'ORDER BY data_set ASC, file_name ASC'
 
     const total = this.db.prepare(`SELECT COUNT(*) as count FROM documents ${where}`).get(...params)
     const rows = this.db.prepare(
-      `SELECT * FROM documents ${where} ORDER BY data_set ASC, file_name ASC LIMIT ? OFFSET ?`
+      `SELECT * FROM documents ${where} ${orderBy} LIMIT ? OFFSET ?`
     ).all(...params, limit, offset)
 
     return { documents: rows, total: total.count }

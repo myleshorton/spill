@@ -37,7 +37,7 @@ export default function LatestDocuments() {
 
   const load = useCallback((newOffset: number) => {
     setLoading(true)
-    listDocuments({ limit: PAGE_SIZE, offset: newOffset })
+    listDocuments({ limit: PAGE_SIZE, offset: newOffset, sort: 'newest' })
       .then((data) => {
         setDocs(data.documents)
         setTotal(data.total)

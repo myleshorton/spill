@@ -97,6 +97,7 @@ export async function listDocuments(options: {
   dataSet?: number
   contentType?: string  // comma-separated for multiple types
   category?: string
+  sort?: 'default' | 'newest'
 } = {}): Promise<{ documents: Document[], total: number }> {
   const params = new URLSearchParams()
   if (options.limit) params.set('limit', String(options.limit))
@@ -104,6 +105,7 @@ export async function listDocuments(options: {
   if (options.dataSet) params.set('data_set', String(options.dataSet))
   if (options.contentType) params.set('content_type', options.contentType)
   if (options.category) params.set('category', options.category)
+  if (options.sort) params.set('sort', options.sort)
 
   const res = await fetch(`${API_BASE}/documents?${params}`)
   if (!res.ok) throw new Error(`List failed: ${res.status}`)

@@ -121,8 +121,9 @@ function createDocumentsRouter (docsDb, searchIndex, archiverRef, torrentManager
     const rawType = req.query.content_type || undefined
     const contentType = rawType && rawType.includes(',') ? rawType.split(',') : rawType
     const category = req.query.category || undefined
+    const sort = req.query.sort || 'default'
 
-    const result = docsDb.list({ limit, offset, dataSet, contentType, category })
+    const result = docsDb.list({ limit, offset, dataSet, contentType, category, sort })
     res.json({
       documents: result.documents.map(rowToDoc),
       total: result.total
