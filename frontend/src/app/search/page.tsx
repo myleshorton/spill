@@ -66,6 +66,7 @@ function SearchContent() {
         dataSet: dataSet ? Number(dataSet) : undefined,
         contentType: contentType || undefined,
         category: category || undefined,
+        sort: 'newest',
       })
         .then((result) => {
           setDocuments(result.documents)
