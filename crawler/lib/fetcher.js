@@ -113,16 +113,21 @@ class Fetcher {
     }
 
     // Skip robots.txt check — wick uses --no-robots
-    const isLikelyFile = /\.(pdf|doc|docx|xls|xlsx|csv|txt|eml|msg|zip|tar|tar\.gz|tgz|mp4|webm|mov|avi|mkv|wmv|mpg|mpeg|m4v|flv)$/i.test(url)
+    const decodedUrl = decodeURIComponent(url)
+    const isLikelyFile = /\.(pdf|doc|docx|xls|xlsx|csv|txt|eml|msg|zip|tar|tar\.gz|tgz|mp4|webm|mov|avi|mkv|wmv|mpg|mpeg|m4v|flv)(\?|$)/i.test(decodedUrl)
+
+    // Sites that require browser-like access even for files (age gates, bot detection)
+    const WICK_REQUIRED_DOMAINS = /justice\.gov|reddit\.com|nytimes\.com|washingtonpost\.com/i
+    const domain = new URL(url).hostname
+    const needsWick = WICK_REQUIRED_DOMAINS.test(domain)
 
     // Save to cache
-    const domain = new URL(url).hostname
     const hash = crypto.createHash('sha256').update(url).digest('hex').slice(0, 16)
     const domainDir = path.join(this.cacheDir, domain)
     if (!fs.existsSync(domainDir)) fs.mkdirSync(domainDir, { recursive: true })
 
-    // For binary files, use node-fetch directly (wick is for HTML/text)
-    if (isLikelyFile) {
+    // For binary files on sites that don't need wick, use node-fetch directly
+    if (isLikelyFile && !needsWick) {
       return this._fetchBinary(url, domain, hash, domainDir)
     }
 
