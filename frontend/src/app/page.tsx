@@ -6,7 +6,7 @@ import HeroChat from '@/components/HeroChat'
 import StatsBar from '@/components/StatsBar'
 import ActivityFeed from '@/components/ActivityFeed'
 import Recommendations from '@/components/Recommendations'
-import TopExtractions from '@/components/TopExtractions'
+import LatestDocuments from '@/components/LatestDocuments'
 import { siteConfig } from '@/config/site.config'
 
 const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -96,7 +96,7 @@ export default async function HomePage() {
           </div>
         </section>
 
-        <TopExtractions />
+        <LatestDocuments />
 
         <section className="mx-auto max-w-7xl px-4 pb-12 sm:px-6">
           <StatsBar />
