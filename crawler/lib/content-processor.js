@@ -49,10 +49,23 @@ class ContentProcessor {
     const fileBuffer = fs.readFileSync(filePath)
     const sha256 = crypto.createHash('sha256').update(fileBuffer).digest('hex')
 
-    // 2. Dedup
+    // 2. Dedup — check by hash first, then by filename
     const existing = this.docsDb.findByHash(sha256)
     if (existing) {
-      return { skipped: true, reason: 'duplicate', existingId: existing.id }
+      return { skipped: true, reason: 'duplicate (hash)', existingId: existing.id }
+    }
+
+    // Filename dedup: extract base filename and check if it already exists in the archive
+    // This catches EFTA docs from justice.gov that don't have hashes set
+    const srcUrl = finalUrl || fetchResult.url || ''
+    const urlFilename = decodeURIComponent(srcUrl.split('/').pop() || '').split('?')[0]
+    if (urlFilename && urlFilename.length > 4) {
+      const byName = this.docsDb.db.prepare(
+        'SELECT id FROM documents WHERE file_name = ? LIMIT 1'
+      ).get(urlFilename)
+      if (byName) {
+        return { skipped: true, reason: 'duplicate (filename)', existingId: byName.id }
+      }
     }
 
     // 3. Extract text

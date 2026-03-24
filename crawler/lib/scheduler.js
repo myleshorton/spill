@@ -90,6 +90,21 @@ class Scheduler {
     // Per-domain rate limiting
     await this._waitForDomain(row.domain, row.min_delay_ms || 2000)
 
+    // Pre-fetch dedup: skip if a document with this filename already exists in the archive
+    try {
+      const urlFilename = decodeURIComponent(row.url.split('/').pop() || '').split('?')[0]
+      if (urlFilename && urlFilename.length > 4 && this.processor && this.processor.docsDb) {
+        const existing = this.processor.docsDb.db.prepare(
+          'SELECT id FROM documents WHERE file_name = ? LIMIT 1'
+        ).get(urlFilename)
+        if (existing) {
+          this.crawlDb.markSkipped(row.id, 'duplicate (pre-fetch filename)')
+          this.skipped++
+          return
+        }
+      }
+    } catch {}
+
     this.crawlDb.markFetching(row.id)
 
     // Fetch
