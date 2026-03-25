@@ -29,11 +29,11 @@ function timeAgo(ts: number): string {
   return `${Math.floor(days / 30)}mo ago`
 }
 
-export default function LatestDocuments() {
-  const [docs, setDocs] = useState<Document[]>([])
-  const [total, setTotal] = useState(0)
+export default function LatestDocuments({ initialData }: { initialData?: { documents: Document[], total: number } | null }) {
+  const [docs, setDocs] = useState<Document[]>(initialData?.documents || [])
+  const [total, setTotal] = useState(initialData?.total || 0)
   const [offset, setOffset] = useState(0)
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(!initialData)
 
   const load = useCallback((newOffset: number) => {
     setLoading(true)
@@ -50,7 +50,8 @@ export default function LatestDocuments() {
       .finally(() => setLoading(false))
   }, [])
 
-  useEffect(() => { load(0) }, [load])
+  // Only fetch client-side if no initial data or when paginating
+  useEffect(() => { if (!initialData) load(0) }, [load, initialData])
 
   if (!loading && docs.length === 0) return null
 

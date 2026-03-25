@@ -17,9 +17,18 @@ const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
 const SERVER_API = process.env.ARCHIVER_URL || 'http://localhost:4000'
 
 
-export const dynamic = 'force-dynamic'
+export const revalidate = 60 // regenerate page every 60 seconds
+
+async function getLatestDocs() {
+  try {
+    const res = await fetch(`${SERVER_API}/api/documents?limit=6&sort=newest`, { next: { revalidate: 60 } })
+    if (!res.ok) return null
+    return res.json()
+  } catch { return null }
+}
 
 export default async function HomePage() {
+  const latestDocsPromise = getLatestDocs()
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'WebSite',
@@ -96,7 +105,7 @@ export default async function HomePage() {
           </div>
         </section>
 
-        <LatestDocuments />
+        <LatestDocuments initialData={await latestDocsPromise} />
 
         <section className="mx-auto max-w-7xl px-4 pb-12 sm:px-6">
           <StatsBar />
