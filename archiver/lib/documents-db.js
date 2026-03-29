@@ -72,6 +72,7 @@ class DocumentsDatabase {
       CREATE INDEX IF NOT EXISTS idx_docs_category ON documents(category);
       CREATE INDEX IF NOT EXISTS idx_docs_collection ON documents(collection_id);
       CREATE INDEX IF NOT EXISTS idx_docs_hash ON documents(sha256_hash);
+      CREATE INDEX IF NOT EXISTS idx_docs_created ON documents(created_at);
     `)
 
     this._migrate()
@@ -956,9 +957,8 @@ class DocumentsDatabase {
   }
 
   activitySnapshot () {
-    // Cache for 30 seconds — this method runs ~16 full-table COUNT(*) queries
-    // on 1.4M+ rows and was being polled every 8s, pegging the CPU at 100%.
-    if (this._activityCache && Date.now() - this._activityCache.ts < 30000) {
+    // Cache for 2 minutes — this method runs ~16 COUNT(*) queries on 1.4M+ rows.
+    if (this._activityCache && Date.now() - this._activityCache.ts < 120000) {
       return this._activityCache.data
     }
 
