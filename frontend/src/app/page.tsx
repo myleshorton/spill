@@ -17,18 +17,7 @@ const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
 const SERVER_API = process.env.ARCHIVER_URL || 'http://localhost:4000'
 
 
-export const revalidate = 60 // regenerate page every 60 seconds
-
-async function getLatestDocs() {
-  try {
-    const res = await fetch(`${SERVER_API}/api/documents?limit=6&sort=newest`, { next: { revalidate: 60 } })
-    if (!res.ok) return null
-    return res.json()
-  } catch { return null }
-}
-
-export default async function HomePage() {
-  const latestDocsPromise = getLatestDocs()
+export default function HomePage() {
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'WebSite',
@@ -105,7 +94,7 @@ export default async function HomePage() {
           </div>
         </section>
 
-        <LatestDocumentsServer promise={latestDocsPromise} />
+        <LatestDocuments />
 
         <section className="mx-auto max-w-7xl px-4 pb-12 sm:px-6">
           <StatsBar />
@@ -146,82 +135,6 @@ export default async function HomePage() {
 
       <Footer />
     </div>
-  )
-}
-
-function formatFileSize(bytes: number): string {
-  if (!bytes) return ''
-  if (bytes < 1024) return bytes + ' B'
-  if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB'
-  return (bytes / 1048576).toFixed(1) + ' MB'
-}
-
-async function LatestDocumentsServer({ promise }: { promise: Promise<{ documents: Array<{ id: string; title: string; contentType: string; fileSize: number; dataSet: number; hasThumbnail: boolean; origin: string | null }>, total: number } | null> }) {
-  const data = await promise
-  if (!data || data.documents.length === 0) return null
-
-  return (
-    <section className="relative border-y border-spill-divider bg-[#0D0D0D] py-10">
-      <div className="relative mx-auto max-w-7xl px-4 sm:px-6">
-        <div className="flex items-end justify-between mb-1">
-          <div>
-            <h2 className="font-headline text-xl font-bold uppercase tracking-tight text-spill-text-primary">
-              Latest Documents
-            </h2>
-            <span className="text-xs text-spill-text-secondary">
-              {data.total.toLocaleString()} documents in the archive
-            </span>
-          </div>
-          <Link href="/search" className="text-xs text-spill-text-secondary hover:text-spill-accent transition-colors">
-            Browse all &rarr;
-          </Link>
-        </div>
-        <div className="mb-6 h-px bg-gradient-to-r from-spill-accent/40 via-spill-divider to-transparent" />
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {data.documents.map((doc) => (
-            <Link
-              key={doc.id}
-              href={`/doc/${doc.id}`}
-              className="group rounded-lg border border-spill-divider bg-spill-surface overflow-hidden transition-all hover:border-spill-accent/30 hover:shadow-lg hover:shadow-spill-accent/5"
-            >
-              {doc.hasThumbnail ? (
-                <div className="relative aspect-[16/9] overflow-hidden bg-spill-bg">
-                  <img
-                    src={`/api/documents/${doc.id}/thumbnail`}
-                    alt=""
-                    className="h-full w-full object-cover transition-transform group-hover:scale-105"
-                    loading="lazy"
-                  />
-                  <div className="absolute bottom-2 left-2">
-                    <span className="rounded bg-black/70 px-1.5 py-0.5 font-mono text-[10px] uppercase text-spill-accent backdrop-blur-sm">
-                      {doc.contentType}
-                    </span>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex items-center justify-center aspect-[16/9] bg-spill-bg/50">
-                  <FileText className="h-10 w-10 text-spill-text-secondary/20" />
-                </div>
-              )}
-              <div className="p-3">
-                <p className="line-clamp-2 text-sm font-medium text-spill-text-primary group-hover:text-spill-accent transition-colors">
-                  {doc.title}
-                </p>
-                <div className="mt-1.5 flex items-center gap-2 text-[10px] text-spill-text-secondary">
-                  <span>DS {doc.dataSet}</span>
-                  {doc.fileSize > 0 && (
-                    <>
-                      <span className="text-spill-divider">&middot;</span>
-                      <span>{formatFileSize(doc.fileSize)}</span>
-                    </>
-                  )}
-                </div>
-              </div>
-            </Link>
-          ))}
-        </div>
-      </div>
-    </section>
   )
 }
 
