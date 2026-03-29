@@ -150,6 +150,87 @@ const drafts: BlogPost[] = [
 
 const posts: BlogPost[] = [
   {
+    slug: 'crawling-the-uncrawlable',
+    title: 'Crawling the Uncrawlable: How We Index Epstein Content From Sites That Block Bots',
+    date: 'March 25, 2026',
+    tag: 'ENGINEERING',
+    excerpt:
+      'Reddit blocks datacenter IPs. The DOJ site has an age gate. News sites detect bots. We needed to crawl them all. Here is how we built a crawler that actually works.',
+    html: `
+<p>The Epstein archive doesn't stop at the 1.4 million documents the DOJ released. Every day, new court filings emerge, journalists publish investigations, Reddit users surface connections, and researchers post analyses. We built a crawler to find and index all of it.</p>
+
+<p>The problem: most of these sites don't want to be crawled.</p>
+
+<h2>The Wall</h2>
+
+<p>Our crawler ran fine on archive.org and DocumentCloud. Then we tried Reddit, and got nothing. The DOJ's own Epstein files page returned an age verification gate instead of documents. The New York Times, Washington Post, and most major news sites detected our bot and blocked it. Even government sites like the FBI vault would intermittently refuse connections.</p>
+
+<p>The standard approach &mdash; set a User-Agent header, respect robots.txt, be polite &mdash; doesn't work when sites actively block datacenter IP ranges. Our server runs on Hetzner in Germany. Reddit, in particular, blocks Hetzner IPs entirely. Doesn't matter how polite your bot is if the front door is locked.</p>
+
+<h2>Enter Wick</h2>
+
+<p>We switched our crawler to use <a href="https://getwick.dev">Wick</a>, a browser-grade web fetching tool designed for exactly this problem. Instead of making bare HTTP requests that scream "I'm a bot," Wick fetches pages the way a real browser does &mdash; TLS fingerprint, HTTP/2 negotiation, header ordering, the works.</p>
+
+<p>The integration was straightforward. Wick runs as a CLI tool:</p>
+
+<pre><code>wick fetch https://www.reddit.com/r/Epstein/ --no-robots --format html</code></pre>
+
+<p>We wrapped it in a tiny HTTP proxy on the host machine, and our Docker-based crawler calls it for every HTML page fetch. Binary files (PDFs, images) still go through direct HTTP since they don't trigger bot detection.</p>
+
+<h2>What Changed</h2>
+
+<p>Before Wick, our crawler was stuck in a loop: discover URLs via search, try to fetch them, get blocked, repeat. The queue grew but nothing actually got downloaded.</p>
+
+<p>After Wick:</p>
+
+<ul>
+<li><strong>Reddit</strong> &mdash; We now crawl r/Epstein, r/EpsteinAndFriends, and related subreddits. Individual posts, comment threads, linked documents. Over 30 Reddit threads indexed so far, including discussions about the unredacted black book, flight logs, victim impact statements, and document analysis.</li>
+<li><strong>DOJ/Justice.gov</strong> &mdash; The age verification gate that blocked our crawler? Wick walks right through it. We're now indexing the DOJ's data set listing pages and following links to individual documents.</li>
+<li><strong>News sites</strong> &mdash; Britannica, NY Post, PBS, NPR, AP News, NBC, CBS, USA Today. Articles about Prince Andrew's arrest, Howard Lutnick's island visit, Goldman Sachs lawyer resignations, Pam Bondi subpoenas. All indexed and searchable.</li>
+<li><strong>Research sites</strong> &mdash; EpsteinWeb.org connection graphs, the Jmail Encyclopedia, Newsweek's full name list.</li>
+</ul>
+
+<p>Over 5,000 documents indexed from web sources, with new content arriving continuously.</p>
+
+<h2>The Residential IP Problem</h2>
+
+<p>Even Wick has limits. Some sites &mdash; Reddit in particular &mdash; don't just detect bot behavior, they block entire IP ranges belonging to cloud providers. No amount of browser emulation helps if the IP itself is blacklisted.</p>
+
+<p>Wick solves this with <strong>wick-tunnel</strong>, which routes requests through a residential IP. You run <code>wick-tunnel init</code> on your server, then <code>wick-tunnel join</code> on a machine with a residential connection (your laptop, a home server). Traffic that needs a clean IP gets routed through the tunnel automatically.</p>
+
+<p>This is how we plan to unlock the remaining blocked sources. The crawler runs 24/7 on our server, but requests that hit IP-based blocks get transparently routed through a residential connection.</p>
+
+<h2>Deduplication</h2>
+
+<p>When you crawl the same content from multiple sources &mdash; a Reddit post links to an archive.org PDF that's also on DocumentCloud and referenced in a court filing &mdash; you need to not index it four times.</p>
+
+<p>We built two layers of dedup:</p>
+
+<ol>
+<li><strong>Pre-fetch filename check</strong> &mdash; Before downloading, extract the filename from the URL and check if a document with that name already exists in the archive. This catches the 600+ EFTA PDFs that the DOJ site links to but we already have from the original data dump. Zero bandwidth wasted.</li>
+<li><strong>Post-fetch SHA256 hash</strong> &mdash; After downloading, hash the content and check for duplicates. Catches the same document hosted at different URLs.</li>
+</ol>
+
+<h2>What We're Crawling Now</h2>
+
+<p>The crawler runs continuously with 46 search queries cycling through topics like "JPMorgan Epstein unsealed documents," "Prince Andrew arrest 2026," "Howard Lutnick Epstein island," and "Epstein redacted documents hidden text." It discovers new URLs, fetches them through Wick, scores their relevance using a local embedding model, and indexes anything scoring above 0.3.</p>
+
+<p>The latest crawled documents show up on the <a href="/">home page</a> and are immediately searchable. You can see news articles from hours ago alongside the original DOJ documents from 2025.</p>
+
+<h2>Stack</h2>
+
+<ul>
+<li><a href="https://getwick.dev">Wick Pro</a> &mdash; Browser-grade fetching with <code>--no-robots</code> and residential IP routing via wick-tunnel</li>
+<li><strong>Node.js crawler</strong> with adapter pattern (court, government, news, archive-org, search-discovery)</li>
+<li><strong>Xenova/bge-small-en-v1.5</strong> &mdash; Local 384-dim embedding model for relevance scoring, no API calls</li>
+<li><strong>Meilisearch</strong> &mdash; Full-text indexing of crawled content alongside the 1.4M original documents</li>
+<li><strong>Pre-fetch dedup</strong> &mdash; Filename and hash checks to avoid re-downloading the massive DOJ document set</li>
+</ul>
+
+<p class="signature">&mdash; The Archive Collective</p>
+`,
+  },
+  {
     slug: 'welcome-to-the-archive',
     title: 'Welcome to the Archive: What We Built and Why',
     date: 'March 7, 2026',
