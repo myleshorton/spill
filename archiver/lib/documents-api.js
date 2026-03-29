@@ -315,9 +315,11 @@ function createDocumentsRouter (docsDb, searchIndex, archiverRef, torrentManager
       return res.status(404).json({ error: 'Thumbnail not available' })
     }
 
+    const buffer = fs.readFileSync(doc.thumb_path)
     res.setHeader('Content-Type', 'image/jpeg')
+    res.setHeader('Content-Length', buffer.length)
     res.setHeader('Cache-Control', 'public, max-age=604800')
-    fs.createReadStream(doc.thumb_path).pipe(res)
+    res.end(buffer)
   })
 
   // Serve sanitized HTML preview (strips scripts/iframes/event handlers)
