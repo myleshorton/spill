@@ -19,10 +19,11 @@ function HeaderSearch() {
   }
 
   return (
-    <form onSubmit={handleSearch} className="relative flex-1 max-w-2xl">
+    <form action="/search" method="get" onSubmit={handleSearch} className="relative flex-1 max-w-2xl">
       <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-spill-text-secondary" />
       <input
         type="text"
+        name="q"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         placeholder={siteConfig.search.placeholderSmall}
@@ -95,15 +96,15 @@ export default function Header() {
         </Link>
 
         <Suspense fallback={
-          <div className="relative flex-1 max-w-2xl">
+          <form action="/search" method="get" className="relative flex-1 max-w-2xl">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-spill-text-secondary" />
             <input
               type="text"
+              name="q"
               placeholder={siteConfig.search.placeholderSmall}
               className="w-full rounded-lg border border-spill-divider bg-spill-surface py-2 pl-10 pr-4 font-body text-sm text-spill-text-primary placeholder:text-spill-text-secondary/60"
-              readOnly
             />
-          </div>
+          </form>
         }>
           <HeaderSearch />
         </Suspense>
