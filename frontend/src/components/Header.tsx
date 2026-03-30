@@ -1,31 +1,17 @@
 'use client'
 
-import { Suspense, useState } from 'react'
+import { useState } from 'react'
 import Link from 'next/link'
-import { useRouter, useSearchParams } from 'next/navigation'
 import { Search, Menu, X, Database, FileText, Info, Upload, Share2, Users, ExternalLink, ChevronDown, Star, MessageSquare, Newspaper, Scale } from 'lucide-react'
 import { siteConfig } from '@/config/site.config'
 
 function HeaderSearch() {
-  const router = useRouter()
-  const searchParams = useSearchParams()
-  const [query, setQuery] = useState(searchParams.get('q') || '')
-
-  function handleSearch(e: React.FormEvent) {
-    e.preventDefault()
-    if (query.trim()) {
-      router.push(`/search?q=${encodeURIComponent(query.trim())}`)
-    }
-  }
-
   return (
-    <form action="/search" method="get" onSubmit={handleSearch} className="relative flex-1 max-w-2xl">
+    <form action="/search" method="get" className="relative flex-1 max-w-2xl">
       <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-spill-text-secondary" />
       <input
         type="text"
         name="q"
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
         placeholder={siteConfig.search.placeholderSmall}
         className="w-full rounded-lg border border-spill-divider bg-spill-surface py-2 pl-10 pr-4 font-body text-sm text-spill-text-primary placeholder:text-spill-text-secondary/60 focus:border-spill-accent/50 focus:outline-none focus:ring-1 focus:ring-spill-accent/30 transition-colors"
       />
@@ -95,19 +81,7 @@ export default function Header() {
           </div>
         </Link>
 
-        <Suspense fallback={
-          <form action="/search" method="get" className="relative flex-1 max-w-2xl">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-spill-text-secondary" />
-            <input
-              type="text"
-              name="q"
-              placeholder={siteConfig.search.placeholderSmall}
-              className="w-full rounded-lg border border-spill-divider bg-spill-surface py-2 pl-10 pr-4 font-body text-sm text-spill-text-primary placeholder:text-spill-text-secondary/60"
-            />
-          </form>
-        }>
-          <HeaderSearch />
-        </Suspense>
+        <HeaderSearch />
 
         <nav className="hidden items-center gap-1 md:flex">
           <Link
