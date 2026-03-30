@@ -17,6 +17,9 @@ const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
 const SERVER_API = process.env.ARCHIVER_URL || 'http://localhost:4000'
 
 
+// Force revalidation so the page isn't cached indefinitely
+export const revalidate = 300
+
 export default function HomePage() {
   const jsonLd = {
     '@context': 'https://schema.org',
