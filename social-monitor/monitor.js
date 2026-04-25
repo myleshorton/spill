@@ -17,6 +17,24 @@ const Database = require('better-sqlite3')
 const path = require('path')
 const http = require('http')
 
+// Helper: drain and discard a fetch response body to prevent socket leaks.
+// Node.js undici keeps HTTP/1.1 connections alive; an unconsumed body holds
+// the socket open indefinitely.
+async function drain (res) {
+  try { await res.arrayBuffer() } catch {}
+}
+
+// Helper: fetch with a timeout to prevent hung connections
+async function fetchWithTimeout (url, opts = {}, timeoutMs = 15000) {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), timeoutMs)
+  try {
+    return await fetch(url, { ...opts, signal: controller.signal })
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
 // ─── Config ───
 const SITE_URL = process.env.SITE_URL || 'https://unredact.org'
 const DB_PATH = process.env.MONITOR_DB || path.join(__dirname, 'monitor.db')
@@ -283,7 +301,7 @@ Write a brief, helpful reply (max ${maxLen} chars) that:
 Return ONLY the reply text, nothing else.`
 
   try {
-    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    const res = await fetchWithTimeout('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -295,7 +313,7 @@ Return ONLY the reply text, nothing else.`
         temperature: 0.7,
         messages: [{ role: 'user', content: prompt }]
       })
-    })
+    }, 30000)
     const data = await res.json()
     if (data.error) throw new Error(data.error.message)
     let reply = data.choices[0].message.content.trim()
@@ -342,10 +360,18 @@ async function storeOpportunity (platform, postUrl, authorHandle, authorName, te
 
 // ─── Bluesky Firehose ───
 let wsReconnectDelay = 1000
+let activeWs = null
 
 function startFirehose () {
+  // Clean up previous WebSocket if still lingering
+  if (activeWs) {
+    try { activeWs.removeAllListeners(); activeWs.terminate() } catch {}
+    activeWs = null
+  }
+
   console.log('[bluesky] Connecting to Jetstream firehose...')
   const ws = new WebSocket(JETSTREAM_URL)
+  activeWs = ws
   let messageCount = 0
   let matchCount = 0
 
@@ -386,12 +412,14 @@ function startFirehose () {
       let displayName = null
       let followers = 0
       try {
-        const res = await fetch(`https://public.api.bsky.app/xrpc/app.bsky.actor.getProfile?actor=${msg.did}`)
+        const res = await fetchWithTimeout(`https://public.api.bsky.app/xrpc/app.bsky.actor.getProfile?actor=${msg.did}`)
         if (res.ok) {
           const profile = await res.json()
           handle = profile.handle || msg.did
           displayName = profile.displayName || null
           followers = profile.followersCount || 0
+        } else {
+          await drain(res)
         }
       } catch {}
 
@@ -423,8 +451,8 @@ async function searchBluesky () {
   for (const q of queries) {
     try {
       const url = `${BSKY_SEARCH_URL}?q=${encodeURIComponent(q)}&limit=25&sort=latest`
-      const res = await fetch(url)
-      if (!res.ok) continue
+      const res = await fetchWithTimeout(url)
+      if (!res.ok) { await drain(res); continue }
       const data = await res.json()
 
       for (const post of (data.posts || [])) {
@@ -460,8 +488,8 @@ async function searchReddit () {
   for (const q of queries) {
     try {
       const url = `${REDDIT_SEARCH_URL}?q=${encodeURIComponent(q)}&sort=new&limit=25&t=week`
-      const res = await fetch(url, { headers: { 'User-Agent': 'SpillArchiveMonitor/1.0' } })
-      if (!res.ok) continue
+      const res = await fetchWithTimeout(url, { headers: { 'User-Agent': 'SpillArchiveMonitor/1.0' } })
+      if (!res.ok) { await drain(res); continue }
       const data = await res.json()
 
       for (const child of (data.data?.children || [])) {
@@ -488,8 +516,8 @@ async function searchReddit () {
   for (const sub of subreddits) {
     try {
       const url = `https://www.reddit.com/r/${sub}/new.json?limit=25`
-      const res = await fetch(url, { headers: { 'User-Agent': 'SpillArchiveMonitor/1.0' } })
-      if (!res.ok) continue
+      const res = await fetchWithTimeout(url, { headers: { 'User-Agent': 'SpillArchiveMonitor/1.0' } })
+      if (!res.ok) { await drain(res); continue }
       const data = await res.json()
 
       for (const child of (data.data?.children || [])) {
